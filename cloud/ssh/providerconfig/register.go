@@ -28,7 +28,7 @@ func init() {
 	localSchemeBuilder.Register(addKnownTypes)
 }
 
-const GroupName = "awsproviderconfig"
+const GroupName = "sshproviderconfig"
 
 var SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: runtime.APIVersionInternal}
 
@@ -42,16 +42,16 @@ func Resource(resource string) schema.GroupResource {
 
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
-		&AWSMachineProviderConfig{},
+		&SSHMachineProviderConfig{},
 	)
 	scheme.AddKnownTypes(SchemeGroupVersion,
-		&AWSClusterProviderConfig{},
+		&SSHClusterProviderConfig{},
 	)
 	scheme.AddKnownTypes(SchemeGroupVersion,
-		&AWSMachineProviderStatus{},
+		&SSHMachineProviderStatus{},
 	)
 	scheme.AddKnownTypes(SchemeGroupVersion,
-		&AWSClusterProviderStatus{},
+		&SSHClusterProviderStatus{},
 	)
 	return nil
 }

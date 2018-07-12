@@ -37,12 +37,12 @@ import (
 	machinecontroller "sigs.k8s.io/cluster-api/pkg/controller/machine"
 	"sigs.k8s.io/cluster-api/pkg/controller/sharedinformers"
 
-	machineactuator "sigs.k8s.io/cluster-api-provider-aws/cloud/aws/actuators/machine"
-	"sigs.k8s.io/cluster-api-provider-aws/cloud/aws/controllers/machine/options"
+	machineactuator "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/actuators/machine"
+	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/controllers/machine/options"
 )
 
 const (
-	controllerName = "aws-machine-controller"
+	controllerName = "ssh-machine-controller"
 )
 
 func Start(server *options.Server, shutdown <-chan struct{}) {
@@ -61,7 +61,7 @@ func Start(server *options.Server, shutdown <-chan struct{}) {
 	}
 	actuator, err := machineactuator.NewActuator(params)
 	if err != nil {
-		glog.Fatalf("Could not create aws machine actuator: %v", err)
+		glog.Fatalf("Could not create ssh machine actuator: %v", err)
 	}
 
 	si := sharedinformers.NewSharedInformers(config, shutdown)

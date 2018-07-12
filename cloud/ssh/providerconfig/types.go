@@ -11,28 +11,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1
+package providerconfig
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-type AWSMachineProviderConfig struct {
+type SSHMachineProviderConfig struct {
 	metav1.TypeMeta `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-type AWSClusterProviderConfig struct {
+type SSHClusterProviderConfig struct {
 	metav1.TypeMeta `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-type AWSMachineProviderStatus struct {
+type SSHMachineProviderStatus struct {
 	metav1.TypeMeta `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-type AWSClusterProviderStatus struct {
+type SSHClusterProviderStatus struct {
 	metav1.TypeMeta `json:",inline"`
 }

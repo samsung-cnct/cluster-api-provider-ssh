@@ -1,6 +1,6 @@
-# Kubernetes cluster-api-provider-aws Project
+# Kubernetes cluster-api-provider-ssh Project
 
-This repository hosts an implementation of a provider for AWS for the [cluster-api project](https://sigs.k8s.io/cluster-api).
+This repository hosts an implementation of a provider using SSH for the [cluster-api project](https://sigs.k8s.io/cluster-api).
 
 ## Community, discussion, contribution, and support
 

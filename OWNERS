@@ -2,11 +2,10 @@
 
 approvers:
   - sig-cluster-lifecycle-leads
-  - sig-aws-leads
   - cluster-api-admins
   - cluster-api-maintainers
-  - cluster-api-aws-maintainers
+  - cluster-api-ssh-maintainers
 
 reviewers:
   - cluster-api-maintainers
-  - cluster-api-aws-maintainers
+  - cluster-api-ssh-maintainers

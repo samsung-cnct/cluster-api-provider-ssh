@@ -23,11 +23,11 @@ aliases:
     - roberthbailey
     - rsdcastro
     - spew
-  sig-aws-leads:
-    - justinsb
-    - kris-nova
-    - countspongebob
-  cluster-api-aws-maintainers:
-    - detiber
-    - chuckha
+  cluster-api-ssh-maintainers:
+    - dlipovetsky
+    - alejandroEsc
     - davidewatson
+    - guineveresaenger
+    - joejulian 
+    - oneilcin
+    
