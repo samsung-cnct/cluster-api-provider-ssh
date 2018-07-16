@@ -1,0 +1,9 @@
+---
+type: chart
+builds:
+- image: samsung_cnct/ssh-cluster-controller
+  context: ../cmd/cluster-controller/
+  dockerContext: ../cmd/cluster-controller/
+- image: samsung_cnct/ssh-machine-controller
+  context: ../cmd/machine-controller/
+  dockerContext: ../cmd/machine-controller/
