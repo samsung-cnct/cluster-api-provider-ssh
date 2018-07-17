@@ -1,0 +1,13 @@
+---
+type: chart
+builds:
+- image: golang:1.10.0
+  commands:
+  - make depend
+  - make
+#- image: samsung_cnct/ssh-cluster-controller
+#  context: cluster-controller
+#  locationOverride: cmd
+#- image: samsung_cnct/ssh-machine-controller
+#  context: machine-controller
+#  locationOverride: cmd

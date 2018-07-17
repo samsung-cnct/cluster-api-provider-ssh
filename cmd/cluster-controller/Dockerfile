@@ -15,6 +15,7 @@
 # Reproducible builder image
 FROM golang:1.10.0 as builder
 WORKDIR /go/src/sigs.k8s.io/cluster-api-provider-ssh
+
 # This expects that the context passed to the docker build command is
 # the cluster-api-provider-ssh directory.
 # e.g. docker build -t <tag> -f <this_Dockerfile> <path_to_cluster-api-ssh>
