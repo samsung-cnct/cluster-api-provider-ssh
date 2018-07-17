@@ -2,7 +2,8 @@
 type: chart
 builds:
 - image: samsung_cnct/ssh-cluster-controller
+  context: cluster-controller
+  locationOverride: cmd
 - image: samsung_cnct/ssh-machine-controller
-packages:
-  cmd/cluster-controller/
-  cmd/machine-controller/
+  context: machine-controller
+  locationOverride: cmd
