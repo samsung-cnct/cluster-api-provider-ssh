@@ -2,9 +2,11 @@
 type: chart
 builds:
 - image: golang:1.10.0
-  commands:
-  - make depend
-  - make
+  commands: |
+    pwd
+    echo $GOPATH
+    make depend
+    make
 #- image: samsung_cnct/ssh-cluster-controller
 #  context: cluster-controller
 #  locationOverride: cmd
