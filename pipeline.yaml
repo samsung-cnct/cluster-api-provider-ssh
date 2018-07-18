@@ -3,19 +3,10 @@ type: chart
 builds:
 - image: golang:1.10.0
   commands: |
-    pwd
-    echo $GOPATH
     mkdir -p $GOPATH/src/sigs.k8s.io/
-    ln -s . $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
-    ls /go/src/sigs.k8s.io/cluster-api-provider-ssh
+    ln -s $(pwd) $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
     cd /go/src/sigs.k8s.io/cluster-api-provider-ssh
     set +e
     make depend
-    make
     set -e
-#- image: samsung_cnct/ssh-cluster-controller
-#  context: cluster-controller
-#  locationOverride: cmd
-#- image: samsung_cnct/ssh-machine-controller
-#  context: machine-controller
-#  locationOverride: cmd
+    make
