@@ -5,8 +5,10 @@ builds:
   commands: |
     pwd
     echo $GOPATH
+    set +e
     make depend
     make
+    set -e
 #- image: samsung_cnct/ssh-cluster-controller
 #  context: cluster-controller
 #  locationOverride: cmd
