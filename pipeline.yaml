@@ -7,6 +7,8 @@ builds:
     echo $GOPATH
     mkdir -p $GOPATH/src/sigs.k8s.io/
     ln -s . $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
+    ls /go/src/sigs.k8s.io/cluster-api-provider-ssh
+    cd /go/src/sigs.k8s.io/cluster-api-provider-ssh
     set +e
     make depend
     make
