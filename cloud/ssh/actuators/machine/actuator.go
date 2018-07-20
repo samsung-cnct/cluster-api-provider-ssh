@@ -17,9 +17,22 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
+	clustercommon "sigs.k8s.io/cluster-api/pkg/apis/cluster/common"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 	client "sigs.k8s.io/cluster-api/pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1"
 )
+
+const (
+	ProviderName = "metal"
+)
+
+func init() {
+	actuator, err := NewActuator(ActuatorParams{})
+	if err != nil {
+		glog.Fatalf("Error creating cluster provisioner for %v : %v", ProviderName, err)
+	}
+	clustercommon.RegisterClusterProvisioner(ProviderName, actuator)
+}
 
 // Actuator is responsible for performing machine reconciliation
 type Actuator struct {
