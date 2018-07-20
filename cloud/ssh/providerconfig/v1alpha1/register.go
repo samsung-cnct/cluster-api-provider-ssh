@@ -136,3 +136,12 @@ func newEncoder(codecFactory *serializer.CodecFactory) (runtime.Encoder, error) 
 	encoder := codecFactory.EncoderForVersion(serializerInfos[0].Serializer, SchemeGroupVersion)
 	return encoder, nil
 }
+
+func (codec *SSHProviderConfigCodec) ClusterProviderFromProviderConfig(providerConfig clusterv1.ProviderConfig) (*SSHClusterProviderConfig, error) {
+	var config SSHClusterProviderConfig
+	err := codec.DecodeFromProviderConfig(providerConfig, &config)
+	if err != nil {
+		return nil, err
+	}
+	return &config, nil
+}
