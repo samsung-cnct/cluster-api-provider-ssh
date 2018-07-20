@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	ProviderName = "metal"
+	ProviderName = "ssh"
 )
 
 func init() {
