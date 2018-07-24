@@ -2,14 +2,25 @@ items:
 - apiVersion: "cluster.k8s.io/v1alpha1"
   kind: Machine
   metadata:
-    generateName: ssh-controlplane-
+    generateName: ssh-controlplane-0
     labels:
       set: controlplane
   spec:
+    versions:
+      kubelet: 1.10.1
+      controlPlane: 1.10.1
+    roles:
+    - Master
+
 - apiVersion: "cluster.k8s.io/v1alpha1"
   kind: Machine
   metadata:
-    generateName: ssh-node-
+    generateName: ssh-node-0
     labels:
       set: node
   spec:
+    versions:
+      kubelet: 1.10.1
+      controlPlane: 1.10.1
+    roles:
+    - Node

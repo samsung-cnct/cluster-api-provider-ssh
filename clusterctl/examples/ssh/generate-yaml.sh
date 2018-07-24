@@ -1,8 +1,16 @@
 #!/bin/sh
 set -e
 
+OUTPUT_DIR=out
+mkdir -p ${OUTPUT_DIR}
+
+
+MACHINE_TEMPLATE_FILE=machines.yaml.template
+MACHINE_GENERATED_FILE=${OUTPUT_DIR}/machines.yaml
+CLUSTER_TEMPLATE_FILE=cluster.yaml.template
+CLUSTER_GENERATED_FILE=${OUTPUT_DIR}/cluster.yaml
 PROVIDERCOMPONENT_TEMPLATE_FILE=provider-components.yaml.template
-PROVIDERCOMPONENT_GENERATED_FILE=provider-components.yaml
+PROVIDERCOMPONENT_GENERATED_FILE=${OUTPUT_DIR}/provider-components.yaml
 
 OVERWRITE=0
 
@@ -38,16 +46,18 @@ if [ $OVERWRITE -ne 1 ] && [ -f $PROVIDERCOMPONENT_GENERATED_FILE ]; then
   exit 1
 fi
 
-OS=$(uname)
-if [[ "$OS" =~ "Linux" ]]; then
-elif [[ "$OS" =~ "Darwin" ]]; then
-else
-  echo "Unrecognized OS : $OS"
-  exit 1
-fi
+# TODO Fill out the generation pieces as we need them.
+
 
 cat $PROVIDERCOMPONENT_TEMPLATE_FILE \
   > $PROVIDERCOMPONENT_GENERATED_FILE
+
+cat $MACHINE_TEMPLATE_FILE \
+  > $MACHINE_GENERATED_FILE
+
+cat $CLUSTER_TEMPLATE_FILE \
+  > $CLUSTER_GENERATED_FILE
+
 
 echo "Done generating $PROVIDERCOMPONENT_GENERATED_FILE"
 echo "You will still need to generate the cluster.yaml and machines.yaml"

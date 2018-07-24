@@ -13,3 +13,9 @@
 
 # Vendor directory
 vendor
+# binary directory
+bin
+
+# lock file for dep file
+Gopkg.lock
+
