@@ -14,22 +14,18 @@
 
 .PHONY: image
 
-GCR_BUCKET = k8s-cluster-api
-PREFIX = gcr.io/$(GCR_BUCKET)
-DEV_PREFIX ?= gcr.io/$(shell gcloud config get-value project)
+REGISTRY = quay.io
+ORG = samsung_cnct
+PREFIX = $(REGISTRY)/$(ORG)
+DEV_PREFIX = $(REGISTRY)/$(shell whoami)
 NAME = ssh-machine-controller
-TAG = 0.0.1
+TAG = 0.1.0
 
 image:
 	docker build -t "$(PREFIX)/$(NAME):$(TAG)" -f ./Dockerfile ../..
 
 push: image
 	docker push "$(PREFIX)/$(NAME):$(TAG)"
-	$(MAKE) fix_gcs_permissions
-
-fix_gcs_permissions:
-	gsutil acl ch -u AllUsers:READ gs://artifacts.$(GCR_BUCKET).appspot.com
-	gsutil -m acl ch -r -u AllUsers:READ gs://artifacts.$(GCR_BUCKET).appspot.com
 
 dev_image:
 	docker build -t "$(DEV_PREFIX)/$(NAME):$(TAG)-dev" -f ./Dockerfile ../..
