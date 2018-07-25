@@ -35,7 +35,6 @@ make
 ```bash
 cd clusterctl/examples/ssh
 ./generate-yaml.sh
-
 ```
 
 For now some manual changes will have to be made to the template files as needed.
