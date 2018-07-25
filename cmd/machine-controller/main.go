@@ -24,8 +24,8 @@ import (
 	"k8s.io/apiserver/pkg/util/logs"
 	"sigs.k8s.io/cluster-api/pkg/controller/config"
 
-	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/controllers/machine"
-	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/controllers/machine/options"
+	machineController "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/controllers/machine"
+	machineOptions "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/controllers/machine/options"
 )
 
 func init() {
@@ -33,6 +33,12 @@ func init() {
 }
 
 func main() {
+	fs := pflag.CommandLine
+	var machineSetupConfigsPath string
+
+	fs.StringVar(&machineSetupConfigsPath, "machinesetup", machineSetupConfigsPath, "path to machine setup configs file")
+
+	config.ControllerConfig.AddFlags(pflag.CommandLine)
 	// the following line exists to make glog happy, for more information, see: https://github.com/kubernetes/kubernetes/issues/17162
 	flag.CommandLine.Parse([]string{})
 	pflag.Parse()
@@ -40,8 +46,8 @@ func main() {
 	logs.InitLogs()
 	defer logs.FlushLogs()
 
-	machineServer := options.NewServer()
-	if err := machine.Run(machineServer); err != nil {
-		glog.Errorf("Failed to start the machine controller. Err: %v", err)
+	machineServer := machineOptions.NewServer(machineSetupConfigsPath)
+	if err := machineController.Run(machineServer); err != nil {
+		glog.Errorf("Failed to start machine controller. Err: %v", err)
 	}
 }

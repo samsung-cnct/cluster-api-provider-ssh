@@ -12,5 +12,5 @@ spec:
     providerConfig:
       value:
         apiVersion: "sshproviderconfig/v1alpha1"
-        kind: "AWSClusterProviderConfig"
+        kind: "SSHClusterProviderConfig"
 

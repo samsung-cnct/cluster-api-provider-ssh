@@ -51,6 +51,8 @@ spec:
             mountPath: /etc/kubernetes
           - name: certs
             mountPath: /etc/ssl/certs
+          - name: machine-setup
+            mountPath: /etc/machinesetup
         env:
         - name: NODE_NAME
           valueFrom:
@@ -75,6 +77,8 @@ spec:
             mountPath: /etc/kubernetes
           - name: certs
             mountPath: /etc/ssl/certs
+          - name: machine-setup
+            mountPath: /etc/machinesetup
         env:
         - name: NODE_NAME
           valueFrom:
@@ -84,6 +88,7 @@ spec:
         - "./machine-controller"
         args:
         - --kubeconfig=/etc/kubernetes/admin.conf
+        - --machinesetup=/etc/machinesetup/machine_setup_configs.yaml
         - --leader-elect
         resources:
           requests:
@@ -99,6 +104,9 @@ spec:
       - name: certs
         hostPath:
           path: /etc/ssl/certs
+      - name: machine-setup
+        configMap:
+          name: machine-setup
 ---
 apiVersion: v1
 kind: ConfigMap
