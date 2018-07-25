@@ -6,12 +6,24 @@ items:
     labels:
       set: controlplane
   spec:
+    providerConfig:
+      value:
+        apiVersion: "sshproviderconfig/v1alpha1"
+        kind: "SSHMachineProviderConfig"
+        roles:
+        - Master
+        - Etcd
+        provisionedMachineName: "ssh-controlplane-0"
+        sshconfig:
+          username: ubuntu
+          host: 192.168.2.121
+          port: 22
+          publicKeys:
+          - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCWmTnZsAcdoX81F1nnK36dnzv30Ue9S9CadH+RtuhavyAZAgq1t6q4iK9QSQ7nLf/l0ZoHIWmBPdmQEVCq31PcWWbqCgU5LlBVU2FSSm5zj8YjRT5tYTlRB2NdVCvox4Dj1g2XkKYHuqLUpcxF13m9n6ChgeEA3xR2Qv+3Zz3U819wvU3kV2BGDCaOF2bJgWpH5BmBfigiNzRYG3pWaUbKbisLGcrkjmGdcRRtNx9OlDzQW7sS4lP3xU59afDOs22su+4JvDNBXoFgyUWJn7qzA3ama2EzFTivspw84JogRM7C9qHRuuZBtElUMTd/Y/nI+uuoJdEqPS7VDjl/DLKpqsd6KowNhlE7ir6eZv2pdEY5quFKaiklbwuyBdH9+jGCvrzRLX29yyTyQ9FyKe7RuPCVtEOlL/uy76R5Zing9ACJqezjyGM4GrJDsQFf/g6sfx5n/j93vNu+B0WL6vagQx0CBF6U+yPkkqK+eBlguYwkiO8P/oqeLpPsINs5oK5mleAS61TiKTh6S4QTI4tgCmIWwfMABkrWNTds/kmGIvKVCtMx8HRcGacD05HCUruhNqCjAut345DSOQD69ar+lcX9o6tGW36oP+lIV13p7b6Ab7DaiDU5knRvEVWwbXm/Age+rJsxGdda8hlRhBHe9WqHdxkxD23WkiEA9V0UuQ== pacific.cluster.cnct.io"
+          secretName: master-private-key
     versions:
       kubelet: 1.10.1
       controlPlane: 1.10.1
-    roles:
-    - Master
-
 - apiVersion: "cluster.k8s.io/v1alpha1"
   kind: Machine
   metadata:
@@ -19,8 +31,20 @@ items:
     labels:
       set: node
   spec:
+    providerConfig:
+      value:
+        apiVersion: "sshproviderconfig/v1alpha1"
+        kind: "SSHMachineProviderConfig"
+        roles:
+        - Node
+        provisionedMachineName: "ssh-node-0"
+        sshconfig:
+          username: ubuntu
+          host: 192.168.2.187
+          port: 22
+          publicKeys:
+          - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCWmTnZsAcdoX81F1nnK36dnzv30Ue9S9CadH+RtuhavyAZAgq1t6q4iK9QSQ7nLf/l0ZoHIWmBPdmQEVCq31PcWWbqCgU5LlBVU2FSSm5zj8YjRT5tYTlRB2NdVCvox4Dj1g2XkKYHuqLUpcxF13m9n6ChgeEA3xR2Qv+3Zz3U819wvU3kV2BGDCaOF2bJgWpH5BmBfigiNzRYG3pWaUbKbisLGcrkjmGdcRRtNx9OlDzQW7sS4lP3xU59afDOs22su+4JvDNBXoFgyUWJn7qzA3ama2EzFTivspw84JogRM7C9qHRuuZBtElUMTd/Y/nI+uuoJdEqPS7VDjl/DLKpqsd6KowNhlE7ir6eZv2pdEY5quFKaiklbwuyBdH9+jGCvrzRLX29yyTyQ9FyKe7RuPCVtEOlL/uy76R5Zing9ACJqezjyGM4GrJDsQFf/g6sfx5n/j93vNu+B0WL6vagQx0CBF6U+yPkkqK+eBlguYwkiO8P/oqeLpPsINs5oK5mleAS61TiKTh6S4QTI4tgCmIWwfMABkrWNTds/kmGIvKVCtMx8HRcGacD05HCUruhNqCjAut345DSOQD69ar+lcX9o6tGW36oP+lIV13p7b6Ab7DaiDU5knRvEVWwbXm/Age+rJsxGdda8hlRhBHe9WqHdxkxD23WkiEA9V0UuQ== pacific.cluster.cnct.io"
+          secretName: node-private-key
     versions:
       kubelet: 1.10.1
       controlPlane: 1.10.1
-    roles:
-    - Node
