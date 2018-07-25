@@ -17,9 +17,34 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// SSHConfig specifies everything needed to ssh to a host
+type SSHConfig struct {
+	Username   string   `json:"username"`             // The Username to use for the PrivateKey in secretName
+	Host       string   `json:"host"`                 // The IP or hostname used to SSH to the machine
+	Port       int      `json:"port"`                 // The Port used to SSH to the machine
+	PublicKeys []string `json:"publicKeys,omitempty"` // The SSH public keys of the machine
+	SecretName string   `json:"secretName"`           // The Secret with the username and private key used to SSH to the machine
+}
+
+// MachineRole indicates the purpose of the Machine, and will determine
+// what software and configuration will be used when provisioning and managing
+// the Machine. A single Machine may have more than one role, and the list and
+// definitions of supported roles is expected to evolve over time.
+type MachineRole string
+
+const (
+	MasterRole MachineRole = "Master"
+	NodeRole   MachineRole = "Node"
+	EtcdRole   MachineRole = "Etcd"
+)
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type SSHMachineProviderConfig struct {
 	metav1.TypeMeta `json:",inline"`
+	Roles           []MachineRole `json:"roles,omitempty"` // A list of roles for this Machine to use.
+	MachineType     string        `json:"machineType"`
+	SSHConfig       SSHConfig     `json:"sshConfig"`
+	OS              string        `json:"os"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

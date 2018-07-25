@@ -24,9 +24,7 @@
 #   go-tests = true
 #   unused-packages = true
 
-required = [
-  "k8s.io/code-generator/cmd/deepcopy-gen",
-]
+required = ["k8s.io/code-generator/cmd/deepcopy-gen"]
 
 [[constraint]]
   name = "sigs.k8s.io/cluster-api"
@@ -35,3 +33,12 @@ required = [
 [[constraint]]
   name = "k8s.io/code-generator"
   branch = "release-1.9"
+
+# current version is release-8.0... should look into this.
+[[constraint]]
+  name = "k8s.io/client-go"
+  branch = "release-6.0"
+
+[prune]
+  go-tests = true
+  unused-packages = true

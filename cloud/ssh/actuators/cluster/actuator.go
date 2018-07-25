@@ -17,13 +17,15 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
+	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/providerconfig/v1alpha1"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 	client "sigs.k8s.io/cluster-api/pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1"
 )
 
 // Actuator is responsible for performing cluster reconciliation
 type Actuator struct {
-	clusterClient client.ClusterInterface
+	clusterClient          client.ClusterInterface
+	sshProviderConfigCodec *v1alpha1.SSHProviderConfigCodec
 }
 
 // ActuatorParams holds parameter information for Actuator
@@ -33,8 +35,15 @@ type ActuatorParams struct {
 
 // NewActuator creates a new Actuator
 func NewActuator(params ActuatorParams) (*Actuator, error) {
+
+	codec, err := v1alpha1.NewCodec()
+	if err != nil {
+		return nil, err
+	}
+
 	return &Actuator{
-		clusterClient: params.ClusterClient,
+		clusterClient:          params.ClusterClient,
+		sshProviderConfigCodec: codec,
 	}, nil
 }
 
@@ -48,4 +57,13 @@ func (a *Actuator) Reconcile(cluster *clusterv1.Cluster) error {
 func (a *Actuator) Delete(cluster *clusterv1.Cluster) error {
 	glog.Infof("Deleting cluster %v.", cluster.Name)
 	return fmt.Errorf("TODO: Not yet implemented")
+}
+
+func (a *Actuator) clusterProviderConfig(providerConfig clusterv1.ProviderConfig) (*v1alpha1.SSHClusterProviderConfig, error) {
+	var config v1alpha1.SSHClusterProviderConfig
+	err := a.sshProviderConfigCodec.DecodeFromProviderConfig(providerConfig, &config)
+	if err != nil {
+		return nil, err
+	}
+	return &config, nil
 }

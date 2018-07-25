@@ -36,6 +36,15 @@ build: depend
 	CGO_ENABLED=0 go install -a -ldflags '-extldflags "-static"' sigs.k8s.io/cluster-api-provider-ssh/cmd/cluster-controller
 	CGO_ENABLED=0 go install -a -ldflags '-extldflags "-static"' sigs.k8s.io/cluster-api-provider-ssh/cmd/machine-controller
 
+compile:
+	mkdir -p ./bin
+	go build -o ./bin/cluster-controller ./cmd/cluster-controller
+	go build -o ./bin/machine-controller ./cmd/machine-controller
+	go build -o ./bin/clusterctl ./clusterctl
+
+clean:
+	rm -rf ./bin
+
 images: depend
 	$(MAKE) -C cmd/cluster-controller image
 	$(MAKE) -C cmd/machine-controller image
@@ -51,6 +60,9 @@ test:
 
 fmt:
 	hack/verify-gofmt.sh
+
+goimport:
+	goimports -w $(shell git ls-files "**/*.go" "*.go" | grep -v -e "vendor" | xargs echo)
 
 vet:
 	go vet ./...
