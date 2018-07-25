@@ -45,7 +45,7 @@ spec:
             cpu: 100m
             memory: 30Mi
       - name: ssh-cluster-controller
-        image: gcr.io/k8s-cluster-api/ssh-cluster-controller:0.0.1
+        image: quay.io/samsung_cnct/ssh-cluster-controller:prod
         volumeMounts:
           - name: config
             mountPath: /etc/kubernetes
@@ -69,7 +69,7 @@ spec:
             cpu: 400m
             memory: 500Mi
       - name: ssh-machine-controller
-        image: gcr.io/k8s-cluster-api/ssh-machine-controller:0.0.1
+        image: quay.io/samsung_cnct/ssh-machine-controller:prod
         volumeMounts:
           - name: config
             mountPath: /etc/kubernetes
