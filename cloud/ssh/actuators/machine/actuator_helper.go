@@ -5,7 +5,6 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 )
 
-
 func (a *Actuator) machineProviderConfig(providerConfig clusterv1.ProviderConfig) (*v1alpha1.SSHMachineProviderConfig, error) {
 	var config v1alpha1.SSHMachineProviderConfig
 	err := a.sshProviderConfigCodec.DecodeFromProviderConfig(providerConfig, &config)

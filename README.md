@@ -29,3 +29,30 @@ ln -s $(pwd) $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
 make depend
 make
 ```
+
+## Generating cluster, machine, and provider-components files.
+
+```bash
+cd clusterctl/examples/ssh
+./generate-yaml.sh
+
+```
+
+For now some manual changes will have to be made to the template files as needed.
+
+## Running cluster deployer
+Build the clusterctl binary
+```bash
+ make compile
+```
+
+- Run using minikube:
+```bash
+./bin/clusterctl create cluster --provider ssh -c ./clusterctl/examples/ssh/out/cluster.yaml -m ./clusterctl/examples/ssh/out/machines.yaml -p ./clusterctl/examples/ssh/out/provider-components.yaml
+```
+
+- Run using external cluster:
+```bash
+./bin/clusterctl create cluster --existing-bootstrap-cluster-kubeconfig /path/to/kubeconfig --provider ssh -c ./clusterctl/examples/ssh/out/cluster.yaml -m ./clusterctl/examples/ssh/out/machines.yaml -p ./clusterctl/examples/ssh/out/provider-components.yaml
+
+```

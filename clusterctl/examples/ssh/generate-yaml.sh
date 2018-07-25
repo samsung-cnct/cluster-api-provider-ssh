@@ -51,14 +51,15 @@ fi
 
 cat $PROVIDERCOMPONENT_TEMPLATE_FILE \
   > $PROVIDERCOMPONENT_GENERATED_FILE
+echo "Done generating $PROVIDERCOMPONENT_GENERATED_FILE"
 
 cat $MACHINE_TEMPLATE_FILE \
   > $MACHINE_GENERATED_FILE
+echo "Done generating $MACHINE_GENERATED_FILE"
 
 cat $CLUSTER_TEMPLATE_FILE \
   > $CLUSTER_GENERATED_FILE
+echo "Done generating $CLUSTER_GENERATED_FILE"
 
-
-echo "Done generating $PROVIDERCOMPONENT_GENERATED_FILE"
-echo "You will still need to generate the cluster.yaml and machines.yaml"
+echo "You will still need to _edit_ the cluster.yaml and machines.yaml! See the README.md for details."
 

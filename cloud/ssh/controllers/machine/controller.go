@@ -37,9 +37,9 @@ import (
 	machinecontroller "sigs.k8s.io/cluster-api/pkg/controller/machine"
 	"sigs.k8s.io/cluster-api/pkg/controller/sharedinformers"
 
+	s "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh"
 	machineactuator "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/actuators/machine"
 	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/controllers/machine/options"
-	s "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh"
 )
 
 const (
@@ -70,8 +70,8 @@ func Start(server *options.Server, eventRecorder record.EventRecorder, shutdown 
 	params := machineactuator.ActuatorParams{
 		ClusterClient: client.ClusterV1alpha1().Clusters(corev1.NamespaceDefault),
 		EventRecorder: eventRecorder,
-		SSHClient: sshClient,
-		KubeClient:     kubeClient,
+		SSHClient:     sshClient,
+		KubeClient:    kubeClient,
 	}
 
 	actuator, err := machineactuator.NewActuator(params)
