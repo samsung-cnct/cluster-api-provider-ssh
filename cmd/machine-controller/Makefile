@@ -17,9 +17,9 @@
 REGISTRY = quay.io
 ORG = samsung_cnct
 PREFIX = $(REGISTRY)/$(ORG)
-DEV_PREFIX = $(REGISTRY)/$(shell whoami)
 NAME = ssh-machine-controller
 TAG = 0.1.0
+DEV_TAG = $(shell whoami)
 
 image:
 	docker build -t "$(PREFIX)/$(NAME):$(TAG)" -f ./Dockerfile ../..
@@ -28,7 +28,7 @@ push: image
 	docker push "$(PREFIX)/$(NAME):$(TAG)"
 
 dev_image:
-	docker build -t "$(DEV_PREFIX)/$(NAME):$(TAG)-dev" -f ./Dockerfile ../..
+	docker build -t "$(PREFIX)/$(NAME):$(DEV_TAG)" -f ./Dockerfile ../..
 
 dev_push: dev_image
-	docker push "$(DEV_PREFIX)/$(NAME):$(TAG)-dev"
+	docker push "$(PREFIX)/$(NAME):$(DEV_TAG)"
