@@ -20,6 +20,8 @@ import (
 	clustercommon "sigs.k8s.io/cluster-api/pkg/apis/cluster/common"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 	client "sigs.k8s.io/cluster-api/pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1"
+	s "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh"
+	"k8s.io/client-go/tools/record"
 )
 
 const (
@@ -37,11 +39,15 @@ func init() {
 // Actuator is responsible for performing machine reconciliation
 type Actuator struct {
 	clusterClient client.ClusterInterface
+	eventRecorder            record.EventRecorder
+	sshClient                s.SSHProviderClientInterface
 }
 
 // ActuatorParams holds parameter information for Actuator
 type ActuatorParams struct {
 	ClusterClient client.ClusterInterface
+	EventRecorder            record.EventRecorder
+	SSHClient                s.SSHProviderClientInterface
 }
 
 // NewActuator creates a new Actuator

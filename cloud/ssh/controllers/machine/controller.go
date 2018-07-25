@@ -39,13 +39,14 @@ import (
 
 	machineactuator "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/actuators/machine"
 	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/controllers/machine/options"
+	s "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh"
 )
 
 const (
 	controllerName = "ssh-machine-controller"
 )
 
-func Start(server *options.Server, shutdown <-chan struct{}) {
+func Start(server *options.Server, eventRecorder record.EventRecorder, shutdown <-chan struct{}) {
 	config, err := controller.GetConfig(server.CommonConfig.Kubeconfig)
 	if err != nil {
 		glog.Fatalf("Could not create Config for talking to the apiserver: %v", err)
@@ -56,8 +57,18 @@ func Start(server *options.Server, shutdown <-chan struct{}) {
 		glog.Fatalf("Could not create client for talking to the apiserver: %v", err)
 	}
 
+	sshClient, err := s.NewSSHProviderClient()
+	if err != nil {
+		glog.Fatalf("Could not create ssh client for communicating to machines: %v", err)
+	}
+
+
 	params := machineactuator.ActuatorParams{
 		ClusterClient: client.ClusterV1alpha1().Clusters(corev1.NamespaceDefault),
+		EventRecorder: eventRecorder,
+		SSHClient: sshClient,
+
+
 	}
 	actuator, err := machineactuator.NewActuator(params)
 	if err != nil {
@@ -94,7 +105,7 @@ func Run(server *options.Server) error {
 
 	// run function will block and never return.
 	run := func(stop <-chan struct{}) {
-		Start(server, stop)
+		Start(server, recorder, stop)
 	}
 
 	leaderElectConfig := config.GetLeaderElectionConfig()
@@ -142,7 +153,6 @@ func Run(server *options.Server) error {
 }
 
 func createRecorder(kubeClient *kubernetes.Clientset) (record.EventRecorder, error) {
-
 	eventsScheme := runtime.NewScheme()
 	if err := corev1.AddToScheme(eventsScheme); err != nil {
 		return nil, err
