@@ -26,8 +26,6 @@ import (
 
 	machineController "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/controllers/machine"
 	machineOptions "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/controllers/machine/options"
-
-
 )
 
 func init() {
