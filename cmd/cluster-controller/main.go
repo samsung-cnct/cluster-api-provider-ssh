@@ -26,8 +26,6 @@ import (
 
 	clusterController "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/controllers/cluster"
 	clusterOptions "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/controllers/cluster/options"
-	machineController "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/controllers/machine"
-	machineOptions "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/controllers/machine/options"
 )
 
 func init() {
@@ -36,10 +34,8 @@ func init() {
 
 func main() {
 	fs := pflag.CommandLine
-	var controllerType string
 	var machineSetupConfigsPath string
 
-	fs.StringVar(&controllerType, "controller", controllerType, "specify whether this should run the machine or cluster controller")
 	fs.StringVar(&machineSetupConfigsPath, "machinesetup", machineSetupConfigsPath, "path to machine setup configs file")
 
 	config.ControllerConfig.AddFlags(pflag.CommandLine)
@@ -50,19 +46,8 @@ func main() {
 	logs.InitLogs()
 	defer logs.FlushLogs()
 
-	switch controllerType {
-	case "machine":
-		machineServer := machineOptions.NewServer(machineSetupConfigsPath)
-		if err := machineController.Run(machineServer); err != nil {
-			glog.Errorf("Failed to start machine controller. Err: %v", err)
-		}
-
-	case "cluster":
-		clusterServer := clusterOptions.NewServer(machineSetupConfigsPath)
-		if err := clusterController.Run(clusterServer); err != nil {
-			glog.Errorf("Failed to start cluster controller. Err: %v", err)
-		}
-	default:
-		glog.Errorf("Failed to start controller, `controller` flag must be either `machine` or `cluster` but was %s.", controllerType)
+	clusterServer := clusterOptions.NewServer(machineSetupConfigsPath)
+	if err := clusterController.Run(clusterServer); err != nil {
+		glog.Errorf("Failed to start cluster controller. Err: %v", err)
 	}
 }
