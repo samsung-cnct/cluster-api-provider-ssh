@@ -10,7 +10,7 @@ import (
 
 // GetIP returns IP of a machine, note that this also REQUIRED by clusterCreator (clusterdeployer.ProviderDeployer)
 func (a *Actuator) GetIP(cluster *clusterv1.Cluster, machine *clusterv1.Machine) (string, error) {
-	machineConfig, err := a.machineproviderconfig(machine.Spec.ProviderConfig)
+	machineConfig, err := a.machineProviderConfig(machine.Spec.ProviderConfig)
 	if err != nil {
 		return "", err
 	}
@@ -21,7 +21,7 @@ func (a *Actuator) GetIP(cluster *clusterv1.Cluster, machine *clusterv1.Machine)
 
 // GetKubeConfig returns the kubeconfig file, note that this also REQUIRED by clusterCreator (clusterdeployer.ProviderDeployer)
 func (a *Actuator) GetKubeConfig(c *clusterv1.Cluster, m *clusterv1.Machine) (string, error) {
-	machineConfig, err := a.machineproviderconfig(m.Spec.ProviderConfig)
+	machineConfig, err := a.machineProviderConfig(m.Spec.ProviderConfig)
 	if err != nil {
 		return "", err
 	}
@@ -35,7 +35,7 @@ func (a *Actuator) GetKubeConfig(c *clusterv1.Cluster, m *clusterv1.Machine) (st
 }
 
 func (a *Actuator) getPrivateKey(cluster *clusterv1.Cluster, master *clusterv1.Machine) (string, error) {
-	machineConfig, err := a.machineproviderconfig(master.Spec.ProviderConfig)
+	machineConfig, err := a.machineProviderConfig(master.Spec.ProviderConfig)
 	if err != nil {
 		return "", err
 	}

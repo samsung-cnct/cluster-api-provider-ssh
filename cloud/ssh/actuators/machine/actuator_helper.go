@@ -6,7 +6,7 @@ import (
 )
 
 
-func (a *Actuator) machineproviderconfig(providerConfig clusterv1.ProviderConfig) (*v1alpha1.SSHMachineProviderConfig, error) {
+func (a *Actuator) machineProviderConfig(providerConfig clusterv1.ProviderConfig) (*v1alpha1.SSHMachineProviderConfig, error) {
 	var config v1alpha1.SSHMachineProviderConfig
 	err := a.sshProviderConfigCodec.DecodeFromProviderConfig(providerConfig, &config)
 	if err != nil {
