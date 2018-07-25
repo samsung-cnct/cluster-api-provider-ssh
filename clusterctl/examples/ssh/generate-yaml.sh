@@ -61,5 +61,5 @@ cat $CLUSTER_TEMPLATE_FILE \
   > $CLUSTER_GENERATED_FILE
 echo "Done generating $CLUSTER_GENERATED_FILE"
 
-
+echo "You will still need to _edit_ the cluster.yaml and machines.yaml! See the README.md for details."
 

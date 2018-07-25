@@ -38,7 +38,7 @@ cd clusterctl/examples/ssh
 
 ```
 
-For now some manual changes will have to be made to the template files.
+For now some manual changes will have to be made to the template files as needed.
 
 ## Running cluster deployer
 Build the clusterctl binary
@@ -56,4 +56,3 @@ Build the clusterctl binary
 ./bin/clusterctl create cluster --existing-bootstrap-cluster-kubeconfig /path/to/kubeconfig --provider ssh -c ./clusterctl/examples/ssh/out/cluster.yaml -m ./clusterctl/examples/ssh/out/machines.yaml -p ./clusterctl/examples/ssh/out/provider-components.yaml
 
 ```
-
