@@ -21,13 +21,13 @@ import (
 )
 
 type Server struct {
-	CommonConfig *config.Configuration
+	CommonConfig            *config.Configuration
 	MachineSetupConfigsPath string
 }
 
 func NewServer(machineSetupConfigsPath string) *Server {
 	s := Server{
-		CommonConfig: &config.ControllerConfig,
+		CommonConfig:            &config.ControllerConfig,
 		MachineSetupConfigsPath: machineSetupConfigsPath,
 	}
 	return &s

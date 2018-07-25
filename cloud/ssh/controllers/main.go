@@ -2,16 +2,16 @@ package main
 
 import (
 	"flag"
+
 	"github.com/golang/glog"
 	"github.com/spf13/pflag"
 	"k8s.io/apiserver/pkg/util/logs"
 
-	"sigs.k8s.io/cluster-api/pkg/controller/config"
-	machineOptions "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/controllers/machine/options"
-	machineController "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/controllers/machine"
-	clusterOptions "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/controllers/cluster/options"
 	clusterController "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/controllers/cluster"
-
+	clusterOptions "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/controllers/cluster/options"
+	machineController "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/controllers/machine"
+	machineOptions "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/controllers/machine/options"
+	"sigs.k8s.io/cluster-api/pkg/controller/config"
 )
 
 func main() {
@@ -28,7 +28,7 @@ func main() {
 	logs.InitLogs()
 	defer logs.FlushLogs()
 
-	switch (controllerType) {
+	switch controllerType {
 	case "machine":
 		machineServer := machineOptions.NewServer(machineSetupConfigsPath)
 		if err := machineController.Run(machineServer); err != nil {
@@ -44,5 +44,3 @@ func main() {
 		glog.Errorf("Failed to start controller, `controller` flag must be either `machine` or `cluster` but was %v.", controllerType)
 	}
 }
-
-
