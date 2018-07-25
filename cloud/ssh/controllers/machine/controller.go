@@ -57,19 +57,23 @@ func Start(server *options.Server, eventRecorder record.EventRecorder, shutdown 
 		glog.Fatalf("Could not create client for talking to the apiserver: %v", err)
 	}
 
+	kubeClient, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		glog.Fatalf("Error building kubernetes clientset: %s", err)
+	}
+
 	sshClient, err := s.NewSSHProviderClient()
 	if err != nil {
 		glog.Fatalf("Could not create ssh client for communicating to machines: %v", err)
 	}
 
-
 	params := machineactuator.ActuatorParams{
 		ClusterClient: client.ClusterV1alpha1().Clusters(corev1.NamespaceDefault),
 		EventRecorder: eventRecorder,
 		SSHClient: sshClient,
-
-
+		KubeClient:     kubeClient,
 	}
+
 	actuator, err := machineactuator.NewActuator(params)
 	if err != nil {
 		glog.Fatalf("Could not create ssh machine actuator: %v", err)
