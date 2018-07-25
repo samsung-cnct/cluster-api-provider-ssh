@@ -60,5 +60,4 @@ cat $CLUSTER_TEMPLATE_FILE \
 
 
 echo "Done generating $PROVIDERCOMPONENT_GENERATED_FILE"
-echo "You will still need to generate the cluster.yaml and machines.yaml"
 

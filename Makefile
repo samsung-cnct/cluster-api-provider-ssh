@@ -54,3 +54,15 @@ fmt:
 
 vet:
 	go vet ./...
+
+compile:
+	mkdir -p ./bin
+	go build -o ./bin/cluster-controller ./cmd/cluster-controller
+	go build -o ./bin/machine-controller ./cmd/machine-controller
+	go build -o ./bin/clusterctl ./clusterctl
+
+clean:
+	rm -rf ./bin
+
+goimport:
+	goimports -w $(shell git ls-files "**/*.go" "*.go" | grep -v -e "vendor" | xargs echo)

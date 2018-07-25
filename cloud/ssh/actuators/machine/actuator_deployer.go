@@ -3,9 +3,10 @@ package machine
 // This part of the code implements the machineDeployer Interface used by cluster controller
 
 import (
-	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"encoding/base64"
+
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 )
 
 // GetIP returns IP of a machine, note that this also REQUIRED by clusterCreator (clusterdeployer.ProviderDeployer)

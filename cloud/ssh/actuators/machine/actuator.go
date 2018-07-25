@@ -19,12 +19,12 @@ import (
 	"github.com/golang/glog"
 	clustercommon "sigs.k8s.io/cluster-api/pkg/apis/cluster/common"
 
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/record"
+	s "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh"
+	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/providerconfig/v1alpha1"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 	client "sigs.k8s.io/cluster-api/pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1"
-	s "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh"
-	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/providerconfig/v1alpha1"
-	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -41,19 +41,19 @@ func init() {
 
 // Actuator is responsible for performing machine reconciliation
 type Actuator struct {
-	clusterClient client.ClusterInterface
-	eventRecorder            record.EventRecorder
-	sshClient                s.SSHProviderClientInterface
-	sshProviderConfigCodec   *v1alpha1.SSHProviderConfigCodec
-	kubeClient               *kubernetes.Clientset
+	clusterClient          client.ClusterInterface
+	eventRecorder          record.EventRecorder
+	sshClient              s.SSHProviderClientInterface
+	sshProviderConfigCodec *v1alpha1.SSHProviderConfigCodec
+	kubeClient             *kubernetes.Clientset
 }
 
 // ActuatorParams holds parameter information for Actuator
 type ActuatorParams struct {
 	ClusterClient client.ClusterInterface
-	EventRecorder            record.EventRecorder
-	SSHClient                s.SSHProviderClientInterface
-	KubeClient               *kubernetes.Clientset
+	EventRecorder record.EventRecorder
+	SSHClient     s.SSHProviderClientInterface
+	KubeClient    *kubernetes.Clientset
 }
 
 // NewActuator creates a new Actuator
@@ -64,9 +64,9 @@ func NewActuator(params ActuatorParams) (*Actuator, error) {
 	}
 
 	return &Actuator{
-		clusterClient: params.ClusterClient,
-		eventRecorder: params.EventRecorder,
-		sshClient: params.SSHClient,
+		clusterClient:          params.ClusterClient,
+		eventRecorder:          params.EventRecorder,
+		sshClient:              params.SSHClient,
 		sshProviderConfigCodec: codec,
 	}, nil
 }
