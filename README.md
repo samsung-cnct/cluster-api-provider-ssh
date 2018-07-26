@@ -61,7 +61,7 @@ Build the clusterctl binary
 
 When making changes to the either of the controllers, to test them you
 need to build and push new images to quay.io. There are `Makefile`s to
-do this for development (for production there CI/CD will handle this).
+do this for development (for production CI/CD will handle this).
 For example:
 
 ```
