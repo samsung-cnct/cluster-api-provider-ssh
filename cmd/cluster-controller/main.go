@@ -28,10 +28,6 @@ import (
 	clusterOptions "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/controllers/cluster/options"
 )
 
-func init() {
-	config.ControllerConfig.AddFlags(pflag.CommandLine)
-}
-
 func main() {
 	fs := pflag.CommandLine
 	var machineSetupConfigsPath string
