@@ -17,6 +17,8 @@ Participation in the Kubernetes community is governed by the [Kubernetes Code of
 
 # Development notes
 
+## Obtaining the code
+
 Imports in the code refer to `sigs.k8s.io/cluster-api*` even though this 
 repository lives under the `samsung-cnct` GitHub organization. One way
 to build this outside of CI is:
@@ -53,5 +55,53 @@ Build the clusterctl binary
 - Run using external cluster:
 ```bash
 ./bin/clusterctl create cluster --existing-bootstrap-cluster-kubeconfig /path/to/kubeconfig --provider ssh -c ./clusterctl/examples/ssh/out/cluster.yaml -m ./clusterctl/examples/ssh/out/machines.yaml -p ./clusterctl/examples/ssh/out/provider-components.yaml
+```
 
+## Building and deploying new controller images for developement
+
+When making changes to the either of the controllers, to test them you
+need to build and push new images to quay.io. There are `Makefile`s to
+do this for development (for production CI/CD will handle this).
+For example:
+
+```
+cd cmd/cluster-controller/
+make dev_push
+cd -
+cd cmd/machine-controller/
+make dev_push
+```
+
+The images will be tagged with the username of the account you used to
+build and push the images:
+
+https://quay.io/repository/samsung_cnct/ssh-cluster-controller?tab=tags
+https://quay.io/repository/samsung_cnct/ssh-mchine-controller?tab=tags
+
+Remember to change the `provider-components.yaml` manifest to point to your
+images. For example:
+
+```
+diff --git a/clusterctl/examples/ssh/provider-components.yaml.template b/clusterctl/examples/ssh/provider-components.yaml.template
+index 8fac530..3d6c246 100644
+--- a/clusterctl/examples/ssh/provider-components.yaml.template
++++ b/clusterctl/examples/ssh/provider-components.yaml.template
+@@ -45,7 +45,7 @@ spec:
+             cpu: 100m
+             memory: 30Mi
+       - name: ssh-cluster-controller
+-        image: gcr.io/k8s-cluster-api/ssh-cluster-controller:0.0.1
++        image: gcr.io/k8s-cluster-api/ssh-cluster-controller:paul
+         volumeMounts:
+           - name: config
+             mountPath: /etc/kubernetes
+@@ -69,7 +69,7 @@ spec:
+             cpu: 400m
+             memory: 500Mi
+       - name: ssh-machine-controller
+-        image: gcr.io/k8s-cluster-api/ssh-machine-controller:0.0.1
++        image: gcr.io/k8s-cluster-api/ssh-machine-controller:paul
+         volumeMounts:
+           - name: config
+             mountPath: /etc/kubernetes
 ```
