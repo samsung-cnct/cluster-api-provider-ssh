@@ -5,6 +5,8 @@ OUTPUT_DIR=out
 mkdir -p ${OUTPUT_DIR}
 
 
+
+
 MACHINE_TEMPLATE_FILE=machines.yaml.template
 MACHINE_GENERATED_FILE=${OUTPUT_DIR}/machines.yaml
 CLUSTER_TEMPLATE_FILE=cluster.yaml.template
@@ -48,8 +50,24 @@ fi
 
 # TODO Fill out the generation pieces as we need them.
 
+if [ -z ${CLUSTER_PRIVATE_KEY_PLAIN+x} ]; then
+    echo "Please enter a valid Cluster Private Key"
+    exit 1
+fi
+
+# Variables that need to be base64 encoded (for secrets)
+OS=$(uname)
+if [[ "$OS" =~ "Linux" ]]; then
+    CLUSTER_PRIVATE_KEY=$(echo -n $CLUSTER_PRIVATE_KEY_PLAIN|base64 -w0)
+elif [[ "$OS" =~ "Darwin" ]]; then
+    CLUSTER_PRIVATE_KEY=$(echo -n $CLUSTER_PRIVATE_KEY_PLAIN|base64)
+else
+  echo "Unrecognized OS : $OS"
+  exit 1
+fi
 
 cat $PROVIDERCOMPONENT_TEMPLATE_FILE \
+  | sed -e "s/\$CLUSTER_PRIVATE_KEY/$CLUSTER_PRIVATE_KEY/" \
   > $PROVIDERCOMPONENT_GENERATED_FILE
 echo "Done generating $PROVIDERCOMPONENT_GENERATED_FILE"
 
