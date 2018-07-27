@@ -19,6 +19,7 @@ import (
 	"github.com/golang/glog"
 	clustercommon "sigs.k8s.io/cluster-api/pkg/apis/cluster/common"
 
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
 	s "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh"
@@ -46,18 +47,27 @@ type Actuator struct {
 	sshClient              s.SSHProviderClientInterface
 	sshProviderConfigCodec *v1alpha1.SSHProviderConfigCodec
 	kubeClient             *kubernetes.Clientset
+	v1Alpha1Client         client.ClusterV1alpha1Interface
+	scheme                 *runtime.Scheme
 }
 
 // ActuatorParams holds parameter information for Actuator
 type ActuatorParams struct {
-	ClusterClient client.ClusterInterface
-	EventRecorder record.EventRecorder
-	SSHClient     s.SSHProviderClientInterface
-	KubeClient    *kubernetes.Clientset
+	ClusterClient  client.ClusterInterface
+	EventRecorder  record.EventRecorder
+	SSHClient      s.SSHProviderClientInterface
+	KubeClient     *kubernetes.Clientset
+	V1Alpha1Client client.ClusterV1alpha1Interface
 }
 
 // NewActuator creates a new Actuator
 func NewActuator(params ActuatorParams) (*Actuator, error) {
+
+	scheme, err := v1alpha1.NewScheme()
+	if err != nil {
+		return nil, err
+	}
+
 	codec, err := v1alpha1.NewCodec()
 	if err != nil {
 		return nil, err
@@ -68,6 +78,7 @@ func NewActuator(params ActuatorParams) (*Actuator, error) {
 		eventRecorder:          params.EventRecorder,
 		sshClient:              params.SSHClient,
 		sshProviderConfigCodec: codec,
+		scheme:                 scheme,
 	}, nil
 }
 
@@ -90,7 +101,14 @@ func (a *Actuator) Update(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 }
 
 // Exists test for the existance of a machine and is invoked by the Machine Controller
-func (a *Actuator) Exists(cluster *clusterv1.Cluster, machine *clusterv1.Machine) (bool, error) {
-	glog.Info("Checking if machine %v for cluster %v exists.", machine.Name, cluster.Name)
-	return false, fmt.Errorf("TODO: Not yet implemented")
+func (a *Actuator) Exists(c *clusterv1.Cluster, m *clusterv1.Machine) (bool, error) {
+	glog.Infof("Checking if machine %v for cluster %v exists.", m.Name, c.Name)
+	// Try to use the last saved status locating the machine
+	status, err := a.status(m)
+	if err != nil {
+		return false, err
+	}
+	// if status is nil, either it doesnt exist or bootstrapping, however in ssh we assume it exists.
+	// so some status must be returned.
+	return status != nil, nil
 }
