@@ -3,8 +3,6 @@ items:
   kind: Machine
   metadata:
     generateName: ssh-controlplane-
-    labels:
-      set: controlplane
   spec:
     providerConfig:
       value:
@@ -13,8 +11,7 @@ items:
         roles:
         - Master
         - Etcd
-        provisionedMachineName: "ssh-controlplane-0"
-        sshconfig:
+        sshConfig:
           username: ubuntu
           host: 192.168.2.121
           port: 22
@@ -24,15 +21,11 @@ items:
     versions:
       kubelet: 1.10.1
       controlPlane: 1.10.1
-    roles:
-    - Master
-    - Etcd
+# Nodes are defined as those items that do NOT have controlPlane versions entry.
 - apiVersion: "cluster.k8s.io/v1alpha1"
   kind: Machine
   metadata:
     generateName: ssh-node-
-    labels:
-      set: node
   spec:
     providerConfig:
       value:
@@ -40,8 +33,7 @@ items:
         kind: "SSHMachineProviderConfig"
         roles:
         - Node
-        provisionedMachineName: "ssh-node-0"
-        sshconfig:
+        sshConfig:
           username: ubuntu
           host: 192.168.2.187
           port: 22
@@ -50,6 +42,3 @@ items:
           secretName: node-private-key
     versions:
       kubelet: 1.10.1
-      controlPlane: 1.10.1
-    roles:
-    - Node

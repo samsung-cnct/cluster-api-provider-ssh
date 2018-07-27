@@ -26,7 +26,7 @@ spec:
         operator: Exists
       containers:
       - name: controller-manager
-        image: gcr.io/k8s-cluster-api/controller-manager:0.0.7
+        image: gcr.io/k8s-cluster-api/controller-manager:0.0.8
         volumeMounts:
           - name: config
             mountPath: /etc/kubernetes
@@ -116,47 +116,22 @@ data:
   machine_setup_configs.yaml: |-
     items:
     - machineParams:
-        os: ubuntu-16.04
-        roles:
-        - Etcd
-        versions:
-          etcd: 3.0.17
-        sshConfig:
-          username: ubuntu
-          host: 192.168.2.183
-          port: 22
-          publicKeys:
-          - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCWmTnZsAcdoX81F1nnK36dnzv30Ue9S9CadH+RtuhavyAZAgq1t6q4iK9QSQ7nLf/l0ZoHIWmBPdmQEVCq31PcWWbqCgU5LlBVU2FSSm5zj8YjRT5tYTlRB2NdVCvox4Dj1g2XkKYHuqLUpcxF13m9n6ChgeEA3xR2Qv+3Zz3U819wvU3kV2BGDCaOF2bJgWpH5BmBfigiNzRYG3pWaUbKbisLGcrkjmGdcRRtNx9OlDzQW7sS4lP3xU59afDOs22su+4JvDNBXoFgyUWJn7qzA3ama2EzFTivspw84JogRM7C9qHRuuZBtElUMTd/Y/nI+uuoJdEqPS7VDjl/DLKpqsd6KowNhlE7ir6eZv2pdEY5quFKaiklbwuyBdH9+jGCvrzRLX29yyTyQ9FyKe7RuPCVtEOlL/uy76R5Zing9ACJqezjyGM4GrJDsQFf/g6sfx5n/j93vNu+B0WL6vagQx0CBF6U+yPkkqK+eBlguYwkiO8P/oqeLpPsINs5oK5mleAS61TiKTh6S4QTI4tgCmIWwfMABkrWNTds/kmGIvKVCtMx8HRcGacD05HCUruhNqCjAut345DSOQD69ar+lcX9o6tGW36oP+lIV13p7b6Ab7DaiDU5knRvEVWwbXm/Age+rJsxGdda8hlRhBHe9WqHdxkxD23WkiEA9V0UuQ== pacific.cluster.cnct.io"
-          secretName: etcd-private-key
-        metadata:
+    os:
+      ubuntu-16.04
+    roles:
+    - Master
+    - Etcd
+    versions:
+      kubelet: 1.10.4
+      controlPlane: 1.9.4
+    metadata:
     - machineParams:
-        os: ubuntu-16.04
-        roles:
-        - Master
-        versions:
-          kubelet: 1.10.4
-        sshConfig:
-          username: ubuntu
-          host: 192.168.2.121
-          port: 22
-          publicKeys: 
-          - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCWmTnZsAcdoX81F1nnK36dnzv30Ue9S9CadH+RtuhavyAZAgq1t6q4iK9QSQ7nLf/l0ZoHIWmBPdmQEVCq31PcWWbqCgU5LlBVU2FSSm5zj8YjRT5tYTlRB2NdVCvox4Dj1g2XkKYHuqLUpcxF13m9n6ChgeEA3xR2Qv+3Zz3U819wvU3kV2BGDCaOF2bJgWpH5BmBfigiNzRYG3pWaUbKbisLGcrkjmGdcRRtNx9OlDzQW7sS4lP3xU59afDOs22su+4JvDNBXoFgyUWJn7qzA3ama2EzFTivspw84JogRM7C9qHRuuZBtElUMTd/Y/nI+uuoJdEqPS7VDjl/DLKpqsd6KowNhlE7ir6eZv2pdEY5quFKaiklbwuyBdH9+jGCvrzRLX29yyTyQ9FyKe7RuPCVtEOlL/uy76R5Zing9ACJqezjyGM4GrJDsQFf/g6sfx5n/j93vNu+B0WL6vagQx0CBF6U+yPkkqK+eBlguYwkiO8P/oqeLpPsINs5oK5mleAS61TiKTh6S4QTI4tgCmIWwfMABkrWNTds/kmGIvKVCtMx8HRcGacD05HCUruhNqCjAut345DSOQD69ar+lcX9o6tGW36oP+lIV13p7b6Ab7DaiDU5knRvEVWwbXm/Age+rJsxGdda8hlRhBHe9WqHdxkxD23WkiEA9V0UuQ== pacific.cluster.cnct.io"
-          secretName: master-private-key
-          controlPlane: 1.10.4
-        metadata:
-    - machineParams:
-        os: ubuntu-16.04
-        roles:
-        - Node
-        versions:
-          kubelet: 1.10.4
-        sshConfig:
-          username: ubuntu
-          host: 192.168.2.187
-          port: 22
-          publicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCWmTnZsAcdoX81F1nnK36dnzv30Ue9S9CadH+RtuhavyAZAgq1t6q4iK9QSQ7nLf/l0ZoHIWmBPdmQEVCq31PcWWbqCgU5LlBVU2FSSm5zj8YjRT5tYTlRB2NdVCvox4Dj1g2XkKYHuqLUpcxF13m9n6ChgeEA3xR2Qv+3Zz3U819wvU3kV2BGDCaOF2bJgWpH5BmBfigiNzRYG3pWaUbKbisLGcrkjmGdcRRtNx9OlDzQW7sS4lP3xU59afDOs22su+4JvDNBXoFgyUWJn7qzA3ama2EzFTivspw84JogRM7C9qHRuuZBtElUMTd/Y/nI+uuoJdEqPS7VDjl/DLKpqsd6KowNhlE7ir6eZv2pdEY5quFKaiklbwuyBdH9+jGCvrzRLX29yyTyQ9FyKe7RuPCVtEOlL/uy76R5Zing9ACJqezjyGM4GrJDsQFf/g6sfx5n/j93vNu+B0WL6vagQx0CBF6U+yPkkqK+eBlguYwkiO8P/oqeLpPsINs5oK5mleAS61TiKTh6S4QTI4tgCmIWwfMABkrWNTds/kmGIvKVCtMx8HRcGacD05HCUruhNqCjAut345DSOQD69ar+lcX9o6tGW36oP+lIV13p7b6Ab7DaiDU5knRvEVWwbXm/Age+rJsxGdda8hlRhBHe9WqHdxkxD23WkiEA9V0UuQ== pacific.cluster.cnct.io"
-          secretName: node-private-key
-          controlPlane: 1.10.4
-        metadata:
+    os:
+      ubuntu-16.04
+    roles:
+    - Node
+    versions:
+      kubelet: 1.10.4
+    metadata:
 
 
