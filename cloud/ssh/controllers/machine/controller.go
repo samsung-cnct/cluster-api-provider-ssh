@@ -68,10 +68,11 @@ func Start(server *options.Server, eventRecorder record.EventRecorder, shutdown 
 	}
 
 	params := machineactuator.ActuatorParams{
-		ClusterClient: client.ClusterV1alpha1().Clusters(corev1.NamespaceDefault),
-		EventRecorder: eventRecorder,
-		SSHClient:     sshClient,
-		KubeClient:    kubeClient,
+		ClusterClient:  client.ClusterV1alpha1().Clusters(corev1.NamespaceDefault),
+		EventRecorder:  eventRecorder,
+		SSHClient:      sshClient,
+		KubeClient:     kubeClient,
+		V1Alpha1Client: client.ClusterV1alpha1(),
 	}
 
 	actuator, err := machineactuator.NewActuator(params)
