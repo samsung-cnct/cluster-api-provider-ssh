@@ -83,10 +83,37 @@ func NewActuator(params ActuatorParams) (*Actuator, error) {
 }
 
 // Create creates a machine and is invoked by the Machine Controller
-func (a *Actuator) Create(cluster *clusterv1.Cluster, machine *clusterv1.Machine) error {
-	glog.Infof("Creating machine %v for cluster %v.", machine.Name, cluster.Name)
-	return fmt.Errorf("TODO: Not yet implemented")
-}
+func (a *Actuator) Create(c *clusterv1.Cluster, m *clusterv1.Machine) error {
+	glog.Infof("Creating m %v for c %v.", m.Name, c.Name)
+
+	exists, err := a.Exists(c, m)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		// update annotations
+		if a.v1Alpha1Client != nil {
+			return a.updateAnnotations(c, m)
+		}
+
+		machineConfig, err := a.machineProviderConfig(m.Spec.ProviderConfig)
+		if err != nil {
+			return err
+		}
+
+		privateKey, err := a.getPrivateKey(c, m)
+		if err != nil {
+			return err
+		}
+
+		a.sshClient.WritePublicKeys(privateKey, machineConfig.SSHConfig)
+
+	} else {
+		fmt.Errorf("machine doesnt exist!")
+	}
+
+	return nil}
 
 // Delete deletes a machine and is invoked by the Machine Controller
 func (a *Actuator) Delete(cluster *clusterv1.Cluster, machine *clusterv1.Machine) error {
