@@ -103,8 +103,7 @@ func (a *Actuator) Update(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 // Exists test for the existance of a machine and is invoked by the Machine Controller
 func (a *Actuator) Exists(c *clusterv1.Cluster, m *clusterv1.Machine) (bool, error) {
 	glog.Infof("Checking if machine %v for cluster %v exists.", m.Name, c.Name)
-	// Try to use the last saved status locating the m
-	// in case instance details like the proj or zone has changed
+	// Try to use the last saved status locating the machine
 	status, err := a.status(m)
 	if err != nil {
 		return false, err
