@@ -19,15 +19,13 @@ Participation in the Kubernetes community is governed by the [Kubernetes Code of
 
 ## Obtaining the code
 
-Imports in the code refer to `sigs.k8s.io/cluster-api*` even though this 
-repository lives under the `samsung-cnct` GitHub organization. One way
-to build this outside of CI is:
+Imports in the code refer to `sigs.k8s.io/cluster-api*` even though this
+repository lives under the `samsung-cnct` GitHub organization. For Go dependencies to be built correctly with `dep`, place this repository in your $GOPATH as follows:
 
 ```bash
 go get github.com/samsung-cnct/cluster-api-provider-ssh
-cd $GOPATH/src/github.com/samsung-cnct/cluster-api-provider-ssh
 mkdir -p $GOPATH/src/sigs.k8s.io/
-ln -s $(pwd) $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
+mv $GOPATH/src/github.com/samsung-cnct/cluster-api-provider-ssh $GOPATH/src/sigs.k8s.io/
 make depend
 make
 ```
