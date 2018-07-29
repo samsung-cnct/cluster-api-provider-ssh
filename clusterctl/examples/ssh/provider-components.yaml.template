@@ -125,22 +125,25 @@ data:
   machine_setup_configs.yaml: |-
     items:
     - machineParams:
-    os:
-      ubuntu-16.04
-    roles:
-    - Master
-    - Etcd
-    versions:
-      kubelet: 1.10.4
-      controlPlane: 1.9.4
-    metadata:
+        os:
+          ubuntu-16.04
+        roles:
+        - Master
+        - Etcd
+        versions:
+          kubelet: 1.10.4
+          controlPlane: 1.9.4
+      metadata:
+        startupScript: |
+
     - machineParams:
-    os:
-      ubuntu-16.04
-    roles:
-    - Node
-    versions:
-      kubelet: 1.10.4
-    metadata:
+        os:
+          ubuntu-16.04
+        roles:
+        - Node
+        versions:
+          kubelet: 1.10.4
+      metadata:
+        startupScript: |
 
 

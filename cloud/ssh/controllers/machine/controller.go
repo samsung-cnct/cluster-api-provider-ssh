@@ -37,7 +37,6 @@ import (
 	machinecontroller "sigs.k8s.io/cluster-api/pkg/controller/machine"
 	"sigs.k8s.io/cluster-api/pkg/controller/sharedinformers"
 
-	s "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh"
 	machineactuator "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/actuators/machine"
 	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/controllers/machine/options"
 )
@@ -62,17 +61,17 @@ func Start(server *options.Server, eventRecorder record.EventRecorder, shutdown 
 		glog.Fatalf("Error building kubernetes clientset: %s", err)
 	}
 
-	sshClient, err := s.NewSSHProviderClient()
+	configWatch, err := machineactuator.NewConfigWatch(server.MachineSetupConfigsPath)
 	if err != nil {
-		glog.Fatalf("Could not create ssh client for communicating to machines: %v", err)
+		glog.Fatalf("Could not create config watch: %v", err)
 	}
 
 	params := machineactuator.ActuatorParams{
-		ClusterClient:  client.ClusterV1alpha1().Clusters(corev1.NamespaceDefault),
-		EventRecorder:  eventRecorder,
-		SSHClient:      sshClient,
-		KubeClient:     kubeClient,
-		V1Alpha1Client: client.ClusterV1alpha1(),
+		ClusterClient:            client.ClusterV1alpha1().Clusters(corev1.NamespaceDefault),
+		EventRecorder:            eventRecorder,
+		KubeClient:               kubeClient,
+		V1Alpha1Client:           client.ClusterV1alpha1(),
+		MachineSetupConfigGetter: configWatch,
 	}
 
 	actuator, err := machineactuator.NewActuator(params)

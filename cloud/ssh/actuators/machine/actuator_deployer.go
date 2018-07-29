@@ -3,10 +3,10 @@ package machine
 // This part of the code implements the machineDeployer Interface used by cluster controller
 
 import (
-	"encoding/base64"
-
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
+	"github.com/golang/glog"
+	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh"
 )
 
 // GetIP returns IP of a machine, note that this also REQUIRED by clusterCreator (clusterdeployer.ProviderDeployer)
@@ -27,32 +27,27 @@ func (a *Actuator) GetKubeConfig(c *clusterv1.Cluster, m *clusterv1.Machine) (st
 		return "", err
 	}
 
-	privateKey, err := a.getPrivateKey(c, m)
+	privateKey, passPhrase, err := a.getPrivateKey(c, m)
 	if err != nil {
 		return "", err
 	}
 
-	return a.sshClient.GetKubeConfig(privateKey, machineConfig.SSHConfig)
+	sshClient := ssh.NewSSHProviderClient(privateKey, passPhrase, machineConfig.SSHConfig)
+	return sshClient.GetKubeConfig()
 }
 
-func (a *Actuator) getPrivateKey(cluster *clusterv1.Cluster, master *clusterv1.Machine) (string, error) {
+func (a *Actuator) getPrivateKey(cluster *clusterv1.Cluster, master *clusterv1.Machine) (string, string,  error) {
 	machineConfig, err := a.machineProviderConfig(master.Spec.ProviderConfig)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	secretName := machineConfig.SSHConfig.SecretName
-	secret, err := a.kubeClient.CoreV1().Secrets(master.Spec.Namespace).Get(secretName, meta_v1.GetOptions{})
+	secret, err := a.kubeClient.CoreV1().Secrets(master.Namespace).Get(secretName, meta_v1.GetOptions{})
 	if err != nil {
-		return "", err
+		glog.Errorf("could not retrieve machine secret", err)
+		return "", "", err
 	}
 
-	// here we decide what data we get
-	// note that this is base64 encoded stilll
-	privateKeyBytes, err := base64.StdEncoding.DecodeString(string(secret.Data["private-key"]))
-	if err != nil {
-		return "", err
-	}
-
-	return string(privateKeyBytes), nil
+	return string(secret.Data["private-key"]), string(secret.Data["pass-phrase"]), nil
 }
