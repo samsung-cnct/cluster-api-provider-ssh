@@ -2,11 +2,13 @@ package ssh
 
 import (
 	"fmt"
+	"os"
 
 	"golang.org/x/crypto/ssh"
 	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/providerconfig/v1alpha1"
 	"github.com/golang/glog"
 	"net"
+	"golang.org/x/crypto/ssh/agent"
 )
 
 type SSHProviderClientInterface interface {
@@ -52,6 +54,8 @@ func (s *sshProviderClient) GetKubeConfig() (string, error) {
 
 	outputBytes, err := session.Output(cmd)
 
+	defer session.Close()
+
 	return string(outputBytes), err
 
 }
@@ -62,21 +66,35 @@ func (s *sshProviderClient) ProcessCMD(cmd string) error {
 		return fmt.Errorf("Failed to create session:", err)
 	}
 
+	defer session.Close()
+
 	return session.Run(cmd)
 }
 
 func GetBasicSession(s *sshProviderClient) (*ssh.Session, error) {
-	authMethod, err := PublicKeyFile(s.privateKey, s.passPhrase)
-	if err != nil {
-		return nil, err
-	}
+	var sshConfig *ssh.ClientConfig
 
-	sshConfig := &ssh.ClientConfig{
-		User: s.username,
-		Auth: []ssh.AuthMethod{authMethod},
-		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
-			return nil
-		},
+	if s.privateKey != "" {
+		authMethod, err := PublicKeyFile(s.privateKey, s.passPhrase)
+		if err != nil {
+			return nil, err
+		}
+
+		sshConfig = &ssh.ClientConfig{
+			User: s.username,
+			Auth: []ssh.AuthMethod{authMethod,SSHAgent()},
+			HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+				return nil
+			},
+		}
+	} else {
+		sshConfig = &ssh.ClientConfig{
+			User: s.username,
+			Auth: []ssh.AuthMethod{SSHAgent()},
+			HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+				return nil
+			},
+		}
 	}
 
 	connection, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", s.address, s.port), sshConfig)
@@ -111,4 +129,13 @@ func PublicKeyFile(privateKey string, passPhrase string) (ssh.AuthMethod, error)
 		return nil, err
 	}
 	return ssh.PublicKeys(key), nil
+}
+
+// this should allow local use of clusterctl to access remote cluster as long as your socket
+// has the private key added to the agent.
+func SSHAgent() ssh.AuthMethod {
+	if sshAgent, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK")); err == nil {
+		return ssh.PublicKeysCallback(agent.NewClient(sshAgent).Signers)
+	}
+	return nil
 }

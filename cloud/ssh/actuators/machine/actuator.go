@@ -91,7 +91,7 @@ func NewActuator(params ActuatorParams) (*Actuator, error) {
 
 // Create creates a machine and is invoked by the Machine Controller
 func (a *Actuator) Create(c *clusterv1.Cluster, m *clusterv1.Machine) error {
-	glog.Infof("Creating m %s for c %s.", m.Name, c.Name)
+	glog.Infof("Creating machine %s for cluster %s.", m.Name, c.Name)
 	if a.machineSetupConfigGetter == nil {
 		return a.handleMachineError(m, apierrors.InvalidMachineConfiguration(
 			"valid machineSetupConfigGetter is required"), createEventAction)
@@ -136,7 +136,7 @@ func (a *Actuator) Create(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 	glog.Infof("metadata retrieved: machine %s for cluster %s", m.Name, c.Name)
 
 	// Here we deploy and run the scripts to the node.
-	privateKey, passPhrase, err := a.getPrivateKey(c, m)
+	privateKey, passPhrase, err := a.getPrivateKey(c, m.Namespace, machineConfig.SSHConfig.SecretName)
 	if err != nil {
 		return err
 	}
