@@ -4,6 +4,8 @@ set -e
 OUTPUT_DIR=out
 mkdir -p ${OUTPUT_DIR}
 
+BOOTSTRAP_DIR=bootstrap_scripts
+
 MACHINE_TEMPLATE_FILE=machines.yaml.template
 MACHINE_GENERATED_FILE=${OUTPUT_DIR}/machines.yaml
 CLUSTER_TEMPLATE_FILE=cluster.yaml.template
