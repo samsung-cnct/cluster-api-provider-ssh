@@ -26,10 +26,10 @@ func init() {
 }
 
 type metadataParams struct {
-	Token        string
-	Cluster      *clusterv1.Cluster
-	Machine      *clusterv1.Machine
-	Metadata     *Metadata
+	Token    string
+	Cluster  *clusterv1.Cluster
+	Machine  *clusterv1.Machine
+	Metadata *Metadata
 
 	// These fields are set when executing the template if they are necessary.
 	PodCIDR        string

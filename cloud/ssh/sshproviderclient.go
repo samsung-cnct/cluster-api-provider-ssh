@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	"golang.org/x/crypto/ssh"
-	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/providerconfig/v1alpha1"
-	"github.com/golang/glog"
 	"net"
+
+	"github.com/golang/glog"
+	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
+	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/providerconfig/v1alpha1"
 )
 
 type SSHProviderClientInterface interface {
@@ -19,21 +20,20 @@ type SSHProviderClientInterface interface {
 }
 
 type sshProviderClient struct {
-	username string
-	address  string
-	port     int
+	username   string
+	address    string
+	port       int
 	privateKey string
 	passPhrase string
 }
 
-func NewSSHProviderClient(privateKey string, passPhrase string, machineSSHConfig v1alpha1.SSHConfig) (*sshProviderClient) {
+func NewSSHProviderClient(privateKey string, passPhrase string, machineSSHConfig v1alpha1.SSHConfig) *sshProviderClient {
 	return &sshProviderClient{
-		username: machineSSHConfig.Username,
-		address: machineSSHConfig.Host,
-		port: machineSSHConfig.Port,
+		username:   machineSSHConfig.Username,
+		address:    machineSSHConfig.Host,
+		port:       machineSSHConfig.Port,
 		privateKey: privateKey,
-		passPhrase:passPhrase,
-
+		passPhrase: passPhrase,
 	}
 }
 
@@ -82,7 +82,7 @@ func GetBasicSession(s *sshProviderClient) (*ssh.Session, error) {
 
 		sshConfig = &ssh.ClientConfig{
 			User: s.username,
-			Auth: []ssh.AuthMethod{authMethod,SSHAgent()},
+			Auth: []ssh.AuthMethod{authMethod, SSHAgent()},
 			HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
 				return nil
 			},

@@ -3,11 +3,12 @@ package machine
 // This part of the code implements the machineDeployer Interface used by cluster controller
 
 import (
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
-	"github.com/golang/glog"
-	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh"
 	"fmt"
+
+	"github.com/golang/glog"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh"
+	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 )
 
 // GetIP returns IP of a machine, note that this also REQUIRED by clusterCreator (clusterdeployer.ProviderDeployer)
@@ -34,7 +35,7 @@ func (a *Actuator) GetKubeConfig(c *clusterv1.Cluster, m *clusterv1.Machine) (st
 	return sshClient.GetKubeConfig()
 }
 
-func (a *Actuator) getPrivateKey(c *clusterv1.Cluster, namespace string, secretName string) (string, string,  error) {
+func (a *Actuator) getPrivateKey(c *clusterv1.Cluster, namespace string, secretName string) (string, string, error) {
 
 	if a.kubeClient == nil {
 		return "", "", fmt.Errorf("kubeclient is nil, should not happen")
