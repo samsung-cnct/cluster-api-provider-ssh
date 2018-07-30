@@ -19,3 +19,6 @@ bin
 # lock file for dep file
 Gopkg.lock
 
+# pivoted kubeconfig
+kubeconfig
+

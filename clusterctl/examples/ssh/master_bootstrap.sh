@@ -2,6 +2,9 @@ set -e
 set -x
 (
 ARCH=amd64
+apt-get update && apt-get install -y apt-transport-https cur
+
+
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
 touch /etc/apt/sources.list.d/kubernetes.list
 sh -c 'echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list'
@@ -78,7 +81,6 @@ for tries in $(seq 1 60); do
     sleep 1
 done
 # By default, use calico for container network plugin, should make this configurable.
-kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f https://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml
-kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f https://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml
+kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f https://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
 echo done.
 ) 2>&1 | tee /var/log/startup.log
