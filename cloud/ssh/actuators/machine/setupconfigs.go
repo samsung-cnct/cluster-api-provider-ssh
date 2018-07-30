@@ -18,6 +18,7 @@ type MachineSetupConfig interface {
 }
 
 type MachineItem struct {
+	//TODO originally this was a list, investigate if we would.
 	Params   MachineParams `json:"machineParams"`
 	Metadata Metadata        `json:"metadata"`
 }
