@@ -116,6 +116,7 @@ metadata:
   namespace: default
 data:
   private-key: $CLUSTER_PRIVATE_KEY
+  pass-phrase: $CLUSTER_PASSPHRASE
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -125,25 +126,22 @@ data:
   machine_setup_configs.yaml: |-
     items:
     - machineParams:
-        os:
-          ubuntu-16.04
         roles:
         - Master
         - Etcd
         versions:
           kubelet: 1.10.4
-          controlPlane: 1.9.4
+          controlPlane: 1.10.4
       metadata:
         startupScript: |
-
+          $MASTER_BOOTSTRAP_SCRIPT
     - machineParams:
-        os:
-          ubuntu-16.04
         roles:
         - Node
         versions:
           kubelet: 1.10.4
       metadata:
         startupScript: |
+          $NODE_BOOTSTRAP_SCRIPT
 
 
