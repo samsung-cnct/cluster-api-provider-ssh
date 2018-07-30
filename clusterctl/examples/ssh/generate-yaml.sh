@@ -4,9 +4,6 @@ set -e
 OUTPUT_DIR=out
 mkdir -p ${OUTPUT_DIR}
 
-
-
-
 MACHINE_TEMPLATE_FILE=machines.yaml.template
 MACHINE_GENERATED_FILE=${OUTPUT_DIR}/machines.yaml
 CLUSTER_TEMPLATE_FILE=cluster.yaml.template
@@ -58,9 +55,9 @@ fi
 # Variables that need to be base64 encoded (for secrets)
 OS=$(uname)
 if [[ "$OS" =~ "Linux" ]]; then
-    CLUSTER_PRIVATE_KEY=$(echo -n $CLUSTER_PRIVATE_KEY_PLAIN|base64 -w0)
+    CLUSTER_PRIVATE_KEY=$(echo -n $CLUSTER_PRIVATE_KEY_PLAIN | base64 -w0)
 elif [[ "$OS" =~ "Darwin" ]]; then
-    CLUSTER_PRIVATE_KEY=$(echo -n $CLUSTER_PRIVATE_KEY_PLAIN|base64)
+    CLUSTER_PRIVATE_KEY=$(echo -n $CLUSTER_PRIVATE_KEY_PLAIN | base64 | tr -d \\r\\n)
 else
   echo "Unrecognized OS : $OS"
   exit 1
