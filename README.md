@@ -59,15 +59,26 @@ Build the clusterctl binary
 
 When making changes to the either of the controllers, to test them you
 need to build and push new images to quay.io. There are `Makefile`s to
-do this for development (for production CI/CD will handle this).
+do this for development (for production CI/CD will handle this).  The Makefile
+located at cluster-api-provider-ssh will pass through to the Makefiles in the cmd dir.
 For example:
 
+- push both ssh-cluster-controller and ssh-machine-controller images
 ```
-cd cmd/cluster-controller/
+cd $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
 make dev_push
-cd -
-cd cmd/machine-controller/
-make dev_push
+
+```
+
+- push ssh-machine-controller image
+```
+cd $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
+make dev_push_machine
+```
+- push ssh-cluster-controller image
+```
+cd $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
+make dev_push_cluster
 ```
 
 The images will be tagged with the username of the account you used to
