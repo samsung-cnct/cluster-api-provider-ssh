@@ -23,10 +23,11 @@ Imports in the code refer to `sigs.k8s.io/cluster-api*` even though this
 repository lives under the `samsung-cnct` GitHub organization. For Go dependencies to be built correctly with `dep`, place this repository in your $GOPATH as follows:
 
 ```bash
-go get github.com/samsung-cnct/cluster-api-provider-ssh
 mkdir -p $GOPATH/src/sigs.k8s.io/
-mv $GOPATH/src/github.com/samsung-cnct/cluster-api-provider-ssh $GOPATH/src/sigs.k8s.io/
-make depend
+git clone https://github.com/samsung-cnct/cluster-api-provider-ssh.git $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
+cd $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
+make depend-update
+
 make
 ```
 
