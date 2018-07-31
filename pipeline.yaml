@@ -15,3 +15,6 @@ builds:
 - image: samsung_cnct/ssh-machine-controller
   context: machine-controller
   locationOverride: cmd
+# This build tests the images.
+- image: gcr.io/k8s-testimages/dind-test-base-amd64:0.2
+  script: ./hack/ci-test.sh 
