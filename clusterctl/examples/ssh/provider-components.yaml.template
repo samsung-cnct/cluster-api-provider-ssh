@@ -124,6 +124,16 @@ data:
   pass-phrase: $CLUSTER_PASSPHRASE
 ---
 apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: master-private-key
+  namespace: default
+data:
+  private-key: $NODE_CLUSTER_PRIVATE_KEY
+  pass-phrase: $NODE_CLUSTER_PASSPHRASE
+---
+apiVersion: v1
 kind: ConfigMap
 metadata:
   name: machine-setup

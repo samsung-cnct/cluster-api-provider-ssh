@@ -21,4 +21,5 @@ Gopkg.lock
 
 # pivoted kubeconfig
 kubeconfig
+minikube.kubeconfig
 

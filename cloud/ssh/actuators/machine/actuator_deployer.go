@@ -30,7 +30,7 @@ func (a *Actuator) GetKubeConfig(c *clusterv1.Cluster, m *clusterv1.Machine) (st
 	}
 
 	// this is used primarily by clusterctl which is run in the machine that starts up a call to the external cluster
-	// as such, this does not actually do muchi with the machine exect execute a command
+	// as such, this does not actually do much with the machine exect execute a command
 	sshClient := ssh.NewSSHProviderClient("", "", machineConfig.SSHConfig)
 	return sshClient.GetKubeConfig()
 }
