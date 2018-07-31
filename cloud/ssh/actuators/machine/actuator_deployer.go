@@ -3,9 +3,11 @@ package machine
 // This part of the code implements the machineDeployer Interface used by cluster controller
 
 import (
-	"encoding/base64"
+	"fmt"
 
+	"github.com/golang/glog"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 )
 
@@ -27,32 +29,32 @@ func (a *Actuator) GetKubeConfig(c *clusterv1.Cluster, m *clusterv1.Machine) (st
 		return "", err
 	}
 
-	privateKey, err := a.getPrivateKey(c, m)
-	if err != nil {
-		return "", err
-	}
-
-	return a.sshClient.GetKubeConfig(privateKey, machineConfig.SSHConfig)
+	// this is used primarily by clusterctl which is run in the machine that starts up a call to the external cluster
+	// as such, this does not actually do much with the machine exect execute a command
+	sshClient := ssh.NewSSHProviderClient("", "", machineConfig.SSHConfig)
+	return sshClient.GetKubeConfig()
 }
 
-func (a *Actuator) getPrivateKey(cluster *clusterv1.Cluster, master *clusterv1.Machine) (string, error) {
-	machineConfig, err := a.machineProviderConfig(master.Spec.ProviderConfig)
-	if err != nil {
-		return "", err
+func (a *Actuator) getPrivateKey(c *clusterv1.Cluster, namespace string, secretName string) (string, string, error) {
+
+	if a.kubeClient == nil {
+		return "", "", fmt.Errorf("kubeclient is nil, should not happen")
 	}
 
-	secretName := machineConfig.SSHConfig.SecretName
-	secret, err := a.kubeClient.CoreV1().Secrets(master.Spec.Namespace).Get(secretName, meta_v1.GetOptions{})
-	if err != nil {
-		return "", err
+	coreV1Client := a.kubeClient.CoreV1()
+
+	if coreV1Client != nil {
+		glog.Infof("machine info: %s, %s", namespace, secretName)
+		secretsClient := coreV1Client.Secrets(namespace)
+
+		secret, err := secretsClient.Get(secretName, meta_v1.GetOptions{})
+		if err != nil {
+			glog.Errorf("could not retrieve machine secret", err)
+			return "", "", err
+		}
+
+		return string(secret.Data["private-key"]), string(secret.Data["pass-phrase"]), nil
 	}
 
-	// here we decide what data we get
-	// note that this is base64 encoded stilll
-	privateKeyBytes, err := base64.StdEncoding.DecodeString(string(secret.Data["private-key"]))
-	if err != nil {
-		return "", err
-	}
-
-	return string(privateKeyBytes), nil
+	return "", "", fmt.Errorf("core v1 client is nil, should not happen")
 }

@@ -19,13 +19,16 @@ import (
 	"github.com/golang/glog"
 	clustercommon "sigs.k8s.io/cluster-api/pkg/apis/cluster/common"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
-	s "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh"
+	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh"
 	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/providerconfig/v1alpha1"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 	client "sigs.k8s.io/cluster-api/pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1"
+	apierrors "sigs.k8s.io/cluster-api/pkg/errors"
+	"sigs.k8s.io/cluster-api/pkg/kubeadm"
 )
 
 const (
@@ -42,22 +45,23 @@ func init() {
 
 // Actuator is responsible for performing machine reconciliation
 type Actuator struct {
-	clusterClient          client.ClusterInterface
-	eventRecorder          record.EventRecorder
-	sshClient              s.SSHProviderClientInterface
-	sshProviderConfigCodec *v1alpha1.SSHProviderConfigCodec
-	kubeClient             *kubernetes.Clientset
-	v1Alpha1Client         client.ClusterV1alpha1Interface
-	scheme                 *runtime.Scheme
+	clusterClient            client.ClusterInterface
+	eventRecorder            record.EventRecorder
+	sshProviderConfigCodec   *v1alpha1.SSHProviderConfigCodec
+	kubeClient               *kubernetes.Clientset
+	v1Alpha1Client           client.ClusterV1alpha1Interface
+	scheme                   *runtime.Scheme
+	machineSetupConfigGetter SSHClientMachineSetupConfigGetter
+	kubeadm                  SSHClientKubeadm
 }
 
 // ActuatorParams holds parameter information for Actuator
 type ActuatorParams struct {
-	ClusterClient  client.ClusterInterface
-	EventRecorder  record.EventRecorder
-	SSHClient      s.SSHProviderClientInterface
-	KubeClient     *kubernetes.Clientset
-	V1Alpha1Client client.ClusterV1alpha1Interface
+	ClusterClient            client.ClusterInterface
+	EventRecorder            record.EventRecorder
+	KubeClient               *kubernetes.Clientset
+	V1Alpha1Client           client.ClusterV1alpha1Interface
+	MachineSetupConfigGetter SSHClientMachineSetupConfigGetter
 }
 
 // NewActuator creates a new Actuator
@@ -76,16 +80,86 @@ func NewActuator(params ActuatorParams) (*Actuator, error) {
 	return &Actuator{
 		clusterClient:          params.ClusterClient,
 		eventRecorder:          params.EventRecorder,
-		sshClient:              params.SSHClient,
 		sshProviderConfigCodec: codec,
+		kubeClient:             params.KubeClient,
+		v1Alpha1Client:         params.V1Alpha1Client,
 		scheme:                 scheme,
+		machineSetupConfigGetter: params.MachineSetupConfigGetter,
+		kubeadm:                  kubeadm.New(),
 	}, nil
 }
 
 // Create creates a machine and is invoked by the Machine Controller
-func (a *Actuator) Create(cluster *clusterv1.Cluster, machine *clusterv1.Machine) error {
-	glog.Infof("Creating machine %v for cluster %v.", machine.Name, cluster.Name)
-	return fmt.Errorf("TODO: Not yet implemented")
+func (a *Actuator) Create(c *clusterv1.Cluster, m *clusterv1.Machine) error {
+	glog.Infof("Creating machine %s for cluster %s.", m.Name, c.Name)
+	if a.machineSetupConfigGetter == nil {
+		return a.handleMachineError(m, apierrors.InvalidMachineConfiguration(
+			"valid machineSetupConfigGetter is required"), createEventAction)
+	}
+
+	// First get provider config
+	machineConfig, err := a.machineProviderConfig(m.Spec.ProviderConfig)
+	if err != nil {
+		return a.handleMachineError(m, apierrors.InvalidMachineConfiguration(
+			"Cannot unmarshal machine's providerConfig field: %v", err), createEventAction)
+	}
+
+	// Now validate
+	if err := a.validateMachine(m, machineConfig); err != nil {
+		return a.handleMachineError(m, err, createEventAction)
+	}
+
+	// check if the machine exists (here we mean we havent provisioned it yet.)
+	exists, err := a.Exists(c, m)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		glog.Infof("machine %s for cluster %s exists,skipping creation.", m.Name, c.Name)
+		return nil
+	}
+
+	// The doesn't exist case here.
+	glog.Infof("machine %s for cluster %s doesnt exist; Creating.", m.Name, c.Name)
+
+	configParams := &MachineParams{
+		Roles:    machineConfig.Roles,
+		Versions: m.Spec.Versions,
+	}
+
+	metadata, err := a.getMetadata(c, m, configParams)
+	if err != nil {
+		return err
+	}
+
+	glog.Infof("metadata retrieved: machine %s for cluster %s", m.Name, c.Name)
+
+	// Here we deploy and run the scripts to the node.
+	privateKey, passPhrase, err := a.getPrivateKey(c, m.Namespace, machineConfig.SSHConfig.SecretName)
+	if err != nil {
+		return err
+	}
+
+	glog.Infof("running startup script: machine %s for cluster %s...", m.Name, c.Name)
+
+	sshClient := ssh.NewSSHProviderClient(privateKey, passPhrase, machineConfig.SSHConfig)
+	err = sshClient.ProcessCMD(metadata.StartupScript)
+	if err != nil {
+		glog.Errorf("running startup script error:", err)
+
+		return err
+	}
+
+	glog.Infof("annotating machine %s for cluster %s.", m.Name, c.Name)
+
+	a.eventRecorder.Eventf(m, corev1.EventTypeNormal, "Created", "Created Machine %v", m.Name)
+	// If we have a v1Alpha1Client, then annotate the machine.
+	if a.v1Alpha1Client != nil {
+		return a.updateAnnotations(c, m)
+	}
+
+	return nil
 }
 
 // Delete deletes a machine and is invoked by the Machine Controller

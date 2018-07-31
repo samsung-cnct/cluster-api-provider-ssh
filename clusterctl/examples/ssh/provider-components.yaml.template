@@ -79,6 +79,8 @@ spec:
             mountPath: /etc/ssl/certs
           - name: machine-setup
             mountPath: /etc/machinesetup
+          - name: kubeadm
+            mountPath: /usr/bin/kubeadm
         env:
         - name: NODE_NAME
           valueFrom:
@@ -107,6 +109,9 @@ spec:
       - name: machine-setup
         configMap:
           name: machine-setup
+      - name: kubeadm
+        hostPath:
+          path: /usr/bin/kubeadm
 ---
 apiVersion: v1
 kind: Secret
@@ -116,6 +121,17 @@ metadata:
   namespace: default
 data:
   private-key: $CLUSTER_PRIVATE_KEY
+  pass-phrase: $CLUSTER_PASSPHRASE
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: master-private-key
+  namespace: default
+data:
+  private-key: $NODE_CLUSTER_PRIVATE_KEY
+  pass-phrase: $NODE_CLUSTER_PASSPHRASE
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -125,22 +141,22 @@ data:
   machine_setup_configs.yaml: |-
     items:
     - machineParams:
-    os:
-      ubuntu-16.04
-    roles:
-    - Master
-    - Etcd
-    versions:
-      kubelet: 1.10.4
-      controlPlane: 1.9.4
-    metadata:
+        roles:
+        - Master
+        - Etcd
+        versions:
+          kubelet: 1.10.4
+          controlPlane: 1.10.4
+      metadata:
+        startupScript: |
+          $MASTER_BOOTSTRAP_SCRIPT
     - machineParams:
-    os:
-      ubuntu-16.04
-    roles:
-    - Node
-    versions:
-      kubelet: 1.10.4
-    metadata:
+        roles:
+        - Node
+        versions:
+          kubelet: 1.10.4
+      metadata:
+        startupScript: |
+          $NODE_BOOTSTRAP_SCRIPT
 
 

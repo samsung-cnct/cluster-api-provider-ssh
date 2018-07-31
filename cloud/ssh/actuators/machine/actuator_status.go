@@ -3,6 +3,8 @@ package machine
 import (
 	"fmt"
 
+	"bytes"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
@@ -13,6 +15,8 @@ type MachineStatus *clusterv1.Machine
 
 const (
 	InstanceStatusAnnotationKey = "instance-status"
+	NameAnnotationKey           = "hostname"
+	BootstrapLabelKey           = "boostrap"
 )
 
 // Get the status of the instance identified by the given machine
@@ -51,4 +55,64 @@ func (a *Actuator) machineStatus(m *clusterv1.Machine) (MachineStatus, error) {
 	}
 
 	return MachineStatus(&status), nil
+}
+
+// Sets the status of the instance identified by the given machine to the given machine
+func (a *Actuator) updateStatus(machine *clusterv1.Machine) error {
+	if a.v1Alpha1Client == nil {
+		return nil
+	}
+	status := MachineStatus(machine)
+	currentMachine, err := util.GetMachineIfExists(a.v1Alpha1Client.Machines(machine.Namespace), machine.ObjectMeta.Name)
+	if err != nil {
+		return err
+	}
+
+	if currentMachine == nil {
+		// The current status no longer exists because the matching CRD has been deleted.
+		return fmt.Errorf("Machine has already been deleted. Cannot update current instance status for machine %v", machine.ObjectMeta.Name)
+	}
+
+	m, err := a.setMachineStatus(currentMachine, status)
+	if err != nil {
+		return err
+	}
+
+	_, err = a.v1Alpha1Client.Machines(machine.Namespace).Update(m)
+	return err
+}
+
+// Applies the state of an instance onto a given machine CRD
+func (a *Actuator) setMachineStatus(machine *clusterv1.Machine, status MachineStatus) (*clusterv1.Machine, error) {
+	// Avoid status within status within status ...
+	status.ObjectMeta.Annotations[InstanceStatusAnnotationKey] = ""
+
+	serializer := json.NewSerializer(json.DefaultMetaFactory, a.scheme, a.scheme, false)
+	b := []byte{}
+	buff := bytes.NewBuffer(b)
+	err := serializer.Encode((*clusterv1.Machine)(status), buff)
+	if err != nil {
+		return nil, fmt.Errorf("encoding failure: %v", err)
+	}
+
+	if machine.ObjectMeta.Annotations == nil {
+		machine.ObjectMeta.Annotations = make(map[string]string)
+	}
+	machine.ObjectMeta.Annotations[InstanceStatusAnnotationKey] = buff.String()
+	return machine, nil
+}
+
+func (a *Actuator) updateAnnotations(cluster *clusterv1.Cluster, machine *clusterv1.Machine) error {
+	name := machine.ObjectMeta.Name
+
+	if machine.ObjectMeta.Annotations == nil {
+		machine.ObjectMeta.Annotations = make(map[string]string)
+	}
+	machine.ObjectMeta.Annotations[NameAnnotationKey] = name
+	_, err := a.v1Alpha1Client.Machines(machine.Namespace).Update(machine)
+	if err != nil {
+		return err
+	}
+	err = a.updateStatus(machine)
+	return err
 }
