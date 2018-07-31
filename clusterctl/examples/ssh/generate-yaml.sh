@@ -48,8 +48,7 @@ fi
 # TODO Fill out the generation pieces as we need them.
 
 if [ -z ${CLUSTER_PRIVATE_KEY_PLAIN+x} ]; then
-    echo "Please generate a valid Cluster Private Key. Then run:"
-    echo "export CLUSTER_PRIVATE_KEY_PLAIN=$(cat `path/to/private/key/file`)"
+    echo "Please generate a valid Cluster Private Key and export the key file contents to CLUSTER_PRIVATE_KEY_PLAIN."
     exit 1
 fi
 
