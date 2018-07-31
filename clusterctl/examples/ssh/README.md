@@ -7,7 +7,17 @@
 For convenience, a generation script which populates templates based on openstack cloud provider
 configuration is provided.
 
-1. Run the generation script.
+1. Generate a Cluster Private Key.
+
+Store the key in a file reserved for this cluster.
+
+2. Set key as env var.
+```
+
+export CLUSTER_PRIVATE_KEY_PLAIN=$(cat /path/to/ClusterPrivateKey)
+```
+
+3. Run the generation script.
 ```
 ./generate-yaml.sh
 ```

@@ -48,7 +48,7 @@ fi
 # TODO Fill out the generation pieces as we need them.
 
 if [ -z ${CLUSTER_PRIVATE_KEY_PLAIN+x} ]; then
-    echo "Please enter a valid Cluster Private Key"
+    echo "Please generate a valid Cluster Private Key and export the key file contents to CLUSTER_PRIVATE_KEY_PLAIN."
     exit 1
 fi
 
