@@ -1,5 +1,8 @@
-#!/bin/sh
-set -e
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
 
 OUTPUT_DIR=out
 mkdir -p ${OUTPUT_DIR}
