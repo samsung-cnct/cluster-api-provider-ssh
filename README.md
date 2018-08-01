@@ -26,8 +26,6 @@ repository lives under the `samsung-cnct` GitHub organization. For Go dependenci
 mkdir -p $GOPATH/src/sigs.k8s.io/
 git clone https://github.com/samsung-cnct/cluster-api-provider-ssh.git $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
 cd $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
-make depend-update
-
 make
 ```
 
