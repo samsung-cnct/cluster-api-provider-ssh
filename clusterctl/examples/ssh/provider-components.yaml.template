@@ -127,7 +127,7 @@ apiVersion: v1
 kind: Secret
 type: Opaque
 metadata:
-  name: master-private-key
+  name: node-private-key
   namespace: default
 data:
   private-key: $NODE_CLUSTER_PRIVATE_KEY
