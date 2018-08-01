@@ -18,6 +18,8 @@ import (
 	"sync"
 
 	"golang.org/x/tools/go/gcexportdata"
+	"golang.org/x/tools/go/packages/golist"
+	"golang.org/x/tools/go/packages/raw"
 )
 
 // A LoadMode specifies the amount of detail to return when loading packages.
@@ -75,6 +77,10 @@ type Config struct {
 	//	opt.Env = append(os.Environ(), "GOOS=plan9", "GOARCH=386")
 	//
 	Env []string
+
+	// Flags is a list of command-line flags to be passed through to
+	// the underlying query tool.
+	Flags []string
 
 	// Error is called for each error encountered during package loading.
 	// It must be safe to call Error simultaneously from multiple goroutines.
@@ -136,7 +142,23 @@ type Config struct {
 // Load and returns the Go packages named by the given patterns.
 func Load(cfg *Config, patterns ...string) ([]*Package, error) {
 	l := newLoader(cfg)
-	return l.load(patterns...)
+	rawCfg := newRawConfig(&l.Config)
+	roots, pkgs, err := loadRaw(l.Context, rawCfg, patterns...)
+	if err != nil {
+		return nil, err
+	}
+	return l.loadFrom(roots, pkgs...)
+}
+
+// loadRaw returns the raw Go packages named by the given patterns.
+// This is a low level API, in general you should be using the Load function
+// unless you have a very strong need for the raw data.
+// It returns the packages identifiers that directly matched the patterns, the
+// full set of packages requested (which may include the dependencies) and
+// an error if the operation failed.
+func loadRaw(ctx context.Context, cfg *raw.Config, patterns ...string) ([]string, []*raw.Package, error) {
+	//TODO: this is the seam at which we enable alternate build systems
+	return golist.LoadRaw(ctx, cfg, patterns...)
 }
 
 // A Package describes a single loaded Go package.
@@ -206,7 +228,7 @@ type Package struct {
 
 // loaderPackage augments Package with state used during the loading phase
 type loaderPackage struct {
-	raw *rawPackage
+	raw *raw.Package
 	*Package
 	importErrors  map[string]error // maps each bad import to its error
 	loadOnce      sync.Once
@@ -231,6 +253,12 @@ func newLoader(cfg *Config) *loader {
 	if ld.Context == nil {
 		ld.Context = context.Background()
 	}
+	// Determine directory to be used for relative contains: paths.
+	if ld.Dir == "" {
+		if cwd, err := os.Getwd(); err == nil {
+			ld.Dir = cwd
+		}
+	}
 	if ld.Mode >= LoadSyntax {
 		if ld.Fset == nil {
 			ld.Fset = token.NewFileSet()
@@ -252,32 +280,29 @@ func newLoader(cfg *Config) *loader {
 	return ld
 }
 
-func (ld *loader) load(patterns ...string) ([]*Package, error) {
-	if len(patterns) == 0 {
-		return nil, fmt.Errorf("no packages to load")
+func newRawConfig(cfg *Config) *raw.Config {
+	rawCfg := &raw.Config{
+		Dir:    cfg.Dir,
+		Env:    cfg.Env,
+		Flags:  cfg.Flags,
+		Export: cfg.Mode > LoadImports && cfg.Mode < LoadAllSyntax,
+		Tests:  cfg.Tests,
+		Deps:   cfg.Mode >= LoadImports,
 	}
-
-	// Do the metadata query and partial build.
-	// TODO(adonovan): support alternative build systems at this seam.
-	rawCfg := newRawConfig(&ld.Config)
-	list, err := golistPackages(rawCfg, patterns...)
-	if _, ok := err.(GoTooOldError); ok {
-		if ld.Config.Mode >= LoadTypes {
-			// Upgrade to LoadAllSyntax because we can't depend on the existance
-			// of export data. We can remove this once iancottrell's cl is in.
-			ld.Config.Mode = LoadAllSyntax
-		}
-		list, err = golistPackagesFallback(rawCfg, patterns...)
+	if rawCfg.Env == nil {
+		rawCfg.Env = os.Environ()
 	}
-	if err != nil {
-		return nil, err
-	}
-	return ld.loadFrom(list...)
+	return rawCfg
 }
 
-func (ld *loader) loadFrom(list ...*rawPackage) ([]*Package, error) {
+func (ld *loader) loadFrom(roots []string, list ...*raw.Package) ([]*Package, error) {
+	if len(list) == 0 {
+		return nil, fmt.Errorf("packages not found")
+	}
+	if len(roots) == 0 {
+		return nil, fmt.Errorf("packages had no initial set")
+	}
 	ld.pkgs = make(map[string]*loaderPackage, len(list))
-	var initial []*loaderPackage
 	// first pass, fixup and build the map and roots
 	for _, pkg := range list {
 		lpkg := &loaderPackage{
@@ -288,22 +313,22 @@ func (ld *loader) loadFrom(list ...*rawPackage) ([]*Package, error) {
 				GoFiles:    pkg.GoFiles,
 				OtherFiles: pkg.OtherFiles,
 			},
-			// TODO: should needsrc also be true if pkg.Export == ""
-			needsrc: ld.Mode >= LoadAllSyntax,
+			needsrc: ld.Mode >= LoadAllSyntax || pkg.Export == "",
 		}
 		ld.pkgs[lpkg.ID] = lpkg
-		if !pkg.DepOnly {
-			initial = append(initial, lpkg)
-			if ld.Mode == LoadSyntax {
-				lpkg.needsrc = true
-			}
+	}
+	// check all the roots were found
+	initial := make([]*loaderPackage, len(roots))
+	for i, root := range roots {
+		lpkg := ld.pkgs[root]
+		if lpkg == nil {
+			return nil, fmt.Errorf("root package %v not found", root)
 		}
-	}
-	if len(ld.pkgs) == 0 {
-		return nil, fmt.Errorf("packages not found")
-	}
-	if len(initial) == 0 {
-		return nil, fmt.Errorf("packages had no initial set")
+		initial[i] = lpkg
+		// mark the roots as needing source
+		if ld.Mode == LoadSyntax {
+			lpkg.needsrc = true
+		}
 	}
 
 	// Materialize the import graph.

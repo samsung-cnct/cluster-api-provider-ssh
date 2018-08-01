@@ -37,6 +37,7 @@ var usesOldGolist = false
 //   import error) will result in a JSON blob with no name and a
 //   nonexistent testmain file in GoFiles. Test that we handle this
 //   gracefully.
+// - test more Flags.
 //
 // TypeCheck & WholeProgram modes:
 //   - Fset may be user-supplied or not.
@@ -111,9 +112,9 @@ func TestMetadataImportGraph(t *testing.T) {
   errors
   math/bits
 * subdir/d
-  subdir/d [subdir/d.test]
+* subdir/d [subdir/d.test]
 * subdir/d.test
-  subdir/d_test [subdir/d.test]
+* subdir/d_test [subdir/d.test]
   unsafe
   b -> a
   b -> errors
@@ -203,9 +204,24 @@ func TestMetadataImportGraph(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		const want = "[subdir/d subdir/e subdir/d.test]"
-		if fmt.Sprint(initial) != want {
-			t.Errorf("for subdir/... wildcard, got %s, want %s", initial, want)
+		graph, all = importGraph(initial)
+		wantGraph = `
+  math/bits
+* subdir/d
+* subdir/d [subdir/d.test]
+* subdir/d.test
+* subdir/d_test [subdir/d.test]
+* subdir/e
+  subdir/d [subdir/d.test] -> math/bits
+  subdir/d.test -> os (pruned)
+  subdir/d.test -> subdir/d [subdir/d.test]
+  subdir/d.test -> subdir/d_test [subdir/d.test]
+  subdir/d.test -> testing (pruned)
+  subdir/d.test -> testing/internal/testdeps (pruned)
+  subdir/d_test [subdir/d.test] -> subdir/d [subdir/d.test]
+`[1:]
+		if graph != wantGraph {
+			t.Errorf("wrong import graph: got <<%s>>, want <<%s>>", graph, wantGraph)
 		}
 	}
 }
@@ -269,7 +285,7 @@ func imports(p *packages.Package) []string {
 	return keys
 }
 
-func TestOptionsDir(t *testing.T) {
+func TestConfigDir(t *testing.T) {
 	tmp, cleanup := makeTree(t, map[string]string{
 		"src/a/a.go":   `package a; const Name = "a" `,
 		"src/a/b/b.go": `package b; const Name = "a/b"`,
@@ -314,6 +330,64 @@ func TestOptionsDir(t *testing.T) {
 		}
 	}
 
+}
+
+func TestConfigFlags(t *testing.T) {
+	// Test satisfying +build line tags, with -tags flag.
+	tmp, cleanup := makeTree(t, map[string]string{
+		// package a
+		"src/a/a.go": `package a; import _ "a/b"`,
+		"src/a/b.go": `// +build tag
+
+package a`,
+		"src/a/c.go": `// +build tag tag2
+
+package a`,
+		"src/a/d.go": `// +build tag,tag2
+
+package a`,
+		// package a/b
+		"src/a/b/a.go": `package b`,
+		"src/a/b/b.go": `// +build tag
+
+package b`,
+	})
+	defer cleanup()
+
+	for _, test := range []struct {
+		pattern        string
+		tags           []string
+		wantSrcs       string
+		wantImportSrcs map[string]string
+	}{
+		{`a`, []string{}, "a.go", map[string]string{"a/b": "a.go"}},
+		{`a`, []string{`-tags=tag`}, "a.go b.go c.go", map[string]string{"a/b": "a.go b.go"}},
+		{`a`, []string{`-tags=tag2`}, "a.go c.go", map[string]string{"a/b": "a.go"}},
+		{`a`, []string{`-tags=tag tag2`}, "a.go b.go c.go d.go", map[string]string{"a/b": "a.go b.go"}},
+	} {
+		cfg := &packages.Config{
+			Mode:  packages.LoadFiles,
+			Flags: test.tags,
+			Env:   append(os.Environ(), "GOPATH="+tmp),
+		}
+
+		initial, err := packages.Load(cfg, test.pattern)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(initial) != 1 {
+			t.Fatalf("test tags %v: pattern %s, expected 1 package, got %d packages.", test.tags, test.pattern, len(initial))
+		}
+		pkg := initial[0]
+		if srcs := strings.Join(srcs(pkg), " "); srcs != test.wantSrcs {
+			t.Errorf("test tags %v: srcs of package %s = [%s], want [%s]", test.tags, test.pattern, srcs, test.wantSrcs)
+		}
+		for path, ipkg := range pkg.Imports {
+			if srcs := strings.Join(srcs(ipkg), " "); srcs != test.wantImportSrcs[path] {
+				t.Errorf("build tags %v: srcs of imported package %s = [%s], want [%s]", test.tags, path, srcs, test.wantImportSrcs[path])
+			}
+		}
+	}
 }
 
 type errCollector struct {
@@ -459,13 +533,12 @@ func TestTypeCheckError(t *testing.T) {
 		wantTypes    bool
 		wantSyntax   bool
 		wantIllTyped bool
-		wantErrs     []string
 	}{
-		{"a", true, true, true, nil},
-		{"b", true, true, true, nil},
-		{"c", true, true, true, []string{"could not import d (no export data file)"}},
-		{"d", false, false, true, nil},  // missing export data
-		{"e", false, false, false, nil}, // type info not requested (despite type error)
+		{"a", true, true, true},
+		{"b", true, true, true},
+		{"c", true, true, true},
+		{"d", false, false, true},  // missing export data
+		{"e", false, false, false}, // type info not requested (despite type error)
 	} {
 		if usesOldGolist && test.id == "c" || test.id == "d" || test.id == "e" {
 			// Behavior is different for old golist because it upgrades to wholeProgram.
@@ -493,9 +566,6 @@ func TestTypeCheckError(t *testing.T) {
 		}
 		if p.IllTyped != test.wantIllTyped {
 			t.Errorf("IllTyped was %t for %s", p.IllTyped, test.id)
-		}
-		if errs := errorMessages(p.Errors); !reflect.DeepEqual(errs, test.wantErrs) {
-			t.Errorf("in package %s, got errors %s, want %s", p, errs, test.wantErrs)
 		}
 	}
 
@@ -729,6 +799,31 @@ func TestAbsoluteFilenames(t *testing.T) {
 				checkFile(filename)
 			}
 		}
+	}
+}
+
+func TestContains(t *testing.T) {
+	tmp, cleanup := makeTree(t, map[string]string{
+		"src/a/a.go": `package a; import "b"`,
+		"src/b/b.go": `package b; import "c"`,
+		"src/c/c.go": `package c`,
+	})
+	defer cleanup()
+
+	opts := &packages.Config{Env: append(os.Environ(), "GOPATH="+tmp), Dir: tmp, Mode: packages.LoadImports}
+	initial, err := packages.Load(opts, "contains:src/b/b.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	graph, _ := importGraph(initial)
+	wantGraph := `
+* b
+  c
+  b -> c
+`[1:]
+	if graph != wantGraph {
+		t.Errorf("wrong import graph: got <<%s>>, want <<%s>>", graph, wantGraph)
 	}
 }
 
