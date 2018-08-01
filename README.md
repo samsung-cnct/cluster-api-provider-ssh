@@ -32,6 +32,25 @@ make
 ```
 
 ## Generating cluster, machine, and provider-components files.
+The generate-yaml.sh bash script uses an environmental to receive the master and node ssh private keys.
+A passphrase can optionally be specified, and will default to empty string if not input.
+The private key environmental will indicate either a plain or encoded value.  If the value is plain, the script will 
+encode it.
+- To specify a master and node ssh secret that is already encoded
+```bash
+export CLUSTER_PRIVATE_KEY_ENCODED=yourencodedsecret
+export CLUSTER_PASSPHRASE=yourpassphrase
+export NODE_CLUSTER_PRIVATE_KEY_ENCODED=yourencodedsecret
+export NODE_CLUSTER_PASSPHRASE=yourpassphrase
+```
+- To specify a master and node ssh secret that is not encoded
+```bash
+export CLUSTER_PRIVATE_KEY_PLAIN=yourplainsecret
+export CLUSTER_PASSPHRASE=yourpassphrase
+export NODE_CLUSTER_PRIVATE_KEY_PLAIN=yourplainsecret
+export NODE_CLUSTER_PASSPHRASE=yourpassphrase
+```
+Run the script to generate the provider-components.yaml, machines.yaml, and cluster.yaml files need for clusterctl
 
 ```bash
 cd clusterctl/examples/ssh
@@ -39,6 +58,7 @@ cd clusterctl/examples/ssh
 ```
 
 For now some manual changes will have to be made to the template files as needed.
+Make sure that the IP addresses and versions look correct in the machines.yaml file.
 
 ## Running cluster deployer
 Build the clusterctl binary

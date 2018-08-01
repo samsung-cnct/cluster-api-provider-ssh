@@ -61,22 +61,50 @@ fi
 
 # TODO Fill out the generation pieces as we need them.
 
-if [ -z ${CLUSTER_PRIVATE_KEY_PLAIN+x} ]; then
-    echo "Please generate a valid Cluster Private Key and export the key file contents to CLUSTER_PRIVATE_KEY_PLAIN."
+if [ -z ${CLUSTER_PRIVATE_KEY_PLAIN+x} ] && [ -z ${CLUSTER_PRIVATE_KEY_ENCODED+x} ]; then
+    echo "Please generate a valid Cluster Private Key and export the key file contents to CLUSTER_PRIVATE_KEY_PLAIN or CLUSTER_PRIVATE_KEY_ENCODED."
     exit 1
 fi
 
 if [ -z ${CLUSTER_PASSPHRASE+x} ]; then
-    echo "using empty pass phrase to private key"
+    echo "using empty cluster pass phrase to private key"
     CLUSTER_PASSPHRASE=""
+fi
+
+if [ -z ${NODE_CLUSTER_PRIVATE_KEY_PLAIN+x} ] && [ -z ${NODE_CLUSTER_PRIVATE_KEY_ENCODED+x} ]; then
+    echo "Please generate a valid Node Cluster Private Key and export the key file contents to NODE_CLUSTER_PRIVATE_KEY_PLAIN or NODE_CLUSTER_PRIVATE_KEY_ENCODED."
+    exit 1
+fi
+
+if [ -z ${NODE_CLUSTER_PASSPHRASE+x} ]; then
+    echo "using empty node cluster pass phrase to private key"
+    NODE_CLUSTER_PASSPHRASE=""
 fi
 
 # Variables that need to be base64 encoded (for secrets)
 OS=$(uname)
 if [[ "$OS" =~ "Linux" ]]; then
-    CLUSTER_PRIVATE_KEY=$(echo -n $CLUSTER_PRIVATE_KEY_PLAIN | base64 -w0)
+    if [ -z ${CLUSTER_PRIVATE_KEY_ENCODED+x} ]; then
+        CLUSTER_PRIVATE_KEY=$(echo -n $CLUSTER_PRIVATE_KEY_PLAIN | base64 -w0)
+    else
+        CLUSTER_PRIVATE_KEY=$(echo -n $CLUSTER_PRIVATE_KEY_ENCODED)
+    fi
+    if [ -z ${NODE_CLUSTER_PRIVATE_KEY_ENCODED+x} ]; then
+        NODE_CLUSTER_PRIVATE_KEY=$(echo -n $NODE_CLUSTER_PRIVATE_KEY_PLAIN | base64 -w0)
+    else
+        NODE_CLUSTER_PRIVATE_KEY=$(echo -n $NODE_CLUSTER_PRIVATE_KEY_ENCODED)
+    fi
 elif [[ "$OS" =~ "Darwin" ]]; then
-    CLUSTER_PRIVATE_KEY=$(echo -n $CLUSTER_PRIVATE_KEY_PLAIN | base64 | tr -d \\r\\n)
+    if [ -z ${CLUSTER_PRIVATE_KEY_ENCODED+x} ]; then
+        CLUSTER_PRIVATE_KEY=$(echo -n $CLUSTER_PRIVATE_KEY_PLAIN | base64 | tr -d \\r\\n)
+    else
+        CLUSTER_PRIVATE_KEY=$(echo -n $CLUSTER_PRIVATE_KEY_ENCODED)
+    fi
+    if [ -z ${NODE_CLUSTER_PRIVATE_KEY_ENCODED+x} ]; then
+        NODE_CLUSTER_PRIVATE_KEY=$(echo -n $NODE_CLUSTER_PRIVATE_KEY_PLAIN | base64 | tr -d \\r\\n)
+    else
+        NODE_CLUSTER_PRIVATE_KEY=$(echo -n $NODE_CLUSTER_PRIVATE_KEY_ENCODED)
+    fi
 else
   echo "Unrecognized OS : $OS"
   exit 1
@@ -85,6 +113,8 @@ fi
 cat $PROVIDERCOMPONENT_TEMPLATE_FILE \
   | sed -e "s/\$CLUSTER_PRIVATE_KEY/$CLUSTER_PRIVATE_KEY/" \
   | sed -e "s/\$CLUSTER_PASSPHRASE/$CLUSTER_PASSPHRASE/" \
+  | sed -e "s/\$NODE_CLUSTER_PRIVATE_KEY/$NODE_CLUSTER_PRIVATE_KEY/" \
+  | sed -e "s/\$NODE_CLUSTER_PASSPHRASE/$NODE_CLUSTER_PASSPHRASE/" \
   | sed -e "/\$MASTER_BOOTSTRAP_SCRIPT/r $PROVIDERCOMPONENT_TEMPLATE_FILE_MASTER_BOOTSTRAP" \
   | sed -e "/\$MASTER_BOOTSTRAP_SCRIPT/d" \
   | sed -e "/\$NODE_BOOTSTRAP_SCRIPT/r $PROVIDERCOMPONENT_TEMPLATE_FILE_NODE_BOOTSTRAP" \
