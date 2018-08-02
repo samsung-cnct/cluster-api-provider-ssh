@@ -3,14 +3,14 @@ kind: Cluster
 metadata:
   name: test-1
 spec:
-    clusterNetwork:
-        services:
-            cidrBlocks: ["10.96.0.0/12"]
-        pods:
-            cidrBlocks: ["192.168.0.0/16"]
-        serviceDomain: "cluster.local"
-    providerConfig:
-      value:
-        apiVersion: "sshproviderconfig/v1alpha1"
-        kind: "SSHClusterProviderConfig"
+  clusterNetwork:
+    services:
+      cidrBlocks: ["10.96.0.0/12"]
+    pods:
+      cidrBlocks: ["10.244.0.0/16"]
+    serviceDomain: "cluster.local"
+  providerConfig:
+    value:
+      apiVersion: "sshproviderconfig/v1alpha1"
+      kind: "SSHClusterProviderConfig"
 

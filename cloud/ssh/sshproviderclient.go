@@ -99,7 +99,8 @@ func GetBasicSession(s *sshProviderClient) (*ssh.Session, error) {
 
 	connection, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", s.address, s.port), sshConfig)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to dial:", err)
+		emsg := fmt.Sprintf("failed to dial to %s:%d:",s.address, s.port)
+		return nil, fmt.Errorf(emsg, err)
 	}
 
 	session, err := connection.NewSession()

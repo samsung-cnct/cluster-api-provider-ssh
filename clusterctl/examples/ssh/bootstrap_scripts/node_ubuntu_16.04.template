@@ -11,15 +11,15 @@
           sudo apt update
 
           function install_configure_docker () {
-              # prevent docker from auto-starting
-              sudo echo "exit 101" > /usr/sbin/policy-rc.d
-              sudo chmod +x /usr/sbin/policy-rc.d
-              trap "sudo rm -f /usr/sbin/policy-rc.d" RETURN
-              sudo apt install -y docker-engine=1.12.0-0~xenial
-              echo 'DOCKER_OPTS="--iptables=false --ip-masq=false"' > /etc/default/docker
-              sudo systemctl daemon-reload
-              sudo systemctl enable docker
-              sudo systemctl start docker
+                 # prevent docker from auto-starting
+                  sudo sh -c "echo \"exit 101\" > /usr/sbin/policy-rc.d"
+                  sudo chmod +x /usr/sbin/policy-rc.d
+                  trap "sudo rm -f /usr/sbin/policy-rc.d" RETURN
+                  sudo apt install -y docker.io
+                  sudo sh -c "echo 'DOCKER_OPTS=\"--iptables=false --ip-masq=false\"' > /etc/default/docker"
+                  sudo systemctl daemon-reload
+                  sudo systemctl enable docker
+                  sudo systemctl start docker
           }
 
           install_configure_docker
@@ -48,6 +48,7 @@
           KUBEADM=$(getversion kubeadm ${KUBELET_VERSION}-)
           KUBECTL=$(getversion kubectl ${KUBELET_VERSION}-)
           sudo apt install -y kubelet=${KUBELET} kubeadm=${KUBEADM} kubectl=${KUBECTL}
+
           # kubeadm uses 10th IP as DNS server
           CLUSTER_DNS_SERVER=$(prips ${SERVICE_CIDR} | head -n 11 | tail -n 1)
           # Override network args to use kubenet instead of cni, override Kubelet DNS args and
@@ -61,6 +62,7 @@
           sudo systemctl restart kubelet.service
 
            # [ERROR Swap]: running with swap on is not supported. Please disable swap
+          sudo swapoff -a
           sudo kubeadm join --token "${TOKEN}" "${MASTER}" --ignore-preflight-errors=all --discovery-token-unsafe-skip-ca-verification
           for tries in $(seq 1 60); do
               sudo kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node $(hostname) machine=${MACHINE} && break
