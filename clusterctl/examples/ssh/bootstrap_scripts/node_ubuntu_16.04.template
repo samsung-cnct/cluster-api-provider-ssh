@@ -11,15 +11,15 @@
           sudo apt update
 
           function install_configure_docker () {
-                 # prevent docker from auto-starting
-                  sudo sh -c "echo \"exit 101\" > /usr/sbin/policy-rc.d"
-                  sudo chmod +x /usr/sbin/policy-rc.d
-                  trap "sudo rm -f /usr/sbin/policy-rc.d" RETURN
-                  sudo apt install -y docker.io
-                  sudo sh -c "echo 'DOCKER_OPTS=\"--iptables=false --ip-masq=false\"' > /etc/default/docker"
-                  sudo systemctl daemon-reload
-                  sudo systemctl enable docker
-                  sudo systemctl start docker
+              # prevent docker from auto-starting
+              sudo sh -c "echo \"exit 101\" > /usr/sbin/policy-rc.d"
+              sudo chmod +x /usr/sbin/policy-rc.d
+              trap "sudo rm -f /usr/sbin/policy-rc.d" RETURN
+              sudo apt install -y docker.io
+              sudo sh -c "echo 'DOCKER_OPTS=\"--iptables=false --ip-masq=false\"' > /etc/default/docker"
+              sudo systemctl daemon-reload
+              sudo systemctl enable docker
+              sudo systemctl start docker
           }
 
           install_configure_docker
@@ -62,6 +62,9 @@
           sudo systemctl restart kubelet.service
 
            # [ERROR Swap]: running with swap on is not supported. Please disable swap
+           # this was put in place since its something that must be done on ubuntu machines
+           # when provisioning for use with kubeadm. Note, kubelet requires this to be off
+           # and may be something we remove in the future and leave it as part of provisioning
           sudo swapoff -a
           sudo kubeadm join --token "${TOKEN}" "${MASTER}" --ignore-preflight-errors=all --discovery-token-unsafe-skip-ca-verification
           for tries in $(seq 1 60); do

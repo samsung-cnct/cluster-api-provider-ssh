@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # This script is intended to be used on a node that one wishes to remove from a cluster
 # Please use wisely and only when needed to clean a machine from its use
