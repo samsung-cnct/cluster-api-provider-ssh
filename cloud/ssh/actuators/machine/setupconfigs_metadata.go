@@ -123,6 +123,7 @@ const nodeEnvironmentVars = `#!/bin/bash
 KUBELET_VERSION={{ .Machine.Spec.Versions.Kubelet }}
 TOKEN={{ .Token }}
 MASTER={{ .MasterEndpoint }}
+MACHINE_NAME={{ .Machine.ObjectMeta.Name }}
 NAMESPACE={{ .Machine.ObjectMeta.Namespace }}
 MACHINE_NAME={{ .Machine.ObjectMeta.Name }}
 MACHINE=$NAMESPACE

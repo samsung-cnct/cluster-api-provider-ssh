@@ -74,5 +74,6 @@
               sudo kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node $(hostname) machine=${MACHINE} && break
               sleep 1
           done
+
           echo done.
           ) 2>&1 | sudo tee /var/log/startup.log
