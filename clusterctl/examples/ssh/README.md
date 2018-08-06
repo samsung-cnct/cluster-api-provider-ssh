@@ -1,23 +1,30 @@
-# Openstack Example Files
-## Contents
-*.yaml files - concrete example files that can be used as is.
-*.yaml.template files - template example files that need values filled in before use.
+# Introduction
 
-## Generation
-For convenience, a generation script which populates templates based on openstack cloud provider
-configuration is provided.
+Three manifest files are necessary to create a Cluster API defined k8s cluster:
 
-1. Generate a Cluster Private Key.
+- `cluster.yaml`: Defines cluster networking (e.g. pod and service cidrs, etc.).
+- `machine.yaml`: Defines k8s versions, ssh configuration, etc.
+- `providerconfig.yaml`: Defines Cluster API controller deployments, ssh key
+secrets, bootstrap scripts, etc.
 
-Store the key in a file reserved for this cluster.
+## Usage
 
-2. Set key as env var.
+- Generate an ssh key for this cluster by running `ssh-keygen` and encode it:
+
+```
+ssh-keygen -t rsa -b 2048 -f ./id_rsa -N ""
+cat id_rsa | base64 | tr -d \\r\\n > id_rsa.b64
 ```
 
-export CLUSTER_PRIVATE_KEY_PLAIN=$(cat /path/to/ClusterPrivateKey)
+2. Set environment variables:
+
+```
+export CLUSTER_PRIVATE_KEY=$(cat id_rsa.b64)
+export NODE_CLUSTER_PRIVATE_KEY=$(cat id_rsa.b64)
 ```
 
-3. Run the generation script.
+3. Run the script:
+
 ```
 ./generate-yaml.sh
 ```
@@ -29,6 +36,6 @@ $ ./generate-yaml.sh
 File provider-components.yaml already exists. Delete it manually before running this script.
 ```
 
-## Manual Modification
-You may always manually curate files based on the examples provided.
-
+You may always manually curate files based on the examples provided. At the 
+very least you _must_ update the IP addresses to match the nodes which should
+be provisioned with k8s.

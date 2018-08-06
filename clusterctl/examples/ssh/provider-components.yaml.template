@@ -122,6 +122,7 @@ metadata:
 data:
   private-key: $CLUSTER_PRIVATE_KEY
   pass-phrase: $CLUSTER_PASSPHRASE
+# TODO: Why do we allow different keys to be specified for masters and nodes?
 ---
 apiVersion: v1
 kind: Secret
