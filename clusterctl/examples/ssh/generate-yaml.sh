@@ -71,21 +71,9 @@ if [ -z ${CLUSTER_PASSPHRASE+x} ]; then
     CLUSTER_PASSPHRASE='""'
 fi
 
-if [ -z ${NODE_CLUSTER_PRIVATE_KEY+x} ]; then
-    echo "Please generate a valid base64 encoded node cluster private key and export the key file contents to NODE_CLUSTER_PRIVATE_KEY."
-    exit 1
-fi
-
-if [ -z ${NODE_CLUSTER_PASSPHRASE+x} ]; then
-    echo "using empty node cluster pass phrase to private key"
-    NODE_CLUSTER_PASSPHRASE='""'
-fi
-
 cat $PROVIDERCOMPONENT_TEMPLATE_FILE \
   | sed -e "s/\$CLUSTER_PRIVATE_KEY/$CLUSTER_PRIVATE_KEY/" \
   | sed -e "s/\$CLUSTER_PASSPHRASE/$CLUSTER_PASSPHRASE/" \
-  | sed -e "s/\$NODE_CLUSTER_PRIVATE_KEY/$NODE_CLUSTER_PRIVATE_KEY/" \
-  | sed -e "s/\$NODE_CLUSTER_PASSPHRASE/$NODE_CLUSTER_PASSPHRASE/" \
   | sed -e "/\$MASTER_BOOTSTRAP_SCRIPT/r $PROVIDERCOMPONENT_TEMPLATE_FILE_MASTER_BOOTSTRAP" \
   | sed -e "/\$MASTER_BOOTSTRAP_SCRIPT/d" \
   | sed -e "/\$NODE_BOOTSTRAP_SCRIPT/r $PROVIDERCOMPONENT_TEMPLATE_FILE_NODE_BOOTSTRAP" \
