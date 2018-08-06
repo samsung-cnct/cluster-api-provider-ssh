@@ -1,6 +1,9 @@
           set -e
           set -x
           (
+          # Run in noninteractive mode to avoid erroring when a config file preexists.
+          export DEBIAN_FRONTEND=noninteractive
+
           sudo apt update
           sudo apt install -y apt-transport-https prips
           sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com --recv-keys F76221572C52609D
