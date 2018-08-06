@@ -117,22 +117,11 @@ apiVersion: v1
 kind: Secret
 type: Opaque
 metadata:
-  name: master-private-key
+  name: cluster-private-key
   namespace: default
 data:
   private-key: $CLUSTER_PRIVATE_KEY
   pass-phrase: $CLUSTER_PASSPHRASE
-# TODO: Why do we allow different keys to be specified for masters and nodes?
----
-apiVersion: v1
-kind: Secret
-type: Opaque
-metadata:
-  name: node-private-key
-  namespace: default
-data:
-  private-key: $NODE_CLUSTER_PRIVATE_KEY
-  pass-phrase: $NODE_CLUSTER_PASSPHRASE
 ---
 apiVersion: v1
 kind: ConfigMap

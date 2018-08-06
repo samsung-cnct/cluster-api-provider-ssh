@@ -15,7 +15,7 @@ items:
           username: ubuntu
           host: 192.168.2.121
           port: 22
-          secretName: master-private-key
+          secretName: cluster-private-key
     versions:
       kubelet: 1.10.4
       controlPlane: 1.10.4
@@ -35,6 +35,6 @@ items:
           username: ubuntu
           host: 192.168.2.187
           port: 22
-          secretName: node-private-key
+          secretName: cluster-private-key
     versions:
       kubelet: 1.10.4
