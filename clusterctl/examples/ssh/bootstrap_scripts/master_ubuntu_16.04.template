@@ -62,8 +62,11 @@
           sudo systemctl restart kubelet.service
 
           # Set up kubeadm config file to pass parameters to kubeadm init.
+          # Note the latest API version for kubeadm is v1alphav2 as of kubeadm
+          # 1.11. We need to account for these different versions in the next
+          # rewrite of this script.
           cat << EOF | sudo tee /etc/kubernetes/kubeadm_config.yaml
-          apiVersion: kubeadm.k8s.io/v1alpha2
+          apiVersion: kubeadm.k8s.io/v1alpha1
           kind: MasterConfiguration
           api:
             bindPort: 443
