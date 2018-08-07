@@ -4,13 +4,6 @@
           # Run in noninteractive mode to avoid erroring when a config file preexists.
           export DEBIAN_FRONTEND=noninteractive
 
-          # This a temporary hack for development purposes.
-          kubeadm reset || true
-          apt-get purge kubeadm kubectl kubelet kubernetes-cni kube* -y || true
-          rm -f /etc/systemd/system/kubelet.service.d/* || true
-          rm -f /etc/systemd/system/kubelet.d/* || true
-          rm -rf /var/lib/etcd || true
-
           sudo apt update
           sudo apt install -y apt-transport-https prips
           sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com --recv-keys F76221572C52609D
