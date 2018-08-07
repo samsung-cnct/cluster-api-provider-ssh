@@ -82,6 +82,7 @@
           networking:
             dsnDomain: ${CLUSTER_DNS_DOMAIN}
             serviceSubnet: ${SERVICE_CIDR}
+            podSubnet: ${POD_CIDR}
           EOF
 
           # Create and set bridge-nf-call-iptables to 1 to pass the kubeadm preflight check.
