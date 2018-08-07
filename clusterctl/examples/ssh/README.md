@@ -16,14 +16,13 @@ ssh-keygen -t rsa -b 2048 -f ./id_rsa -N ""
 cat id_rsa | base64 | tr -d \\r\\n > id_rsa.b64
 ```
 
-2. Set environment variables:
+- Set environment variables
 
 ```
 export CLUSTER_PRIVATE_KEY=$(cat id_rsa.b64)
-export NODE_CLUSTER_PRIVATE_KEY=$(cat id_rsa.b64)
 ```
 
-3. Run the script:
+- Run the script:
 
 ```
 ./generate-yaml.sh
