@@ -47,17 +47,16 @@ func (s *sshProviderClient) DeletePublicKeys(machineSSHConfig v1alpha1.SSHConfig
 
 func (s *sshProviderClient) GetKubeConfig() (string, error) {
 	cmd := "sudo cat /etc/kubernetes/admin.conf"
+
 	session, err := GetBasicSession(s)
 	if err != nil {
 		return "", fmt.Errorf("Failed to create session: %s", err)
 	}
+	defer session.Close()
 
 	outputBytes, err := session.Output(cmd)
 
-	defer session.Close()
-
 	return string(outputBytes), err
-
 }
 
 func (s *sshProviderClient) ProcessCMD(cmd string) error {
@@ -99,7 +98,7 @@ func GetBasicSession(s *sshProviderClient) (*ssh.Session, error) {
 
 	connection, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", s.address, s.port), sshConfig)
 	if err != nil {
-		emsg := fmt.Sprintf("failed to dial to %s:%d:",s.address, s.port)
+		emsg := fmt.Sprintf("failed to dial to %s:%d:", s.address, s.port)
 		return nil, fmt.Errorf(emsg, err)
 	}
 
