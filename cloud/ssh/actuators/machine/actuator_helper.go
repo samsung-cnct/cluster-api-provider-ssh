@@ -2,7 +2,7 @@ package machine
 
 import (
 	"errors"
-
+	"fmt"
 	"github.com/golang/glog"
 
 	"strings"
@@ -13,6 +13,8 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 	apierrors "sigs.k8s.io/cluster-api/pkg/errors"
 	"sigs.k8s.io/cluster-api/pkg/kubeadm"
+	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh"
+	"sigs.k8s.io/cluster-api/pkg/util"
 )
 
 const (
@@ -60,7 +62,7 @@ func (a *Actuator) getMetadata(c *clusterv1.Cluster, m *clusterv1.Machine, machi
 	metadataMap := make(map[string]string)
 
 	if m.Spec.Versions.Kubelet == "" {
-		return nil, errors.New("invalid master configuration: missing Machine.Spec.Versions.Kubelet")
+		return nil, errors.New("invalid configuration: missing Machine.Spec.Versions.Kubelet")
 	}
 
 	machineSetupConfigs, err := a.machineSetupConfigGetter.GetMachineSetupConfig()
@@ -73,7 +75,7 @@ func (a *Actuator) getMetadata(c *clusterv1.Cluster, m *clusterv1.Machine, machi
 		return nil, err
 	}
 
-	if isMaster(machineParams.Roles) {
+	if util.IsMaster(m) {
 		if m.Spec.Versions.ControlPlane == "" {
 			return nil, a.handleMachineError(m, apierrors.InvalidMachineConfiguration(
 				"invalid master configuration: missing Machine.Spec.Versions.ControlPlane"), createEventAction)
@@ -85,9 +87,7 @@ func (a *Actuator) getMetadata(c *clusterv1.Cluster, m *clusterv1.Machine, machi
 		}
 
 		metadataMap = addStringValueMaps(metadataMap, masterMap)
-	}
-
-	if isNode(machineParams.Roles) {
+	} else {
 		kubeadmToken, err := a.getKubeadmToken()
 		if err != nil {
 			return nil, err
@@ -128,3 +128,116 @@ func addStringValueMaps(m1 map[string]string, m2 map[string]string) map[string]s
 
 	return m1
 }
+
+func (a *Actuator) updateMasterInplace(c *clusterv1.Cluster, oldMachine *clusterv1.Machine, newMachine *clusterv1.Machine) error {
+	glog.Infof("updating master node %s", oldMachine.Name)
+	machineConfig, err := a.machineProviderConfig(newMachine.Spec.ProviderConfig)
+	if err != nil {
+		return err
+	}
+
+	privateKey, passPhrase, err := a.getPrivateKey(c, newMachine.Namespace, machineConfig.SSHConfig.SecretName)
+	if err != nil {
+		return err
+	}
+
+	sshClient := ssh.NewSSHProviderClient(privateKey, passPhrase, machineConfig.SSHConfig)
+
+	// Upgrade ControlPlane items
+	if oldMachine.Spec.Versions.ControlPlane != newMachine.Spec.Versions.ControlPlane {
+		glog.Infof("updating master node %s; controlplane version from %s to %s", oldMachine.Name, oldMachine.Spec.Versions.ControlPlane, newMachine.Spec.Versions.ControlPlane)
+
+		cmd := fmt.Sprintf(
+			"curl -sSL https://dl.k8s.io/release/v%s/bin/linux/amd64/kubeadm | sudo tee /usr/bin/kubeadm > /dev/null; "+
+				"sudo chmod a+rx /usr/bin/kubeadm", newMachine.Spec.Versions.ControlPlane)
+		err := sshClient.ProcessCMD(cmd)
+		if err != nil {
+			glog.Infof("Could not get list of releases, sshClient error: %v", err)
+			return err
+		}
+
+		// Upgrade control plane.
+		cmd = fmt.Sprintf("sudo kubeadm upgrade apply %s -y", "v"+newMachine.Spec.Versions.ControlPlane)
+		err = sshClient.ProcessCMD(cmd)
+		if err != nil {
+			glog.Infof("Could not upgrade to new version: %s, sshClient error: %v", newMachine.Spec.Versions.ControlPlane, err)
+			return err
+		}
+	}
+
+	// Upgrade Kubelet.
+	if oldMachine.Spec.Versions.Kubelet != newMachine.Spec.Versions.Kubelet {
+		glog.Infof("updating master node %s; kubelet version from %s to %s.", oldMachine.Name, oldMachine.Spec.Versions.Kubelet, newMachine.Spec.Versions.Kubelet)
+		cmd := fmt.Sprintf("sudo kubectl drain %s --kubeconfig /etc/kubernetes/admin.conf --ignore-daemonsets", newMachine.Name)
+		// The errors are intentionally ignored as master has static pods.
+		_ = sshClient.ProcessCMD(cmd)
+
+		// Upgrade kubelet to desired version.
+		cmd = fmt.Sprintf("sudo apt install kubelet=%s-00", newMachine.Spec.Versions.Kubelet)
+		err = sshClient.ProcessCMD(cmd)
+		if err != nil {
+			glog.Infof("Could not apt install Kubelet version: %s-00, sshClient error: %v", newMachine.Spec.Versions.Kubelet+"-00", err)
+			return err
+		}
+
+		cmd = fmt.Sprintf("sudo kubectl uncordon %s --kubeconfig /etc/kubernetes/admin.conf", newMachine.Name)
+		err = sshClient.ProcessCMD(cmd)
+		if err != nil {
+			glog.Infof("Could not uncordon the node: %s, sshClient error: %v", newMachine.Name, err)
+			return err
+		}
+	}
+
+	glog.Infof("updating master node %s; done.", oldMachine.Name)
+
+	return nil
+}
+
+
+func (a *Actuator) getMachineInstanceVersions(c *clusterv1.Cluster, m *clusterv1.Machine) (*clusterv1.MachineVersionInfo, error) {
+	glog.Infof("retrieving machine versions: machine %s for cluster %s...", m.Name, c.Name)
+	// First get provider config
+	machineConfig, err := a.machineProviderConfig(m.Spec.ProviderConfig)
+	if err != nil {
+		return nil,  fmt.Errorf("error, retrieving machine versions", err)
+	}
+
+	// Here we deploy and run the scripts to the node.
+	privateKey, passPhrase, err := a.getPrivateKey(c, m.Namespace, machineConfig.SSHConfig.SecretName)
+	if err != nil {
+		return nil, fmt.Errorf("error, retrieving machine versions", err)
+	}
+
+	// Get Kubelet version
+	sshClient := ssh.NewSSHProviderClient(privateKey, passPhrase, machineConfig.SSHConfig)
+
+	versionResult, err := sshClient.ProcessCMDWithOutput("kubelet --version")
+	if err != nil {
+		glog.Errorf("error, retrieving machine versions:", err)
+		return nil, err
+	}
+
+	kubeletVersion := strings.Split(string(versionResult), " v")[1]
+	kubeletVersion = strings.TrimSpace(kubeletVersion)
+
+
+	if util.IsMaster(m) {
+		// Get ControlPlane
+		// TODO this is way too provisioning specific.
+		cmd := "kubeadm version | awk -F, '{print $3}' | awk -F\\\" '{print $2}'"
+		versionResult, err = sshClient.ProcessCMDWithOutput(cmd)
+		if err != nil {
+			glog.Errorf("error, retrieving machine controlPlane versions %s: %v", cmd, err)
+			return nil, err
+		}
+
+		controlPlaneVersion := strings.Replace(string(versionResult), "v", "",1)
+		controlPlaneVersion = strings.TrimSpace(controlPlaneVersion)
+
+		return &clusterv1.MachineVersionInfo{Kubelet:kubeletVersion, ControlPlane:controlPlaneVersion}, nil
+	} else {
+		return &clusterv1.MachineVersionInfo{Kubelet:kubeletVersion}, nil
+	}
+
+}
+

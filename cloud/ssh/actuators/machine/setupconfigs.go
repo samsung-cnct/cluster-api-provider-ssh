@@ -62,9 +62,11 @@ func (v *ValidMachineConfigItems) matchMachineSetupConfig(params *MachineParams)
 		if !reflect.DeepEqual(paramRoles, validRoles) {
 			continue
 		}
-		if params.Versions != validParams.Versions {
-			continue
-		}
+		// AE: TODO ! Should we validate over versions? I would think not? otherwise we would need to change this
+		// Every time we want to update
+		//if params.Versions != validParams.Versions {
+		//	continue
+		//}
 		matchingConfigs = append(matchingConfigs, conf)
 	}
 
@@ -98,34 +100,4 @@ func rolesToMap(roles []v1alpha1.MachineRole) map[v1alpha1.MachineRole]int {
 		rolesMap[role] = rolesMap[role] + 1
 	}
 	return rolesMap
-}
-
-// todo may want to separate the concepts of etcd/master anyway.
-func isMaster(roles []v1alpha1.MachineRole) bool {
-	for _, r := range roles {
-		if r == v1alpha1.MasterRole {
-			return true
-		}
-	}
-	return false
-}
-
-/* This is stub code yet to be implemented
-func isEtcd(roles []v1alpha1.MachineRole) bool {
-	for _, r := range roles {
-		if r == v1alpha1.EtcdRole {
-			return true
-		}
-	}
-	return false
-}
-*/
-
-func isNode(roles []v1alpha1.MachineRole) bool {
-	for _, r := range roles {
-		if r == v1alpha1.NodeRole {
-			return true
-		}
-	}
-	return false
 }

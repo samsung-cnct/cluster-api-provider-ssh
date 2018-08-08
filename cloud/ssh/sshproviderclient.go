@@ -45,28 +45,35 @@ func (s *sshProviderClient) DeletePublicKeys(machineSSHConfig v1alpha1.SSHConfig
 }
 
 func (s *sshProviderClient) GetKubeConfig() (string, error) {
-	cmd := "sudo cat /etc/kubernetes/admin.conf"
-
-	session, err := GetBasicSession(s)
+	bytes, err :=  s.ProcessCMDWithOutput("sudo cat /etc/kubernetes/admin.conf")
 	if err != nil {
-		return "", fmt.Errorf("Failed to create session: %s", err)
+		return "", err
 	}
-	defer session.Close()
 
-	outputBytes, err := session.Output(cmd)
-
-	return string(outputBytes), err
+	return string(bytes), nil
 }
 
 func (s *sshProviderClient) ProcessCMD(cmd string) error {
 	session, err := GetBasicSession(s)
 	if err != nil {
-		return fmt.Errorf("Failed to create session: %v", err)
+		return fmt.Errorf("Failed to create a session.", err)
 	}
 
 	defer session.Close()
 
 	return session.Run(cmd)
+}
+
+func (s *sshProviderClient) ProcessCMDWithOutput(cmd string) ([]byte, error) {
+	session, err := GetBasicSession(s)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create session: %s", err)
+	}
+	defer session.Close()
+
+	outputBytes, err := session.Output(cmd)
+
+	return outputBytes, err
 }
 
 func GetBasicSession(s *sshProviderClient) (*ssh.Session, error) {
@@ -103,7 +110,7 @@ func GetBasicSession(s *sshProviderClient) (*ssh.Session, error) {
 	session, err := connection.NewSession()
 	if err != nil {
 		glog.Errorf("failed to create sesssion", err)
-		return nil, fmt.Errorf("Failed to create session: %v", err)
+		return nil, fmt.Errorf("failed to create session:", err)
 	}
 
 	return session, nil

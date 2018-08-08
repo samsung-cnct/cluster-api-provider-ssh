@@ -14,8 +14,6 @@
 package machine
 
 import (
-	"fmt"
-
 	"github.com/golang/glog"
 	clustercommon "sigs.k8s.io/cluster-api/pkg/apis/cluster/common"
 
@@ -29,6 +27,8 @@ import (
 	client "sigs.k8s.io/cluster-api/pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1"
 	apierrors "sigs.k8s.io/cluster-api/pkg/errors"
 	"sigs.k8s.io/cluster-api/pkg/kubeadm"
+	"sigs.k8s.io/cluster-api/pkg/util"
+
 )
 
 const (
@@ -109,7 +109,7 @@ func (a *Actuator) Create(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 		return a.handleMachineError(m, err, createEventAction)
 	}
 
-	// check if the machine exists (here we mean we havent provisioned it yet.)
+	// check if the machine exists (here we mean we haven't provisioned it yet.)
 	exists, err := a.Exists(c, m)
 	if err != nil {
 		return err
@@ -216,9 +216,12 @@ func (a *Actuator) Delete(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 	glog.Infof("running shutdown script: machine %s for cluster %s...", m.Name, c.Name)
 
 	sshClient := ssh.NewSSHProviderClient(privateKey, passPhrase, machineConfig.SSHConfig)
+
+	glog.Infof("running shutdown script: %s", metadata.ShutdownScript)
+
 	err = sshClient.ProcessCMD(metadata.ShutdownScript)
 	if err != nil {
-		glog.Errorf("running shutdown script error:", err)
+		glog.Errorf("error running shutdown script:", err)
 		return err
 	}
 
@@ -233,9 +236,71 @@ func (a *Actuator) Delete(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 }
 
 // Update updates a machine and is invoked by the Machine Controller
-func (a *Actuator) Update(cluster *clusterv1.Cluster, machine *clusterv1.Machine) error {
-	glog.Infof("Updating machine %v for cluster %v.", machine.Name, cluster.Name)
-	return fmt.Errorf("TODO: Not yet implemented")
+func (a *Actuator) Update(cluster *clusterv1.Cluster, goalMachine *clusterv1.Machine) error {
+	glog.Infof("Updating Machine %v for cluster %v.", goalMachine.Name, cluster.Name)
+
+	// validate the goal machine
+	goalConfig, err := a.machineproviderconfig(goalMachine.Spec.ProviderConfig)
+	if err != nil {
+		return a.handleMachineError(goalMachine, apierrors.InvalidMachineConfiguration("Cannot unmarshal machine's providerConfig field: %v", err), noEventAction)
+	}
+
+	if verr := a.validateMachine(goalMachine, goalConfig); verr != nil {
+		return a.handleMachineError(goalMachine, verr, noEventAction)
+	}
+
+	// get the current machine that the goal machine is targeting to update
+	currentMachine, err := util.GetMachineIfExists(a.v1Alpha1Client.Machines(goalMachine.Namespace), goalMachine.ObjectMeta.Name)
+	if err != nil {
+		return err
+	}
+
+	currentVersionInfo, err := a.getMachineInstanceVersions(cluster, currentMachine)
+	if err != nil {
+		return err
+	}
+
+	glog.V(3).Infof("machine versions: %+v", currentVersionInfo)
+	goalVersions := goalMachine.Spec.Versions
+
+	if goalVersions.ControlPlane == currentVersionInfo.ControlPlane && goalVersions.Kubelet == currentVersionInfo.Kubelet {
+		glog.Infof("No updating required for Machine %s of cluster %s: ", goalMachine.Name, cluster.Name)
+		return nil
+	}
+
+	currentMachine.Spec.Versions = *currentVersionInfo
+
+	if util.IsMaster(currentMachine) {
+		glog.Infof("Doing an in-place upgrade for master %s.", goalMachine.ObjectMeta.Name)
+		// TODO: should we support custom CAs here?
+		err = a.updateMasterInplace(cluster, currentMachine, goalMachine)
+		if err != nil {
+			glog.Errorf("master in-place update failed for %s: %v", goalMachine.ObjectMeta.Name, err)
+		}
+	} else {
+		glog.Infof("re-creating machine %s for update.", currentMachine.ObjectMeta.Name)
+		err = a.Delete(cluster, currentMachine)
+		if err != nil {
+			glog.Errorf("delete machine %s for update failed for machine %s: %v", currentMachine.ObjectMeta.Name, err)
+		} else {
+			err = a.Create(cluster, goalMachine)
+			if err != nil {
+				glog.Errorf("create machine %s for update failed for machine %s: %v", goalMachine.ObjectMeta.Name, err)
+			}
+		}
+	}
+	if err != nil {
+		return err
+	}
+
+	a.eventRecorder.Eventf(goalMachine, corev1.EventTypeNormal, "Updated", "Updated Machine %v", goalMachine.Name)
+
+	// If we have a v1Alpha1Client, then annotate the machine.
+	if a.v1Alpha1Client != nil {
+		return a.updateAnnotations(cluster, goalMachine)
+	}
+
+	return a.updateStatus(goalMachine)
 }
 
 // Exists test for the existance of a machine and is invoked by the Machine Controller
