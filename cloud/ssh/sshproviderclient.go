@@ -79,32 +79,19 @@ func GetBasicSession(s *sshProviderClient) (*ssh.Session, error) {
 			return nil, err
 		}
 		sshAuthMethods = append(sshAuthMethods, publicKeyMethod)
+	}
 
-		sshAgent := SSHAgent()
-		if sshAgent != nil {
-			sshAuthMethods = append(sshAuthMethods, sshAgent)
-		}
+	sshAgent := SSHAgent()
+	if sshAgent != nil {
+		sshAuthMethods = append(sshAuthMethods, sshAgent)
+	}
 
-		sshConfig = &ssh.ClientConfig{
-			User: s.username,
-			Auth: sshAuthMethods,
-			HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
-				return nil
-			},
-		}
-	} else {
-		sshAgent := SSHAgent()
-		if sshAgent != nil {
-			sshAuthMethods = append(sshAuthMethods, sshAgent)
-		}
-
-		sshConfig = &ssh.ClientConfig{
-			User: s.username,
-			Auth: sshAuthMethods,
-			HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
-				return nil
-			},
-		}
+	sshConfig = &ssh.ClientConfig{
+		User: s.username,
+		Auth: sshAuthMethods,
+		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+			return nil
+		},
 	}
 
 	connection, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", s.address, s.port), sshConfig)
@@ -112,7 +99,7 @@ func GetBasicSession(s *sshProviderClient) (*ssh.Session, error) {
 		emsg := fmt.Sprintf("failed to dial to %s:%d:", s.address, s.port)
 		return nil, fmt.Errorf(emsg, err)
 	}
-
+	
 	session, err := connection.NewSession()
 	if err != nil {
 		glog.Errorf("failed to create sesssion", err)
