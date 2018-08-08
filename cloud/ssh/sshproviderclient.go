@@ -71,7 +71,7 @@ func (s *sshProviderClient) ProcessCMD(cmd string) error {
 
 func GetBasicSession(s *sshProviderClient) (*ssh.Session, error) {
 	var sshConfig *ssh.ClientConfig
-	sshAuthMethods := make([]ssh.AuthMethod, 1)
+	sshAuthMethods := make([]ssh.AuthMethod, 0)
 
 	if s.privateKey != "" {
 		publicKeyMethod, err := PublicKeyFile(s.privateKey, s.passPhrase)
