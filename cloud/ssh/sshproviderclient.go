@@ -2,9 +2,8 @@ package ssh
 
 import (
 	"fmt"
-	"os"
-
 	"net"
+	"os"
 
 	"github.com/golang/glog"
 	"golang.org/x/crypto/ssh"
@@ -72,24 +71,36 @@ func (s *sshProviderClient) ProcessCMD(cmd string) error {
 
 func GetBasicSession(s *sshProviderClient) (*ssh.Session, error) {
 	var sshConfig *ssh.ClientConfig
+	sshAuthMethods := make([]ssh.AuthMethod, 1)
 
 	if s.privateKey != "" {
-		authMethod, err := PublicKeyFile(s.privateKey, s.passPhrase)
+		publicKeyMethod, err := PublicKeyFile(s.privateKey, s.passPhrase)
 		if err != nil {
 			return nil, err
+		}
+		sshAuthMethods = append(sshAuthMethods, publicKeyMethod)
+
+		sshAgent := SSHAgent()
+		if sshAgent != nil {
+			sshAuthMethods = append(sshAuthMethods, sshAgent)
 		}
 
 		sshConfig = &ssh.ClientConfig{
 			User: s.username,
-			Auth: []ssh.AuthMethod{authMethod, SSHAgent()},
+			Auth: sshAuthMethods,
 			HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
 				return nil
 			},
 		}
 	} else {
+		sshAgent := SSHAgent()
+		if sshAgent != nil {
+			sshAuthMethods = append(sshAuthMethods, sshAgent)
+		}
+
 		sshConfig = &ssh.ClientConfig{
 			User: s.username,
-			Auth: []ssh.AuthMethod{SSHAgent()},
+			Auth: sshAuthMethods,
 			HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
 				return nil
 			},
