@@ -218,7 +218,7 @@ func (a *Actuator) Delete(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 	sshClient := ssh.NewSSHProviderClient(privateKey, passPhrase, machineConfig.SSHConfig)
 	err = sshClient.ProcessCMD(metadata.ShutdownScript)
 	if err != nil {
-		glog.Errorf("running teardown script error:", err)
+		glog.Errorf("running shutdown script error:", err)
 		return err
 	}
 
