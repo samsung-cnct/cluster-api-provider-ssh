@@ -44,7 +44,7 @@ push: depend
 	$(MAKE) -C cmd/cluster-controller push
 	$(MAKE) -C cmd/machine-controller push
 
-dev_push: depend
+dev_push: 
 	$(MAKE) -C cmd/cluster-controller dev_push
 	$(MAKE) -C cmd/machine-controller dev_push
 
