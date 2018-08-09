@@ -38,3 +38,5 @@ items:
           secretName: cluster-private-key
     versions:
       kubelet: 1.10.6
+
+# vim: ft=yaml:ts=2:sw=2

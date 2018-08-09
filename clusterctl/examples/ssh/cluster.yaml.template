@@ -14,3 +14,4 @@ spec:
       apiVersion: "sshproviderconfig/v1alpha1"
       kind: "SSHClusterProviderConfig"
 
+# vim: ft=yaml:ts=2:sw=2

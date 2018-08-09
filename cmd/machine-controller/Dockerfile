@@ -27,3 +27,4 @@ FROM debian:stretch-slim
 RUN apt-get update && apt-get install -y ca-certificates openssh-server && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /go/bin/machine-controller .
+COPY --from=builder /go/src/sigs.k8s.io/cluster-api-provider-ssh/cmd/machine-controller/kubeadm.kubeconfig /etc/kubernetes/admin.conf
