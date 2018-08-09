@@ -5,8 +5,14 @@
 
           mv /var/log/startup.log /var/log/startup.log.$(date +%Y-%m-%d-%H-%M)
 
+          kubectl drain ${MACHINE} --kubeconfig=/etc/kubernetes/admin.conf --delete-local-data --force --ignore-daemonsets
+          kubectl delete node ${MACHINE}
+
           kubeadm reset
+
+          export DEBIAN_FRONTEND=noninteractive
           apt-get purge kubeadm kubectl kubelet kubernetes-cni kube* -y
+
           rm -f /etc/systemd/system/kubelet.service.d/*
           rm -f /etc/systemd/system/kubelet.d/*
           rm -rf /var/lib/etcd

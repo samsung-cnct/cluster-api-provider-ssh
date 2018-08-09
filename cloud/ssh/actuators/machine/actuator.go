@@ -164,6 +164,7 @@ func (a *Actuator) Create(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 // Delete deletes a machine and is invoked by the Machine Controller
 func (a *Actuator) Delete(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 	glog.Infof("Deleting machine %v for cluster %v.", m.Name, c.Name)
+
 	if a.machineSetupConfigGetter == nil {
 		return a.handleMachineError(m, apierrors.InvalidMachineConfiguration(
 			"valid machineSetupConfigGetter is required"), deleteEventAction)
@@ -207,7 +208,6 @@ func (a *Actuator) Delete(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 
 	glog.Infof("metadata retrieved: machine %s for cluster %s", m.Name, c.Name)
 
-	// Here we deploy and run the scripts to the node.
 	privateKey, passPhrase, err := a.getPrivateKey(c, m.Namespace, machineConfig.SSHConfig.SecretName)
 	if err != nil {
 		return err
@@ -215,16 +215,14 @@ func (a *Actuator) Delete(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 
 	glog.Infof("running startup script: machine %s for cluster %s...", m.Name, c.Name)
 
-	// !? startup (shutdown) are not the right actions
 	sshClient := ssh.NewSSHProviderClient(privateKey, passPhrase, machineConfig.SSHConfig)
 	err = sshClient.ProcessCMD(metadata.ShutdownScript)
 	if err != nil {
-		glog.Errorf("running reset script error:", err)
-
+		glog.Errorf("running teardown script error:", err)
 		return err
 	}
 
-	a.eventRecorder.Eventf(m, corev1.EventTypeNormal, "Destroyed", "Destroyed Machine %v", m.Name)
+	a.eventRecorder.Eventf(m, corev1.EventTypeNormal, "Deleted", "Deleted Machine %v", m.Name)
 
 	return nil
 }
