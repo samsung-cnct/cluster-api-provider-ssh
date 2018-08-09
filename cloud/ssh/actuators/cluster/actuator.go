@@ -47,5 +47,5 @@ func (a *Actuator) Reconcile(cluster *clusterv1.Cluster) error {
 // Delete deletes a cluster and is invoked by the Cluster Controller
 func (a *Actuator) Delete(cluster *clusterv1.Cluster) error {
 	glog.Infof("Deleting cluster %v.", cluster.Name)
-	return fmt.Errorf("TODO: Not yet implemented")
+	return nil
 }

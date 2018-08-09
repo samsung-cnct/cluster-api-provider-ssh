@@ -1,0 +1,14 @@
+          set -e
+          set -x
+          (
+          ARCH=amd64
+
+          mv /var/log/startup.log /var/log/startup.log.$(date +%Y-%m-%d-%H-%M)
+
+          kubeadm reset
+          apt-get purge kubeadm kubectl kubelet kubernetes-cni kube* -y
+          rm -f /etc/systemd/system/kubelet.service.d/*
+          rm -f /etc/systemd/system/kubelet.d/*
+          rm -rf /var/lib/etcd
+
+          ) 2>&1 | sudo tee /var/log/teardown.log
