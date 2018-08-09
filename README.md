@@ -33,7 +33,14 @@ make
 
 Follow the instructions [here](./clusterctl/examples/ssh/README.md).
 
-## Running cluster deployer
+## Deploying a cluster
+
+clusterctl needs access to the private key in order to finalize the new internal cluster.
+
+```bash
+eval $(ssh-agent)
+ssh-add <private key file>
+```
 
 Build the clusterctl binary:
 
@@ -41,24 +48,38 @@ Build the clusterctl binary:
  make compile
 ```
 
-- Run using minikube:
+- Run using minikube<sup>[1](#kvm2)</sup>:
 
 ```bash
-./bin/clusterctl create cluster --provider ssh -c ./clusterctl/examples/ssh/out/cluster.yaml -m ./clusterctl/examples/ssh/out/machines.yaml -p ./clusterctl/examples/ssh/out/provider-components.yaml
+bin/clusterctl create cluster --provider ssh \
+    -c ./clusterctl/examples/ssh/out/cluster.yaml \
+    -m ./clusterctl/examples/ssh/out/machines.yaml \
+    -p ./clusterctl/examples/ssh/out/provider-components.yaml
 ```
 
 - Run using external cluster:
 
 ```bash
-./bin/clusterctl create cluster --existing-bootstrap-cluster-kubeconfig /path/to/kubeconfig --provider ssh -c ./clusterctl/examples/ssh/out/cluster.yaml -m ./clusterctl/examples/ssh/out/machines.yaml -p ./clusterctl/examples/ssh/out/provider-components.yaml
+./bin/clusterctl create cluster --provider ssh \
+    --existing-bootstrap-cluster-kubeconfig /path/to/kubeconfig \
+    -c ./clusterctl/examples/ssh/out/cluster.yaml \
+    -m ./clusterctl/examples/ssh/out/machines.yaml \
+    -p ./clusterctl/examples/ssh/out/provider-components.yaml
 ```
 
-## Building and deploying new controller images for developement
+Validate your new cluster:
 
-When making changes to the either of the controllers, to test them you
-need to build and push new images to quay.io. There are `Makefile`s to
-do this for development (for production CI/CD will handle this).  The Makefile
-located at cluster-api-provider-ssh will pass through to the Makefiles in the cmd dir.
+```bash
+export KUBECONFIG=${PWD}/kubeconfig
+kubectl get nodes
+```
+
+## Building and deploying new controller images for development
+
+To test custom changes to either of the machine controller or the cluster controller, you
+need to build and push new images to a repository. There are `make` targets to
+do this.
+
 For example:
 
 - push both ssh-cluster-controller and ssh-machine-controller images
@@ -82,8 +103,8 @@ make dev_push_cluster
 The images will be tagged with the username of the account you used to
 build and push the images:
 
-https://quay.io/repository/samsung_cnct/ssh-cluster-controller?tab=tags
-https://quay.io/repository/samsung_cnct/ssh-mchine-controller?tab=tags
+* https://quay.io/repository/samsung_cnct/ssh-cluster-controller?tab=tags
+* https://quay.io/repository/samsung_cnct/ssh-mchine-controller?tab=tags
 
 Remember to change the `provider-components.yaml` manifest to point to your
 images. For example:
@@ -112,3 +133,9 @@ index 8fac530..3d6c246 100644
            - name: config
              mountPath: /etc/kubernetes
 ```
+
+---
+
+<a name="kvm2">1</a> If using minikube on linux, you may prefer to use the
+[kvm2 driver](https://github.com/kubernetes/minikube/blob/master/docs/drivers.md#kvm2-driver).
+To do so, add the `--vm-driver=kvm2` flag after installing the driver.
