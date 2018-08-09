@@ -3,7 +3,7 @@
           (
           ARCH=amd64
 
-          mv /var/log/startup.log /var/log/startup.log.$(date +%Y-%m-%d-%H-%M) || true
+          mv -f /var/log/teardown.log /var/log/teardown.log.$(date +%Y-%m-%d-%H-%M)
 
           KUBECONFIG=/etc/kubernetes/admin.conf
           kubectl drain ${MACHINE} --delete-local-data --force --ignore-daemonsets
