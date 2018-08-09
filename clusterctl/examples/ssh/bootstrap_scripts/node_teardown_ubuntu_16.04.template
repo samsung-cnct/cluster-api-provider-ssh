@@ -27,7 +27,7 @@
                       /var/lib/etcd2 \
                       /var/lib/kubelet \
           "
-          for d in RM_RF_DIRS; do
+          for d in ${RM_RF_DIRS}; do
             rm -rf $d
           done
 
