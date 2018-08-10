@@ -147,7 +147,6 @@ func (a *Actuator) Create(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 	err = sshClient.ProcessCMD(metadata.StartupScript)
 	if err != nil {
 		glog.Errorf("running startup script error:", err)
-
 		return err
 	}
 
@@ -163,9 +162,69 @@ func (a *Actuator) Create(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 }
 
 // Delete deletes a machine and is invoked by the Machine Controller
-func (a *Actuator) Delete(cluster *clusterv1.Cluster, machine *clusterv1.Machine) error {
-	glog.Infof("Deleting machine %v for cluster %v.", machine.Name, cluster.Name)
-	return fmt.Errorf("TODO: Not yet implemented")
+func (a *Actuator) Delete(c *clusterv1.Cluster, m *clusterv1.Machine) error {
+	glog.Infof("Deleting machine %v for cluster %v.", m.Name, c.Name)
+
+	if a.machineSetupConfigGetter == nil {
+		return a.handleMachineError(m, apierrors.InvalidMachineConfiguration(
+			"valid machineSetupConfigGetter is required"), deleteEventAction)
+	}
+
+	// First get provider config
+	machineConfig, err := a.machineProviderConfig(m.Spec.ProviderConfig)
+	if err != nil {
+		return a.handleMachineError(m, apierrors.InvalidMachineConfiguration(
+			"Cannot unmarshal machine's providerConfig field: %v", err), deleteEventAction)
+	}
+
+	// Now validate
+	if err := a.validateMachine(m, machineConfig); err != nil {
+		return a.handleMachineError(m, err, deleteEventAction)
+	}
+
+	// Check if the machine exists (here we mean it is not bootstrapping.)
+	exists, err := a.Exists(c, m)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		glog.Infof("machine %s for cluster %s does not exists (maybe it is still bootstrapping), skipping deletion.", m.Name, c.Name)
+		return nil
+	}
+
+	// The exists case here.
+	glog.Infof("machine %s for cluster %s doesnt exist; Creating.", m.Name, c.Name)
+
+	configParams := &MachineParams{
+		Roles:    machineConfig.Roles,
+		Versions: m.Spec.Versions,
+	}
+
+	metadata, err := a.getMetadata(c, m, configParams)
+	if err != nil {
+		return err
+	}
+
+	glog.Infof("metadata retrieved: machine %s for cluster %s", m.Name, c.Name)
+
+	privateKey, passPhrase, err := a.getPrivateKey(c, m.Namespace, machineConfig.SSHConfig.SecretName)
+	if err != nil {
+		return err
+	}
+
+	glog.Infof("running startup script: machine %s for cluster %s...", m.Name, c.Name)
+
+	sshClient := ssh.NewSSHProviderClient(privateKey, passPhrase, machineConfig.SSHConfig)
+	err = sshClient.ProcessCMD(metadata.ShutdownScript)
+	if err != nil {
+		glog.Errorf("running shutdown script error:", err)
+		return err
+	}
+
+	a.eventRecorder.Eventf(m, corev1.EventTypeNormal, "Deleted", "Deleted Machine %v", m.Name)
+
+	return nil
 }
 
 // Update updates a machine and is invoked by the Machine Controller

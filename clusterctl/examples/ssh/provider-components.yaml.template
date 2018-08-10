@@ -140,6 +140,8 @@ data:
       metadata:
         startupScript: |
           $MASTER_BOOTSTRAP_SCRIPT
+        shutdownScript: |
+          $MASTER_TEARDOWN_SCRIPT
     - machineParams:
         roles:
         - Node
@@ -148,5 +150,7 @@ data:
       metadata:
         startupScript: |
           $NODE_BOOTSTRAP_SCRIPT
+        shutdownScript: |
+          $NODE_TEARDOWN_SCRIPT
 
 

@@ -16,8 +16,9 @@ var (
 )
 
 type Metadata struct {
-	StartupScript string `json:"startupScript"`
-	Items         map[string]string
+	StartupScript  string `json:"startupScript"`
+	ShutdownScript string `json:"shutdownScript"`
+	Items          map[string]string
 }
 
 func init() {
@@ -45,14 +46,22 @@ func masterMetadata(c *clusterv1.Cluster, m *clusterv1.Machine, metadata *Metada
 		PodCIDR:     getSubnet(c.Spec.ClusterNetwork.Pods),
 		ServiceCIDR: getSubnet(c.Spec.ClusterNetwork.Services),
 	}
-
 	masterMetadata := map[string]string{}
 	var buf bytes.Buffer
+
 	if err := masterEnvironmentVarsTemplate.Execute(&buf, params); err != nil {
 		return nil, err
 	}
 	buf.WriteString(params.Metadata.StartupScript)
 	masterMetadata["startup-script"] = buf.String()
+
+	buf.Reset()
+	if err := masterEnvironmentVarsTemplate.Execute(&buf, params); err != nil {
+		return nil, err
+	}
+	buf.WriteString(params.Metadata.ShutdownScript)
+	masterMetadata["shutdown-script"] = buf.String()
+
 	return masterMetadata, nil
 }
 
@@ -66,14 +75,22 @@ func nodeMetadata(token string, c *clusterv1.Cluster, m *clusterv1.Machine, meta
 		ServiceCIDR:    getSubnet(c.Spec.ClusterNetwork.Services),
 		MasterEndpoint: getEndpoint(c.Status.APIEndpoints[0]),
 	}
-
 	nodeMetadata := map[string]string{}
 	var buf bytes.Buffer
+
 	if err := nodeEnvironmentVarsTemplate.Execute(&buf, params); err != nil {
 		return nil, err
 	}
 	buf.WriteString(params.Metadata.StartupScript)
 	nodeMetadata["startup-script"] = buf.String()
+
+	buf.Reset()
+	if err := nodeEnvironmentVarsTemplate.Execute(&buf, params); err != nil {
+		return nil, err
+	}
+	buf.WriteString(params.Metadata.ShutdownScript)
+	nodeMetadata["shutdown-script"] = buf.String()
+
 	return nodeMetadata, nil
 }
 

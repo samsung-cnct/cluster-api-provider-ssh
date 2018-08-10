@@ -1,0 +1,34 @@
+          set -e
+          set -x
+          (
+          ARCH=amd64
+
+          mv -f /var/log/teardown.log /var/log/teardown.log.$(date +%Y-%m-%d-%H-%M)
+
+          KUBECONFIG=/etc/kubernetes/admin.conf
+          kubectl drain ${MACHINE} --delete-local-data --force --ignore-daemonsets
+          kubectl delete node ${MACHINE}
+
+          kubeadm reset
+
+          # !? TODO: This is an incomplete list of packages to remove
+          DEBIAN_FRONTEND=noninteractive
+          apt-get purge kubeadm kubectl kubelet kubernetes-cni kube* docker.io -y
+
+          RM_RF_DIRS="/etc/cni \
+                      /etc/docker \
+                      /etc/ethertypes \
+                      /etc/kubernetes \
+                      /etc/systemd/system/kubelet.service.d \
+                      /var/lib/cni \
+                      /var/lib/docker \
+                      /var/lib/dockershim \
+                      /var/lib/etcd \
+                      /var/lib/etcd2 \
+                      /var/lib/kubelet \
+          "
+          for d in ${RM_RF_DIRS}; do
+            rm -rf $d
+          done
+
+          ) 2>&1 | sudo tee /var/log/teardown.log
