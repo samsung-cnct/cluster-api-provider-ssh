@@ -122,7 +122,7 @@ func (a *Actuator) getKubeadmToken() (string, error) {
 	}
 	output, err := a.kubeadm.TokenCreate(tokenParams)
 	if err != nil {
-		glog.Errorf("unable to create token: %v", err)
+		glog.Errorf("unable to create token: %s, %v", output, err)
 		return "", err
 	}
 	return strings.TrimSpace(output), err
