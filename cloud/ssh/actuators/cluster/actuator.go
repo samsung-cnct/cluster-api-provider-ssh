@@ -47,5 +47,14 @@ func (a *Actuator) Reconcile(cluster *clusterv1.Cluster) error {
 // Delete deletes a cluster and is invoked by the Cluster Controller
 func (a *Actuator) Delete(cluster *clusterv1.Cluster) error {
 	glog.Infof("Deleting cluster %v.", cluster.Name)
+
+	// The core machine controller will not [delete](https://goo.gl/LEW9s1)
+	// a machine unless it [has a cluster](https://goo.gl/X8AGH6). Therefore
+	// we must assume one cluster per namespace. Related issues:
+	//
+	// https://github.com/samsung-cnct/cluster-api-provider-ssh/pull/50
+	// https://github.com/kubernetes-sigs/cluster-api/issues/252
+	// https://github.com/kubernetes-sigs/cluster-api/issues/177
+	// https://github.com/kubernetes-sigs/cluster-api/issues/41
 	return nil
 }
