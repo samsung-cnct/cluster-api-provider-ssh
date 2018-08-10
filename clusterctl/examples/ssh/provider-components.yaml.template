@@ -135,8 +135,8 @@ data:
         - Master
         - Etcd
         versions:
-          kubelet: 1.10.4
-          controlPlane: 1.10.4
+          kubelet: 1.10.6
+          controlPlane: 1.10.6
       metadata:
         startupScript: |
           $MASTER_BOOTSTRAP_SCRIPT
@@ -144,7 +144,7 @@ data:
         roles:
         - Node
         versions:
-          kubelet: 1.10.4
+          kubelet: 1.10.6
       metadata:
         startupScript: |
           $NODE_BOOTSTRAP_SCRIPT
