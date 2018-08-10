@@ -17,8 +17,8 @@ items:
           port: 22
           secretName: cluster-private-key
     versions:
-      kubelet: 1.10.4
-      controlPlane: 1.10.4
+      kubelet: 1.10.6
+      controlPlane: 1.10.6
 # Nodes are defined as those items that do NOT have controlPlane versions entry.
 - apiVersion: "cluster.k8s.io/v1alpha1"
   kind: Machine
@@ -37,4 +37,4 @@ items:
           port: 22
           secretName: cluster-private-key
     versions:
-      kubelet: 1.10.4
+      kubelet: 1.10.6
