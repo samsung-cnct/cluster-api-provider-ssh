@@ -11,6 +11,12 @@
 
           kubeadm reset
 
+          # We assume each node is a pristine version of the intended Linux 
+          # distro when we bootstrap. In order to make the node as much like it 
+          # was when we teardown (as much as possible since we do not protect 
+          # against things like hostDir changes) we should uninstall exactly 
+          # what we installed.
+          #
           # !? TODO: This is an incomplete list of packages to remove
           DEBIAN_FRONTEND=noninteractive
           apt-get purge kubeadm kubectl kubelet kubernetes-cni kube* docker.io -y
