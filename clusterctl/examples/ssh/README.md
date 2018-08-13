@@ -4,7 +4,7 @@ Three manifest files are necessary to create a Cluster API defined k8s cluster:
 
 - `cluster.yaml`: Defines cluster networking (e.g. pod and service cidrs, etc.).
 - `machine.yaml`: Defines k8s versions, ssh configuration, etc.
-- `providerconfig.yaml`: Defines Cluster API controller deployments, ssh key
+- `provider-components.yaml`: Defines Cluster API controller deployments, ssh key
   secrets, bootstrap scripts, etc.
 
 ## Usage
