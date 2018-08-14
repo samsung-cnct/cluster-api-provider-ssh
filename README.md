@@ -50,6 +50,8 @@ Build the clusterctl binary:
 
 - Run using minikube<sup>[1](#kvm2)</sup>:
 
+:warning: Warning: You must only use minikube version 0.28.0
+
 ```bash
 bin/clusterctl create cluster --provider ssh \
     -c ./clusterctl/examples/ssh/out/cluster.yaml \
