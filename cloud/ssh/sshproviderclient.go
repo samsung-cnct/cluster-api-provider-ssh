@@ -61,7 +61,7 @@ func (s *sshProviderClient) GetKubeConfig() (string, error) {
 func (s *sshProviderClient) ProcessCMD(cmd string) error {
 	session, err := GetBasicSession(s)
 	if err != nil {
-		return fmt.Errorf("Failed to create session:", err)
+		return fmt.Errorf("Failed to create session: %v", err)
 	}
 
 	defer session.Close()
@@ -103,7 +103,7 @@ func GetBasicSession(s *sshProviderClient) (*ssh.Session, error) {
 	session, err := connection.NewSession()
 	if err != nil {
 		glog.Errorf("failed to create sesssion", err)
-		return nil, fmt.Errorf("Failed to create session:", err)
+		return nil, fmt.Errorf("Failed to create session: %v", err)
 	}
 
 	return session, nil
