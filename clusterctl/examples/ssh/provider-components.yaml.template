@@ -1,3 +1,48 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: clusterapi
+  namespace: default
+
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: clusterapi
+rules:
+- apiGroups: [""]
+  resources: 
+  - "endpoints"
+  - "events"
+  - "nodes"
+  - "secrets"
+  verbs: 
+  - "*"
+- apiGroups: ["cluster.k8s.io"]
+  resources: 
+  - "clusters"
+  - "machinedeployments"
+  - "machines"
+  - "machines/status"
+  - "machinesets"
+  verbs: 
+  - "*"
+
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: clusterapi
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: clusterapi
+subjects:
+- kind: ServiceAccount
+  name: clusterapi
+  namespace: default
+---
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
@@ -11,6 +56,7 @@ spec:
       labels:
         api: clusterapi
     spec:
+      serviceAccountName: clusterapi
       nodeSelector:
         node-role.kubernetes.io/master: ""
       tolerations:
@@ -27,15 +73,9 @@ spec:
       containers:
       - name: controller-manager
         image: gcr.io/k8s-cluster-api/controller-manager:0.0.8
-        volumeMounts:
-          - name: config
-            mountPath: /etc/kubernetes
-          - name: certs
-            mountPath: /etc/ssl/certs
         command:
         - "./controller-manager"
         args:
-        - --kubeconfig=/etc/kubernetes/admin.conf
         - --leader-elect
         resources:
           requests:
@@ -47,10 +87,6 @@ spec:
       - name: ssh-cluster-controller
         image: quay.io/samsung_cnct/ssh-cluster-controller:prod
         volumeMounts:
-          - name: config
-            mountPath: /etc/kubernetes
-          - name: certs
-            mountPath: /etc/ssl/certs
           - name: machine-setup
             mountPath: /etc/machinesetup
         env:
@@ -61,7 +97,6 @@ spec:
         command:
         - "./cluster-controller"
         args:
-        - --kubeconfig=/etc/kubernetes/admin.conf
         - --leader-elect
         resources:
           requests:
@@ -73,10 +108,6 @@ spec:
       - name: ssh-machine-controller
         image: quay.io/samsung_cnct/ssh-machine-controller:prod
         volumeMounts:
-          - name: config
-            mountPath: /etc/kubernetes
-          - name: certs
-            mountPath: /etc/ssl/certs
           - name: machine-setup
             mountPath: /etc/machinesetup
           - name: kubeadm
@@ -89,7 +120,6 @@ spec:
         command:
         - "./machine-controller"
         args:
-        - --kubeconfig=/etc/kubernetes/admin.conf
         - --machinesetup=/etc/machinesetup/machine_setup_configs.yaml
         - --leader-elect
         resources:
@@ -100,12 +130,6 @@ spec:
             cpu: 400m
             memory: 500Mi
       volumes:
-      - name: config
-        hostPath:
-          path: /etc/kubernetes
-      - name: certs
-        hostPath:
-          path: /etc/ssl/certs
       - name: machine-setup
         configMap:
           name: machine-setup
@@ -153,4 +177,4 @@ data:
         shutdownScript: |
           $NODE_TEARDOWN_SCRIPT
 
-
+# vim: ft=yaml:ts=2:sw=2
