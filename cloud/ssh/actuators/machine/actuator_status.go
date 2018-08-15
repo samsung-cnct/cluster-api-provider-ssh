@@ -17,7 +17,7 @@ type AnnotationKey string
 
 const (
 	InstanceStatus AnnotationKey = "instance-status"
-	Name           AnnotationKey = "hostname"
+	Name           AnnotationKey = "machine-name"
 )
 
 // Get the status of the instance identified by the given machine

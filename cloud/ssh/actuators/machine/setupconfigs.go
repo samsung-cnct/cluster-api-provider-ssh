@@ -62,11 +62,9 @@ func (v *ValidMachineConfigItems) matchMachineSetupConfig(params *MachineParams)
 		if !reflect.DeepEqual(paramRoles, validRoles) {
 			continue
 		}
-		// AE: TODO ! Should we validate over versions? I would think not? otherwise we would need to change this
-		// Every time we want to update
-		//if params.Versions != validParams.Versions {
-		//	continue
-		//}
+		if params.Versions != validParams.Versions {
+			continue
+		}
 		matchingConfigs = append(matchingConfigs, conf)
 	}
 
