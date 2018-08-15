@@ -58,7 +58,7 @@ dev_push_cluster: ## Push the development tagged cluster-controller image to the
 dev_push_machine: ## Push the development tagged machine-controller image to the registry
 	$(MAKE) -C cmd/machine-controller dev_push
 
-check: golint yamllint ## Do linting
+check: golint yamllint mdlint ## Do linting
 
 test: ## Run tests
 	go test -race -cover ./cmd/... ./cloud/...
@@ -75,6 +75,9 @@ golint:
 
 yamllint:
 	git ls-files '*.yml' '*.yaml' '*.yaml.template' | grep -v '^vendor' | xargs yamllint
+
+mdlint:
+	git ls-files '*.md' | grep -v '^vendor' | xargs -n 1 markdownlint
 
 compile: ## Compile the binaries into the ./bin directory
 	mkdir -p ./bin
