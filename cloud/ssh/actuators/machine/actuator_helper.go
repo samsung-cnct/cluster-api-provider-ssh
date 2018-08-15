@@ -30,15 +30,6 @@ func (a *Actuator) machineProviderConfig(providerConfig clusterv1.ProviderConfig
 	return &config, nil
 }
 
-func (a *Actuator) clusterProviderConfig(providerConfig clusterv1.ProviderConfig) (*v1alpha1.SSHClusterProviderConfig, error) {
-	var config v1alpha1.SSHClusterProviderConfig
-	err := a.sshProviderConfigCodec.DecodeFromProviderConfig(providerConfig, &config)
-	if err != nil {
-		return nil, err
-	}
-	return &config, nil
-}
-
 func (a *Actuator) validateMachine(machine *clusterv1.Machine, config *v1alpha1.SSHMachineProviderConfig) *apierrors.MachineError {
 	if machine.Spec.Versions.Kubelet == "" {
 		return apierrors.InvalidMachineConfiguration("spec.versions.kubelet can't be empty")
@@ -52,6 +43,7 @@ func (a *Actuator) handleMachineError(machine *clusterv1.Machine, err *apierrors
 		message := err.Message
 		machine.Status.ErrorReason = &reason
 		machine.Status.ErrorMessage = &message
+		//nolint:errcheck
 		a.v1Alpha1Client.Machines(machine.Namespace).UpdateStatus(machine)
 	}
 
@@ -126,15 +118,6 @@ func (a *Actuator) getKubeadmToken() (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(output), err
-}
-
-func (a *Actuator) machineproviderconfig(providerConfig clusterv1.ProviderConfig) (*v1alpha1.SSHMachineProviderConfig, error) {
-	var config v1alpha1.SSHMachineProviderConfig
-	err := a.sshProviderConfigCodec.DecodeFromProviderConfig(providerConfig, &config)
-	if err != nil {
-		return nil, err
-	}
-	return &config, nil
 }
 
 func addStringValueMaps(m1 map[string]string, m2 map[string]string) map[string]string {
