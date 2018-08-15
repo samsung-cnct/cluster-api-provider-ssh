@@ -139,4 +139,3 @@ index 8fac530..3d6c246 100644
 <a name="kvm2">1</a> If using minikube on linux, you may prefer to use the
 [kvm2 driver](https://github.com/kubernetes/minikube/blob/master/docs/drivers.md#kvm2-driver).
 To do so, add the `--vm-driver=kvm2` flag after installing the driver.
-
