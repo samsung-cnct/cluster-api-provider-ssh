@@ -24,9 +24,9 @@ Participation in the Kubernetes community is governed by the
 ## Obtaining the code
 
 Imports in the code refer to `sigs.k8s.io/cluster-api*` even though this
-repository lives under the `samsung-cnct` GitHub organization. For Go
-dependencies to be built correctly with `dep`, place this repository in your
-$GOPATH as follows:
+repository lives under the `samsung-cnct` GitHub organization.
+For Go dependencies to be built correctly with `dep`, place this repository in
+your $GOPATH as follows:
 
 ```bash
 mkdir -p $GOPATH/src/sigs.k8s.io/
@@ -86,8 +86,8 @@ kubectl get nodes
 ## Building and deploying new controller images for development
 
 To test custom changes to either of the machine controller or the cluster
-controller, you need to build and push new images to a repository. There
-are `make` targets to do this.
+controller, you need to build and push new images to a repository.
+There are `make` targets to do this.
 
 For example:
 
@@ -124,7 +124,8 @@ build and push the images:
 <!-- markdownlint-enable MD034 -->
 
 Remember to change the `provider-components.yaml` manifest to point to your
-images. For example:
+images.
+For example:
 
 ```patch
 diff --git a/clusterctl/examples/ssh/provider-components.yaml.template b/clusterctl/examples/ssh/provider-components.yaml.template
