@@ -45,7 +45,7 @@ func (s *sshProviderClient) DeletePublicKeys(machineSSHConfig v1alpha1.SSHConfig
 }
 
 func (s *sshProviderClient) GetKubeConfig() (string, error) {
-	bytes, err :=  s.ProcessCMDWithOutput("sudo cat /etc/kubernetes/admin.conf")
+	bytes, err := s.ProcessCMDWithOutput("sudo cat /etc/kubernetes/admin.conf")
 	if err != nil {
 		return "", err
 	}

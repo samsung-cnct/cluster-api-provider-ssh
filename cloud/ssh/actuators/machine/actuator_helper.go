@@ -3,17 +3,18 @@ package machine
 import (
 	"errors"
 	"fmt"
+
 	"github.com/golang/glog"
 
 	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh"
 	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/providerconfig/v1alpha1"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 	apierrors "sigs.k8s.io/cluster-api/pkg/errors"
 	"sigs.k8s.io/cluster-api/pkg/kubeadm"
-	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh"
 	"sigs.k8s.io/cluster-api/pkg/util"
 )
 
@@ -193,13 +194,12 @@ func (a *Actuator) updateMasterInplace(c *clusterv1.Cluster, oldMachine *cluster
 	return nil
 }
 
-
 func (a *Actuator) getMachineInstanceVersions(c *clusterv1.Cluster, m *clusterv1.Machine) (*clusterv1.MachineVersionInfo, error) {
 	glog.Infof("retrieving machine versions: machine %s for cluster %s...", m.Name, c.Name)
 	// First get provider config
 	machineConfig, err := a.machineProviderConfig(m.Spec.ProviderConfig)
 	if err != nil {
-		return nil,  fmt.Errorf("error, retrieving machine versions", err)
+		return nil, fmt.Errorf("error, retrieving machine versions", err)
 	}
 
 	// Here we deploy and run the scripts to the node.
@@ -220,7 +220,6 @@ func (a *Actuator) getMachineInstanceVersions(c *clusterv1.Cluster, m *clusterv1
 	kubeletVersion := strings.Split(string(versionResult), " v")[1]
 	kubeletVersion = strings.TrimSpace(kubeletVersion)
 
-
 	if util.IsMaster(m) {
 		// Get ControlPlane
 		// TODO this is way too provisioning specific.
@@ -231,13 +230,12 @@ func (a *Actuator) getMachineInstanceVersions(c *clusterv1.Cluster, m *clusterv1
 			return nil, err
 		}
 
-		controlPlaneVersion := strings.Replace(string(versionResult), "v", "",1)
+		controlPlaneVersion := strings.Replace(string(versionResult), "v", "", 1)
 		controlPlaneVersion = strings.TrimSpace(controlPlaneVersion)
 
-		return &clusterv1.MachineVersionInfo{Kubelet:kubeletVersion, ControlPlane:controlPlaneVersion}, nil
+		return &clusterv1.MachineVersionInfo{Kubelet: kubeletVersion, ControlPlane: controlPlaneVersion}, nil
 	} else {
-		return &clusterv1.MachineVersionInfo{Kubelet:kubeletVersion}, nil
+		return &clusterv1.MachineVersionInfo{Kubelet: kubeletVersion}, nil
 	}
 
 }
-
