@@ -58,7 +58,7 @@ dev_push_cluster: ## Push the development tagged cluster-controller image to the
 dev_push_machine: ## Push the development tagged machine-controller image to the registry
 	$(MAKE) -C cmd/machine-controller dev_push
 
-check: golint ## Do linting
+check: golint yamllint ## Do linting
 
 test: ## Run tests
 	go test -race -cover ./cmd/... ./cloud/...
@@ -72,6 +72,9 @@ vet:
 golint:
 	@command -v golangci-lint > /dev/null | go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
 	golangci-lint run
+
+yamllint:
+	git ls-files '*.yml' '*.yaml' '*.yaml.template' | grep -v '^vendor' | xargs yamllint
 
 compile: ## Compile the binaries into the ./bin directory
 	mkdir -p ./bin
