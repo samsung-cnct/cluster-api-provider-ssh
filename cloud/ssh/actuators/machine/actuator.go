@@ -264,7 +264,6 @@ func (a *Actuator) Update(cluster *clusterv1.Cluster, goalMachine *clusterv1.Mac
 		return err
 	}
 
-
 	glog.V(3).Infof("machine versions: %+v", currentVersionInfo)
 	currentMachineName := currentMachine.ObjectMeta.Name
 	goalVersions := goalMachine.Spec.Versions
