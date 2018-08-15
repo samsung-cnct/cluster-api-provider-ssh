@@ -194,7 +194,7 @@ func (a *Actuator) Delete(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 	}
 
 	// The exists case here.
-	glog.Infof("machine %s for cluster %s doesnt exist; Creating.", m.Name, c.Name)
+	glog.Infof("machine %s for cluster %s exists; Deleting.", m.Name, c.Name)
 
 	configParams := &MachineParams{
 		Roles:    machineConfig.Roles,
@@ -213,13 +213,18 @@ func (a *Actuator) Delete(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 		return err
 	}
 
-	glog.Infof("running startup script: machine %s for cluster %s...", m.Name, c.Name)
+	glog.Infof("running shutdown script: machine %s for cluster %s...", m.Name, c.Name)
 
 	sshClient := ssh.NewSSHProviderClient(privateKey, passPhrase, machineConfig.SSHConfig)
 	err = sshClient.ProcessCMD(metadata.ShutdownScript)
 	if err != nil {
 		glog.Errorf("running shutdown script error:", err)
 		return err
+	}
+
+	// If we have a v1Alpha1Client, then delete the annotations on the machine.
+	if a.v1Alpha1Client != nil {
+		return a.deleteAnnotations(c, m)
 	}
 
 	a.eventRecorder.Eventf(m, corev1.EventTypeNormal, "Deleted", "Deleted Machine %v", m.Name)
