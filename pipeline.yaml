@@ -4,7 +4,12 @@ builds:
 # This build pulls in dependencies and autogenerates any required code.
   - image: golang:1.10.0
     commands: |
-      apt-get install -y python3-setuptools yamllint
+      curl -sL https://deb.nodesource.com/setup_8.x | bash -
+      apt-get install -y \
+        npm \
+        python3-setuptools \
+        yamllint
+      npm install markdownlint-cli --global
       mkdir -p $GOPATH/src/sigs.k8s.io/
       ln -s $(pwd) $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
       cd /go/src/sigs.k8s.io/cluster-api-provider-ssh
