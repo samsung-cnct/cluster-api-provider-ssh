@@ -1,6 +1,9 @@
+<!-- markdownlint-disable MD033 -->
+
 # Kubernetes cluster-api-provider-ssh Project
 
-This repository hosts an implementation of a provider using SSH for the [cluster-api project](https://sigs.k8s.io/cluster-api).
+This repository hosts an implementation of a provider using SSH for the
+[cluster-api project](https://sigs.k8s.io/cluster-api).
 
 ## Community, discussion, contribution, and support
 
@@ -13,14 +16,17 @@ You can reach the maintainers of this project at:
 
 ### Code of conduct
 
-Participation in the Kubernetes community is governed by the [Kubernetes Code of Conduct](code-of-conduct.md).
+Participation in the Kubernetes community is governed by the
+[Kubernetes Code of Conduct](code-of-conduct.md).
 
 # Development notes
 
 ## Obtaining the code
 
 Imports in the code refer to `sigs.k8s.io/cluster-api*` even though this
-repository lives under the `samsung-cnct` GitHub organization. For Go dependencies to be built correctly with `dep`, place this repository in your $GOPATH as follows:
+repository lives under the `samsung-cnct` GitHub organization. For Go
+dependencies to be built correctly with `dep`, place this repository in your
+$GOPATH as follows:
 
 ```bash
 mkdir -p $GOPATH/src/sigs.k8s.io/
@@ -29,13 +35,14 @@ cd $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
 make
 ```
 
-## Generating cluster, machine, and provider-components files.
+## Generating cluster, machine, and provider-components files
 
 Follow the instructions [here](./clusterctl/examples/ssh/README.md).
 
 ## Deploying a cluster
 
-clusterctl needs access to the private key in order to finalize the new internal cluster.
+clusterctl needs access to the private key in order to finalize the new
+internal cluster.
 
 ```bash
 eval $(ssh-agent)
@@ -78,26 +85,30 @@ kubectl get nodes
 
 ## Building and deploying new controller images for development
 
-To test custom changes to either of the machine controller or the cluster controller, you
-need to build and push new images to a repository. There are `make` targets to
-do this.
+To test custom changes to either of the machine controller or the cluster
+controller, you need to build and push new images to a repository. There
+are `make` targets to do this.
 
 For example:
 
 - push both ssh-cluster-controller and ssh-machine-controller images
-```
+
+```bash
 cd $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
 make dev_push
 
 ```
 
 - push ssh-machine-controller image
-```
+
+```bash
 cd $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
 make dev_push_machine
 ```
+
 - push ssh-cluster-controller image
-```
+
+```bash
 cd $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
 make dev_push_cluster
 ```
@@ -105,13 +116,17 @@ make dev_push_cluster
 The images will be tagged with the username of the account you used to
 build and push the images:
 
-* https://quay.io/repository/samsung_cnct/ssh-cluster-controller?tab=tags
-* https://quay.io/repository/samsung_cnct/ssh-mchine-controller?tab=tags
+<!-- markdownlint-disable MD034 -->
+
+- https://quay.io/repository/samsung_cnct/ssh-cluster-controller?tab=tags
+- https://quay.io/repository/samsung_cnct/ssh-machine-controller?tab=tags
+
+<!-- markdownlint-enable MD034 -->
 
 Remember to change the `provider-components.yaml` manifest to point to your
 images. For example:
 
-```
+```patch
 diff --git a/clusterctl/examples/ssh/provider-components.yaml.template b/clusterctl/examples/ssh/provider-components.yaml.template
 index 8fac530..3d6c246 100644
 --- a/clusterctl/examples/ssh/provider-components.yaml.template
