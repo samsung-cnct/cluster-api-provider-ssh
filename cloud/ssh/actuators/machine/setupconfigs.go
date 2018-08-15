@@ -86,7 +86,7 @@ func parseMachineSetupYaml(reader io.Reader) (*ValidMachineConfigItems, error) {
 	configList := &MachineConfigList{}
 	err = yaml.Unmarshal(bytes, configList)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing yaml: %s", string(bytes), err)
+		return nil, fmt.Errorf("error parsing yaml: %s, %v", string(bytes), err)
 	}
 
 	return &ValidMachineConfigItems{machineConfigList: configList}, nil
