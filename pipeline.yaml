@@ -2,16 +2,22 @@
 type: chart
 builds:
 # This build pulls in dependencies and autogenerates any required code.
-- image: golang:1.10.0
-  commands: |
-    mkdir -p $GOPATH/src/sigs.k8s.io/
-    ln -s $(pwd) $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
-    cd /go/src/sigs.k8s.io/cluster-api-provider-ssh
-    make test generate build
-# These builds create the actual images.
-- image: samsung_cnct/ssh-cluster-controller
-  context: cluster-controller
-  locationOverride: cmd
-- image: samsung_cnct/ssh-machine-controller
-  context: machine-controller
-  locationOverride: cmd
+  - image: golang:1.10.0
+    commands: |
+      curl -sL https://deb.nodesource.com/setup_8.x | bash -
+      apt-get install -y \
+        npm \
+        python3-setuptools \
+        yamllint
+      npm install markdownlint-cli --global
+      mkdir -p $GOPATH/src/sigs.k8s.io/
+      ln -s $(pwd) $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
+      cd /go/src/sigs.k8s.io/cluster-api-provider-ssh
+      make check test generate build
+  # These builds create the actual images.
+  - image: samsung_cnct/ssh-cluster-controller
+    context: cluster-controller
+    locationOverride: cmd
+  - image: samsung_cnct/ssh-machine-controller
+    context: machine-controller
+    locationOverride: cmd

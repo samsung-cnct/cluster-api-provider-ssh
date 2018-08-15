@@ -15,3 +15,28 @@ info.
    a Contributor License Agreement (see details above).
 1. Fork the desired repo, develop and test your code changes.
 1. Submit a pull request.
+
+### Using Linters
+
+You can run the linters against the code with
+
+```bash
+make check
+```
+
+This will check go, yaml, and markdown for linting errors if you have the
+required applications installed:
+
+- go: The go linter,
+  [golangci-lint](https://github.com/golangci/golangci-lint), will install
+  itself.
+  Follow the link for its documentation.
+- yaml: The yaml linter,
+  [yamllint](https://github.com/adrienverge/yamllint) is packaged for most
+  distros.
+  Installation instructions and documentation can be found at
+  [yamllint.readthedocs.io](https://yamllint.readthedocs.io/).
+- markdown: The markdown linter,
+  [markdownlint-cli](https://github.com/DavidAnson/markdownlint) needs node.js
+  and npm installed to install it.
+  See the link for installation instructions and documentation.
