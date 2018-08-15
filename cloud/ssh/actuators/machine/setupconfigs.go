@@ -89,7 +89,7 @@ func parseMachineSetupYaml(reader io.Reader) (*ValidMachineConfigItems, error) {
 		return nil, fmt.Errorf("error parsing yaml: %s", string(bytes), err)
 	}
 
-	return &ValidMachineConfigItems{configList}, nil
+	return &ValidMachineConfigItems{machineConfigList: configList}, nil
 }
 
 func rolesToMap(roles []v1alpha1.MachineRole) map[v1alpha1.MachineRole]int {
