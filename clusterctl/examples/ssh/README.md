@@ -32,10 +32,14 @@ export CLUSTER_PRIVATE_KEY=$(cat id_ecdsa.b64)
 
 If yaml file already exists, you will see an error like the one below:
 
+<!-- markdownlint-disable MD013 -->
+
 ```bash
 $ ./generate-yaml.sh
 File provider-components.yaml already exists. Delete it manually before running this script.
 ```
+
+<!-- markdownlint-enable MD013 -->
 
 Update the `out/machines.yaml` file with ip addresses of ubuntu 16.04 nodes
 in the `spec.providerConfig.value.sshConfig.host` field. Do this for each
