@@ -153,7 +153,7 @@ func (a *Actuator) updateMasterInplace(c *clusterv1.Cluster, oldMachine *cluster
 				"sudo chmod a+rx /usr/bin/kubeadm", newMachine.Spec.Versions.ControlPlane)
 		err := sshClient.ProcessCMD(cmd)
 		if err != nil {
-			glog.Infof("Could not get list of releases, sshClient error: %v", err)
+			glog.Errorf("could not install kubeadm binary: %v", err)
 			return err
 		}
 
@@ -161,7 +161,7 @@ func (a *Actuator) updateMasterInplace(c *clusterv1.Cluster, oldMachine *cluster
 		cmd = fmt.Sprintf("sudo kubeadm upgrade apply %s -y", "v"+newMachine.Spec.Versions.ControlPlane)
 		err = sshClient.ProcessCMD(cmd)
 		if err != nil {
-			glog.Infof("Could not upgrade to new version: %s, sshClient error: %v", newMachine.Spec.Versions.ControlPlane, err)
+			glog.Errorf("could not upgrade to new version %s: %v", newMachine.Spec.Versions.ControlPlane, err)
 			return err
 		}
 	}
@@ -177,14 +177,14 @@ func (a *Actuator) updateMasterInplace(c *clusterv1.Cluster, oldMachine *cluster
 		cmd = fmt.Sprintf("sudo apt install kubelet=%s-00", newMachine.Spec.Versions.Kubelet)
 		err = sshClient.ProcessCMD(cmd)
 		if err != nil {
-			glog.Infof("Could not apt install Kubelet version: %s-00, sshClient error: %v", newMachine.Spec.Versions.Kubelet+"-00", err)
+			glog.Errorf("Could not apt install Kubelet version: %s-00", newMachine.Spec.Versions.Kubelet+"-00: %v", err)
 			return err
 		}
 
 		cmd = fmt.Sprintf("sudo kubectl uncordon %s --kubeconfig /etc/kubernetes/admin.conf", newMachine.Name)
 		err = sshClient.ProcessCMD(cmd)
 		if err != nil {
-			glog.Infof("Could not uncordon the node: %s, sshClient error: %v", newMachine.Name, err)
+			glog.Errorf("Could not uncordon the node: %s: %v", newMachine.Name, err)
 			return err
 		}
 	}
@@ -199,13 +199,13 @@ func (a *Actuator) getMachineInstanceVersions(c *clusterv1.Cluster, m *clusterv1
 	// First get provider config
 	machineConfig, err := a.machineProviderConfig(m.Spec.ProviderConfig)
 	if err != nil {
-		return nil, fmt.Errorf("error, retrieving machine versions", err)
+		return nil, fmt.Errorf("retrieving machine versions: %v", err)
 	}
 
 	// Here we deploy and run the scripts to the node.
 	privateKey, passPhrase, err := a.getPrivateKey(c, m.Namespace, machineConfig.SSHConfig.SecretName)
 	if err != nil {
-		return nil, fmt.Errorf("error, retrieving machine versions", err)
+		return nil, fmt.Errorf("retrieving machine versions: %v", err)
 	}
 
 	// Get Kubelet version
@@ -213,7 +213,7 @@ func (a *Actuator) getMachineInstanceVersions(c *clusterv1.Cluster, m *clusterv1
 
 	versionResult, err := sshClient.ProcessCMDWithOutput("kubelet --version")
 	if err != nil {
-		glog.Errorf("error, retrieving machine versions:", err)
+		glog.Errorf("retrieving machine versions: %v", err)
 		return nil, err
 	}
 

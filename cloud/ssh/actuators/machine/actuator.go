@@ -236,7 +236,9 @@ func (a *Actuator) Delete(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 
 // Update updates a machine and is invoked by the Machine Controller
 func (a *Actuator) Update(cluster *clusterv1.Cluster, goalMachine *clusterv1.Machine) error {
-	glog.Infof("Updating Machine %v for cluster %v.", goalMachine.Name, cluster.Name)
+	goalMachineName := goalMachine.ObjectMeta.Name
+	clusterName := cluster.ObjectMeta.Name
+	glog.Infof("Updating Machine %v for cluster %v.", goalMachineName, clusterName)
 
 	// validate the goal machine
 	goalConfig, err := a.machineProviderConfig(goalMachine.Spec.ProviderConfig)
@@ -244,47 +246,52 @@ func (a *Actuator) Update(cluster *clusterv1.Cluster, goalMachine *clusterv1.Mac
 		return a.handleMachineError(goalMachine, apierrors.InvalidMachineConfiguration("Cannot unmarshal machine's providerConfig field: %v", err), noEventAction)
 	}
 
+	glog.Infof("Updating Machine %v for cluster %v: Validating goal machine spec.", goalMachineName, clusterName)
 	if verr := a.validateMachine(goalMachine, goalConfig); verr != nil {
 		return a.handleMachineError(goalMachine, verr, noEventAction)
 	}
 
 	// get the current machine that the goal machine is targeting to update
+	glog.Infof("Updating Machine %v for cluster %v: Retrieve current machine if it exists.", goalMachineName, clusterName)
 	currentMachine, err := util.GetMachineIfExists(a.v1Alpha1Client.Machines(goalMachine.Namespace), goalMachine.ObjectMeta.Name)
 	if err != nil {
 		return err
 	}
 
+	glog.Infof("Updating Machine %v for cluster %v: Retrieving currently installed versions.", goalMachineName, clusterName)
 	currentVersionInfo, err := a.getMachineInstanceVersions(cluster, currentMachine)
 	if err != nil {
 		return err
 	}
 
+
 	glog.V(3).Infof("machine versions: %+v", currentVersionInfo)
+	currentMachineName := currentMachine.ObjectMeta.Name
 	goalVersions := goalMachine.Spec.Versions
 
 	if goalVersions.ControlPlane == currentVersionInfo.ControlPlane && goalVersions.Kubelet == currentVersionInfo.Kubelet {
-		glog.Infof("No updating required for Machine %s of cluster %s: ", goalMachine.Name, cluster.Name)
+		glog.Infof("No updating required for Machine %s of cluster %s: ", goalMachineName, clusterName)
 		return nil
 	}
 
 	currentMachine.Spec.Versions = *currentVersionInfo
 
 	if util.IsMaster(currentMachine) {
-		glog.Infof("Doing an in-place upgrade for master %s.", goalMachine.ObjectMeta.Name)
+		glog.Infof("Doing an in-place upgrade for master %s.", currentMachineName)
 		// TODO: should we support custom CAs here?
 		err = a.updateMasterInplace(cluster, currentMachine, goalMachine)
 		if err != nil {
-			glog.Errorf("master in-place update failed for %s: %v", goalMachine.ObjectMeta.Name, err)
+			glog.Errorf("master in-place update failed for %s: %v", currentMachineName, err)
 		}
 	} else {
-		glog.Infof("re-creating machine %s for update.", currentMachine.ObjectMeta.Name)
+		glog.Infof("re-creating machine %s for update. ", currentMachineName)
 		err = a.Delete(cluster, currentMachine)
 		if err != nil {
-			glog.Errorf("delete machine %s for update failed for machine %s: %v", currentMachine.ObjectMeta.Name, err)
+			glog.Errorf("delete machine %s for update failed: %v", currentMachineName, err)
 		} else {
 			err = a.Create(cluster, goalMachine)
 			if err != nil {
-				glog.Errorf("create machine %s for update failed for machine %s: %v", goalMachine.ObjectMeta.Name, err)
+				glog.Errorf("create machine %s for update failed: %v", goalMachineName, err)
 			}
 		}
 	}
