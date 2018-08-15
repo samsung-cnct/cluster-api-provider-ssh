@@ -140,34 +140,3 @@ index 8fac530..3d6c246 100644
 [kvm2 driver](https://github.com/kubernetes/minikube/blob/master/docs/drivers.md#kvm2-driver).
 To do so, add the `--vm-driver=kvm2` flag after installing the driver.
 
-## Cleaning External Cluster for Dev Work
-There is a tool to help you dev quickly and redeploy with clean states, the script is located in the hack directory.
-First a few assumptions:
-
-- Using pivoting. 
-- Using an external cluster such as minikube, or your own.
-- minikube/external cluster has kubeconfig file either exported in env variable or in the default directory.
-
-So first create a cluster as part of your dev cycle
-
-```
-$ ./bin/clusterctl create cluster -v 7 --provider ssh -c ./clusterctl/examples/ssh/out/cluster.yaml -m ./clusterctl/examples/ssh/out/machines.yaml -p ./clusterctl/examples/ssh/out/provider-components.yaml --existing-bootstrap-cluster-kubeconfig=minikube.kubeconfig
-```
-Notice that we are using the `--existing-bootstrap-cluster-kubeconfig` flag, that way we do not have to recreate minikube over and over which takes a very long time.
-Now, we have finished, pivoted, and completed (whether succeeded or not), next step is to just clean our cluster for the next cycle:
-
-```
-$./hack/delete_deployments.sh ssh-controlplane-c97bl new-test-1
-Deleting machine object
-machine.cluster.k8s.io/ssh-controlplane-c97bl patched
-machine.cluster.k8s.io "ssh-controlplane-c97bl" deleted
-Deleting cluster object
-cluster.cluster.k8s.io/new-test-1 patched
-cluster.cluster.k8s.io "new-test-1" deleted
-configmap "machine-setup" deleted
-configmap "cluster-info" deleted
-deployment.extensions "clusterapi-controllers" deleted
-deployment.extensions "clusterapi-apiserver" deleted
-statefulset.apps "etcd-clusterapi" deleted
-```
-That should be it, your cluster is good for another run.
