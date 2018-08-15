@@ -240,7 +240,7 @@ func (a *Actuator) Update(cluster *clusterv1.Cluster, goalMachine *clusterv1.Mac
 	glog.Infof("Updating Machine %v for cluster %v.", goalMachine.Name, cluster.Name)
 
 	// validate the goal machine
-	goalConfig, err := a.machineproviderconfig(goalMachine.Spec.ProviderConfig)
+	goalConfig, err := a.machineProviderConfig(goalMachine.Spec.ProviderConfig)
 	if err != nil {
 		return a.handleMachineError(goalMachine, apierrors.InvalidMachineConfiguration("Cannot unmarshal machine's providerConfig field: %v", err), noEventAction)
 	}
