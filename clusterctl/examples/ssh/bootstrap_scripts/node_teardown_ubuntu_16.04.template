@@ -5,7 +5,7 @@
 
           mv -f /var/log/teardown.log /var/log/teardown.log.$(date +%Y-%m-%d-%H-%M)
 
-          KUBECONFIG=/etc/kubernetes/admin.conf
+          KUBECONFIG=/etc/kubernetes/kubelet.conf
           kubectl drain ${MACHINE} --delete-local-data --force --ignore-daemonsets
           kubectl delete node ${MACHINE}
 
