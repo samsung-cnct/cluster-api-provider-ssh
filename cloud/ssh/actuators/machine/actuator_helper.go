@@ -43,6 +43,7 @@ func (a *Actuator) handleMachineError(machine *clusterv1.Machine, err *apierrors
 		message := err.Message
 		machine.Status.ErrorReason = &reason
 		machine.Status.ErrorMessage = &message
+		//nolint:errcheck
 		a.v1Alpha1Client.Machines(machine.Namespace).UpdateStatus(machine)
 	}
 
