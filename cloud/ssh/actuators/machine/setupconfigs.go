@@ -110,6 +110,7 @@ func isMaster(roles []v1alpha1.MachineRole) bool {
 	return false
 }
 
+/* This is stub code yet to be implemented
 func isEtcd(roles []v1alpha1.MachineRole) bool {
 	for _, r := range roles {
 		if r == v1alpha1.EtcdRole {
@@ -118,6 +119,7 @@ func isEtcd(roles []v1alpha1.MachineRole) bool {
 	}
 	return false
 }
+*/
 
 func isNode(roles []v1alpha1.MachineRole) bool {
 	for _, r := range roles {
