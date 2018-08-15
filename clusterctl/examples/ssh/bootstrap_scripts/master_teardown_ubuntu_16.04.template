@@ -3,23 +3,20 @@
           (
           ARCH=amd64
 
-          mv -f /var/log/teardown.log /var/log/teardown.log.$(date +%Y-%m-%d-%H-%M)
+          sudo kubectl --kubeconfig=/etc/kubernetes/admin.conf drain $(hostname) --delete-local-data --ignore-daemonsets
+          sudo kubectl --kubeconfig=/etc/kubernetes/admin.conf delete node $(hostname)
 
-          KUBECONFIG=/etc/kubernetes/admin.conf
-          kubectl drain ${MACHINE} --delete-local-data --force --ignore-daemonsets
-          kubectl delete node ${MACHINE}
+          sudo kubeadm reset
 
-          kubeadm reset
-
-          # We assume each node is a pristine version of the intended Linux 
-          # distro when we bootstrap. In order to make the node as much like it 
-          # was when we teardown (as much as possible since we do not protect 
-          # against things like hostDir changes) we should uninstall exactly 
+          # We assume each node is a pristine version of the intended Linux
+          # distro when we bootstrap. In order to make the node as much like it
+          # was when we teardown (as much as possible since we do not protect
+          # against things like hostDir changes) we should uninstall exactly
           # what we installed.
           #
           # !? TODO: This is an incomplete list of packages to remove
           DEBIAN_FRONTEND=noninteractive
-          apt-get purge kubeadm kubectl kubelet kubernetes-cni kube* docker.io -y
+          sudo apt-get purge kubeadm kubectl kubelet kubernetes-cni kube* docker.io -y
 
           RM_RF_DIRS="/etc/cni \
                       /etc/docker \
@@ -31,10 +28,10 @@
                       /var/lib/dockershim \
                       /var/lib/etcd \
                       /var/lib/etcd2 \
-                      /var/lib/kubelet \
-          "
+                      /var/lib/kubelet"
+
           for d in ${RM_RF_DIRS}; do
-            rm -rf $d
+            sudo rm -rf $d
           done
 
           ) 2>&1 | sudo tee /var/log/teardown.log

@@ -3,17 +3,15 @@
           (
           ARCH=amd64
 
-          mv -f /var/log/teardown.log /var/log/teardown.log.$(date +%Y-%m-%d-%H-%M)
+          #TODO do we drain? or require the operator of the machine to drain before updating? a node has no permission to do so internally
+          # sudo kubectl --kubeconfig=/etc/kubernetes/kubelet.conf drain $(hostname) --delete-local-data --ignore-daemonsets --force
+          sudo kubectl --kubeconfig=/etc/kubernetes/kubelet.conf delete node $(hostname)
 
-          KUBECONFIG=/etc/kubernetes/kubelet.conf
-          kubectl drain ${MACHINE} --delete-local-data --force --ignore-daemonsets
-          kubectl delete node ${MACHINE}
-
-          kubeadm reset
+          sudo kubeadm reset
 
           # !? TODO: This is an incomplete list of packages to remove
           DEBIAN_FRONTEND=noninteractive
-          apt-get purge kubeadm kubectl kubelet kubernetes-cni kube* docker.io -y
+          sudo apt-get purge kubeadm kubectl kubelet kubernetes-cni kube* docker.io -y
 
           RM_RF_DIRS="/etc/cni \
                       /etc/docker \
@@ -25,10 +23,10 @@
                       /var/lib/dockershim \
                       /var/lib/etcd \
                       /var/lib/etcd2 \
-                      /var/lib/kubelet \
-          "
+                      /var/lib/kubelet"
+
           for d in ${RM_RF_DIRS}; do
-            rm -rf $d
+            sudo rm -rf $d
           done
 
           ) 2>&1 | sudo tee /var/log/teardown.log
