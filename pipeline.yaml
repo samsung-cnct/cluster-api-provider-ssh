@@ -7,7 +7,7 @@ builds:
     mkdir -p $GOPATH/src/sigs.k8s.io/
     ln -s $(pwd) $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
     cd /go/src/sigs.k8s.io/cluster-api-provider-ssh
-    make depend generate build
+    make test generate build
 # These builds create the actual images.
 - image: samsung_cnct/ssh-cluster-controller
   context: cluster-controller
