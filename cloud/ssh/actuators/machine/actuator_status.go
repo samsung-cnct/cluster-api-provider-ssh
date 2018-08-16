@@ -40,8 +40,11 @@ func (a *Actuator) updateSSHProviderMachineStatus(c *clusterv1.Cluster, m *clust
 	if err != nil {
 		return err
 	}
-	m.Status = clusterv1.MachineStatus{LastUpdated: metav1.Now(),
-	ProviderStatus:rawe, Versions: &m.Spec.Versions, }
+	m.Status = clusterv1.MachineStatus{
+		LastUpdated: metav1.Now(),
+		ProviderStatus:rawe,
+		Versions: &m.Spec.Versions,
+	}
 
 	_, err = a.v1Alpha1Client.Machines(m.Namespace).UpdateStatus(m)
 	return err
@@ -49,20 +52,15 @@ func (a *Actuator) updateSSHProviderMachineStatus(c *clusterv1.Cluster, m *clust
 
 
 func (a *Actuator) updateAnnotations(cluster *clusterv1.Cluster, machine *clusterv1.Machine) error {
-	name := machine.ObjectMeta.Name
-
 	annotations := machine.ObjectMeta.Annotations
 	if annotations == nil {
 		annotations = make(map[string]string)
 	}
 
-	annotations[string(Name)] = name
+	annotations[string(Name)] = machine.ObjectMeta.Name
 	machine.ObjectMeta.Annotations = annotations
 
 	_, err := a.v1Alpha1Client.Machines(machine.Namespace).Update(machine)
-	if err != nil {
-		return err
-	}
 	return err
 }
 
@@ -71,8 +69,5 @@ func (a *Actuator) deleteAnnotations(cluster *clusterv1.Cluster, machine *cluste
 	machine.ObjectMeta.Annotations = annotations
 
 	_, err := a.v1Alpha1Client.Machines(machine.Namespace).Update(machine)
-	if err != nil {
-		return err
-	}
 	return err
 }
