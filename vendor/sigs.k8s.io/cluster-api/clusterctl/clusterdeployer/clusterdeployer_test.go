@@ -98,7 +98,6 @@ type testClusterClient struct {
 	DeleteMachineObjectsErr            error
 	DeleteMachineSetObjectsErr         error
 	DeleteMachineDeploymentsObjectsErr error
-	UpdateClusterObjectEndpointErr     error
 	CloseErr                           error
 
 	clusters           []*clusterv1.Cluster
@@ -183,9 +182,6 @@ func (c *testClusterClient) DeleteMachineObjects() error {
 	return c.DeleteMachineObjectsErr
 }
 
-func (c *testClusterClient) UpdateClusterObjectEndpoint(string) error {
-	return c.UpdateClusterObjectEndpointErr
-}
 func (c *testClusterClient) Close() error {
 	return c.CloseErr
 }
@@ -215,15 +211,11 @@ func (f *testClusterClientFactory) NewClusterClientFromKubeconfig(kubeconfig str
 }
 
 type testProviderDeployer struct {
-	GetIPErr         error
 	GetKubeConfigErr error
 	ip               string
 	kubeconfig       string
 }
 
-func (d *testProviderDeployer) GetIP(_ *clusterv1.Cluster, _ *clusterv1.Machine) (string, error) {
-	return d.ip, d.GetIPErr
-}
 func (d *testProviderDeployer) GetKubeConfig(_ *clusterv1.Cluster, _ *clusterv1.Machine) (string, error) {
 	return d.kubeconfig, d.GetKubeConfigErr
 }
@@ -330,14 +322,6 @@ func TestCreate(t *testing.T) {
 			expectErr:             true,
 		},
 		{
-			name:                  "fail update external cluster endpoint",
-			internalClient:        &testClusterClient{},
-			externalClient:        &testClusterClient{UpdateClusterObjectEndpointErr: fmt.Errorf("Test failure")},
-			cleanupExternal:       true,
-			expectExternalCreated: true,
-			expectErr:             true,
-		},
-		{
 			name:                  "fail apply yaml to internal cluster",
 			internalClient:        &testClusterClient{ApplyErr: fmt.Errorf("Test failure")},
 			externalClient:        &testClusterClient{},
@@ -368,16 +352,6 @@ func TestCreate(t *testing.T) {
 			cleanupExternal:          true,
 			expectExternalCreated:    true,
 			expectedInternalClusters: 1,
-			expectErr:                true,
-		},
-		{
-			name:                     "fail update cluster endpoint internal",
-			internalClient:           &testClusterClient{UpdateClusterObjectEndpointErr: fmt.Errorf("Test failure")},
-			externalClient:           &testClusterClient{},
-			cleanupExternal:          true,
-			expectExternalCreated:    true,
-			expectedInternalClusters: 1,
-			expectedInternalMachines: 1,
 			expectErr:                true,
 		},
 	}

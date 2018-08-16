@@ -33,8 +33,6 @@ import (
 // Deprecated interface for Provider specific logic. Please do not extend or add. This interface should be removed
 // once issues/158 and issues/160 below are fixed.
 type ProviderDeployer interface {
-	// TODO: This requirement can be removed once after: https://github.com/kubernetes-sigs/cluster-api/issues/158
-	GetIP(cluster *clusterv1.Cluster, machine *clusterv1.Machine) (string, error)
 	// TODO: This requirement can be removed after: https://github.com/kubernetes-sigs/cluster-api/issues/160
 	GetKubeConfig(cluster *clusterv1.Cluster, master *clusterv1.Machine) (string, error)
 }
@@ -63,7 +61,6 @@ type ClusterClient interface {
 	DeleteMachineDeploymentObjects() error
 	DeleteMachineSetObjects() error
 	DeleteMachineObjects() error
-	UpdateClusterObjectEndpoint(string) error
 	Close() error
 }
 
@@ -143,11 +140,6 @@ func (d *ClusterDeployer) Create(cluster *clusterv1.Cluster, machines []*cluster
 		return fmt.Errorf("unable to create master machine: %v", err)
 	}
 
-	glog.Infof("Updating external cluster object with master (%s) endpoint", master.Name)
-	if err := d.updateClusterEndpoint(externalClient, provider); err != nil {
-		return fmt.Errorf("unable to update external cluster endpoint: %v", err)
-	}
-
 	glog.Info("Creating internal cluster")
 	internalClient, err := d.createInternalCluster(externalClient, provider, kubeconfigOutput)
 	if err != nil {
@@ -164,13 +156,6 @@ func (d *ClusterDeployer) Create(cluster *clusterv1.Cluster, machines []*cluster
 	err = d.saveProviderComponentsToCluster(providerComponentsStoreFactory, kubeconfigOutput)
 	if err != nil {
 		return fmt.Errorf("unable to save provider components to internal cluster: %v", err)
-	}
-
-	// For some reason, endpoint doesn't get updated in external cluster sometimes. So we
-	// update the internal cluster endpoint as well to be sure.
-	glog.Infof("Updating internal cluster object with master (%s) endpoint", master.Name)
-	if err := d.updateClusterEndpoint(internalClient, provider); err != nil {
-		return fmt.Errorf("unable to update internal cluster endpoint: %v", err)
 	}
 
 	glog.Info("Creating node machines in internal cluster.")
@@ -271,25 +256,6 @@ func (d *ClusterDeployer) createInternalCluster(externalClient ClusterClient, pr
 	}
 
 	return internalClient, nil
-}
-
-func (d *ClusterDeployer) updateClusterEndpoint(client ClusterClient, provider ProviderDeployer) error {
-	// Update cluster endpoint. Needed till this logic moves into cluster controller.
-	// TODO: https://github.com/kubernetes-sigs/cluster-api/issues/158
-	// Fetch fresh objects.
-	cluster, master, _, err := getClusterAPIObjects(client)
-	if err != nil {
-		return err
-	}
-	masterIP, err := provider.GetIP(cluster, master)
-	if err != nil {
-		return fmt.Errorf("unable to get master IP: %v", err)
-	}
-	err = client.UpdateClusterObjectEndpoint(masterIP)
-	if err != nil {
-		return fmt.Errorf("unable to update cluster endpoint: %v", err)
-	}
-	return nil
 }
 
 func (d *ClusterDeployer) saveProviderComponentsToCluster(factory ProviderComponentsStoreFactory, kubeconfigPath string) error {

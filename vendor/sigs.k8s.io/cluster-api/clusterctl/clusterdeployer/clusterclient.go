@@ -262,25 +262,6 @@ func newDeleteOptions() *metav1.DeleteOptions {
 	}
 }
 
-func (c *clusterClient) UpdateClusterObjectEndpoint(masterIP string) error {
-	clusters, err := c.GetClusterObjects()
-	if err != nil {
-		return err
-	}
-	if len(clusters) != 1 {
-		// TODO: Do not assume default namespace nor single cluster https://github.com/kubernetes-sigs/cluster-api/issues/252
-		return fmt.Errorf("More than the one expected cluster found %v", clusters)
-	}
-	cluster := clusters[0]
-	cluster.Status.APIEndpoints = append(cluster.Status.APIEndpoints,
-		clusterv1.APIEndpoint{
-			Host: masterIP,
-			Port: apiServerPort,
-		})
-	_, err = c.clientSet.ClusterV1alpha1().Clusters(apiv1.NamespaceDefault).UpdateStatus(cluster)
-	return err
-}
-
 func (c *clusterClient) WaitForClusterV1alpha1Ready() error {
 	return waitForClusterResourceReady(c.clientSet)
 }

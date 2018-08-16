@@ -57,7 +57,9 @@ func Start(server *options.Server, shutdown <-chan struct{}) {
 	}
 
 	params := clusteractuator.ActuatorParams{
-		ClusterClient: client.ClusterV1alpha1().Clusters(corev1.NamespaceDefault),
+		// !? TODO: this limits us to the default namespace
+		ClusterClient:  client.ClusterV1alpha1().Clusters(corev1.NamespaceDefault),
+		V1Alpha1Client: client.ClusterV1alpha1(),
 	}
 	actuator, err := clusteractuator.NewActuator(params)
 	if err != nil {

@@ -14,34 +14,80 @@
 package cluster
 
 import (
-	"fmt"
-
 	"github.com/golang/glog"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	providerconfigv1 "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/providerconfig/v1alpha1"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 	client "sigs.k8s.io/cluster-api/pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1"
+	"sigs.k8s.io/cluster-api/pkg/util"
 )
 
 // Actuator is responsible for performing cluster reconciliation
 type Actuator struct {
-	clusterClient client.ClusterInterface
+	clusterClient          client.ClusterInterface
+	v1Alpha1Client         client.ClusterV1alpha1Interface
+	sshProviderConfigCodec *providerconfigv1.SSHProviderConfigCodec
 }
 
 // ActuatorParams holds parameter information for Actuator
 type ActuatorParams struct {
-	ClusterClient client.ClusterInterface
+	ClusterClient  client.ClusterInterface
+	V1Alpha1Client client.ClusterV1alpha1Interface
 }
 
 // NewActuator creates a new Actuator
 func NewActuator(params ActuatorParams) (*Actuator, error) {
+	codec, err := providerconfigv1.NewCodec()
+	if err != nil {
+		return nil, err
+	}
+
 	return &Actuator{
-		clusterClient: params.ClusterClient,
+		clusterClient:          params.ClusterClient,
+		v1Alpha1Client:         params.V1Alpha1Client,
+		sshProviderConfigCodec: codec,
 	}, nil
+}
+
+func (a *Actuator) machineProviderConfig(providerConfig clusterv1.ProviderConfig) (*providerconfigv1.SSHMachineProviderConfig, error) {
+	var config providerconfigv1.SSHMachineProviderConfig
+	err := a.sshProviderConfigCodec.DecodeFromProviderConfig(providerConfig, &config)
+	if err != nil {
+		return nil, err
+	}
+	return &config, nil
 }
 
 // Reconcile reconciles a cluster and is invoked by the Cluster Controller
 func (a *Actuator) Reconcile(cluster *clusterv1.Cluster) error {
 	glog.Infof("Reconciling cluster %v.", cluster.Name)
-	return fmt.Errorf("TODO: Not yet implemented")
+
+	machineList, err := a.v1Alpha1Client.Machines(cluster.Namespace).List(metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	var newAPIEndpoints []clusterv1.APIEndpoint
+	for _, m := range machineList.Items {
+		if util.IsMaster(&m) {
+			config, err := a.machineProviderConfig(m.Spec.ProviderConfig)
+			if err != nil {
+				return err
+			}
+
+			newAPIEndpoints = append(newAPIEndpoints,
+				clusterv1.APIEndpoint{Host: config.SSHConfig.Host,
+					Port: config.SSHConfig.Port})
+		}
+	}
+	cluster.Status.APIEndpoints = newAPIEndpoints
+
+	_, err = a.v1Alpha1Client.Clusters(cluster.Namespace).UpdateStatus(cluster)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Delete deletes a cluster and is invoked by the Cluster Controller
