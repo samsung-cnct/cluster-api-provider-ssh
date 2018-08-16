@@ -150,10 +150,9 @@ func (a *Actuator) Create(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 	}
 
 	glog.Infof("updating SSHProviderMachineStatus for machine %s in cluster %s.", m.Name, c.Name)
-
-	a.updateSSHProviderMachineStatus(c, m, v1alpha1.MachineCreated)
+	
 	a.eventRecorder.Eventf(m, corev1.EventTypeNormal, "Created", "Created Machine %v", m.Name)
-	return nil
+	return a.updateSSHProviderMachineStatus(c, m, v1alpha1.MachineCreated)
 }
 
 // Delete deletes a machine and is invoked by the Machine Controller
@@ -220,14 +219,9 @@ func (a *Actuator) Delete(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 		return err
 	}
 
-	// If we have a v1Alpha1Client, then delete the annotations on the machine.
-	if a.v1Alpha1Client != nil {
-		return a.deleteAnnotations(c, m)
-	}
-
 	a.eventRecorder.Eventf(m, corev1.EventTypeNormal, "Deleted", "Deleted Machine %v", m.Name)
-
-	return nil
+	return a.deleteAnnotations(c, m)
+}
 }
 
 // Update updates a machine and is invoked by the Machine Controller
@@ -295,13 +289,7 @@ func (a *Actuator) Update(cluster *clusterv1.Cluster, goalMachine *clusterv1.Mac
 	}
 
 	a.eventRecorder.Eventf(goalMachine, corev1.EventTypeNormal, "Updated", "Updated Machine %v", goalMachine.Name)
-
-	// If we have a v1Alpha1Client, then annotate the machine.
-	if a.v1Alpha1Client != nil {
-		return a.updateAnnotations(cluster, goalMachine)
-	}
-
-	return a.updateStatus(goalMachine)
+	return a.updateSSHProviderMachineStatus(cluster, goalMachine, v1alpha1.MachineUpdated)
 }
 
 // Exists test for the existance of a machine and is invoked by the Machine Controller

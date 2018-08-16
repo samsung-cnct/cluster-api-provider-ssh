@@ -52,6 +52,10 @@ func (a *Actuator) updateSSHProviderMachineStatus(c *clusterv1.Cluster, m *clust
 
 
 func (a *Actuator) updateAnnotations(cluster *clusterv1.Cluster, machine *clusterv1.Machine) error {
+	if a.v1Alpha1Client == nil {
+		return nil
+	}
+
 	annotations := machine.ObjectMeta.Annotations
 	if annotations == nil {
 		annotations = make(map[string]string)
@@ -65,6 +69,10 @@ func (a *Actuator) updateAnnotations(cluster *clusterv1.Cluster, machine *cluste
 }
 
 func (a *Actuator) deleteAnnotations(cluster *clusterv1.Cluster, machine *clusterv1.Machine) error {
+	if a.v1Alpha1Client == nil {
+		return nil
+	}
+
 	annotations := make(map[string]string)
 	machine.ObjectMeta.Annotations = annotations
 

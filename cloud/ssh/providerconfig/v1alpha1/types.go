@@ -66,7 +66,9 @@ type SSHConfig struct {
 type SSHMachineStatus string
 
 const (
-	MachineCreated SSHMachineStatus = "MachineCreated"
+	MachineCreated SSHMachineStatus = "Machine-Created"
+	MachineDeleted SSHMachineStatus = "Machine-Deleted"
+	MachineUpdated SSHMachineStatus = "Machine-Updated"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
