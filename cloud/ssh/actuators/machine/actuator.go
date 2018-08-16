@@ -113,12 +113,12 @@ func (a *Actuator) Create(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 	}
 
 	if exists {
-		glog.Infof("Creating - machine %s for cluster %s exists, skipping creation.", m.Name, c.Name)
+		glog.Infof("Creating - machine %s for cluster %s exists, skipping.", m.Name, c.Name)
 		return nil
 	}
 
 	// The doesn't exist case here.
-	glog.Infof("Creating - machine %s for cluster %s doesn't exist; Creating.", m.Name, c.Name)
+	glog.Infof("Creating - machine %s for cluster %s doesn't exist.", m.Name, c.Name)
 
 	configParams := &MachineParams{
 		Roles:    machineConfig.Roles,
@@ -178,12 +178,12 @@ func (a *Actuator) Delete(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 	}
 
 	if !exists {
-		glog.Infof("Deleting - machine %s for cluster %s does not exists (maybe it is still bootstrapping), skipping deletion.", m.Name, c.Name)
+		glog.Infof("Deleting - machine %s for cluster %s does not exists (maybe it is still bootstrapping), skipping.", m.Name, c.Name)
 		return nil
 	}
 
 	// The exists case here.
-	glog.Infof("Deleting - machine %s for cluster %s exists; Deleting.", m.Name, c.Name)
+	glog.Infof("Deleting - machine %s for cluster %s exists.", m.Name, c.Name)
 
 	configParams := &MachineParams{
 		Roles:    machineConfig.Roles,
