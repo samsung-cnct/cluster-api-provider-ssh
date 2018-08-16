@@ -13,10 +13,11 @@ import (
 
 type MachineStatus *clusterv1.Machine
 
+type AnnotationKey string
+
 const (
-	InstanceStatusAnnotationKey = "instance-status"
-	NameAnnotationKey           = "hostname"
-	BootstrapLabelKey           = "boostrap"
+	InstanceStatus AnnotationKey = "instance-status"
+	Name           AnnotationKey = "machine-name"
 )
 
 // Get the status of the instance identified by the given machine
@@ -42,7 +43,7 @@ func (a *Actuator) machineStatus(m *clusterv1.Machine) (MachineStatus, error) {
 		return nil, nil
 	}
 
-	annot := m.ObjectMeta.Annotations[InstanceStatusAnnotationKey]
+	annot := m.ObjectMeta.Annotations[string(InstanceStatus)]
 	if annot == "" {
 		return nil, nil
 	}
@@ -85,7 +86,7 @@ func (a *Actuator) updateStatus(machine *clusterv1.Machine) error {
 // Applies the state of an instance onto a given machine CRD
 func (a *Actuator) setMachineStatus(machine *clusterv1.Machine, status MachineStatus) (*clusterv1.Machine, error) {
 	// Avoid status within status within status ...
-	status.ObjectMeta.Annotations[InstanceStatusAnnotationKey] = ""
+	status.ObjectMeta.Annotations[string(InstanceStatus)] = ""
 
 	serializer := json.NewSerializer(json.DefaultMetaFactory, a.scheme, a.scheme, false)
 	b := []byte{}
@@ -98,17 +99,21 @@ func (a *Actuator) setMachineStatus(machine *clusterv1.Machine, status MachineSt
 	if machine.ObjectMeta.Annotations == nil {
 		machine.ObjectMeta.Annotations = make(map[string]string)
 	}
-	machine.ObjectMeta.Annotations[InstanceStatusAnnotationKey] = buff.String()
+	machine.ObjectMeta.Annotations[string(InstanceStatus)] = buff.String()
 	return machine, nil
 }
 
 func (a *Actuator) updateAnnotations(cluster *clusterv1.Cluster, machine *clusterv1.Machine) error {
 	name := machine.ObjectMeta.Name
 
-	if machine.ObjectMeta.Annotations == nil {
-		machine.ObjectMeta.Annotations = make(map[string]string)
+	annotations := machine.ObjectMeta.Annotations
+	if annotations == nil {
+		annotations = make(map[string]string)
 	}
-	machine.ObjectMeta.Annotations[NameAnnotationKey] = name
+
+	annotations[string(Name)] = name
+	machine.ObjectMeta.Annotations = annotations
+
 	_, err := a.v1Alpha1Client.Machines(machine.Namespace).Update(machine)
 	if err != nil {
 		return err
