@@ -217,7 +217,7 @@ func (a *Actuator) Delete(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 // Update updates a machine and is invoked by the Machine Controller
 func (a *Actuator) Update(c *clusterv1.Cluster, goalMachine *clusterv1.Machine) error {
 	goalMachineName := goalMachine.Name
-	glog.Infof("Updating Machine %s for cluster %s.", goalMachineName, c.Name)
+	glog.Infof("Updating machine %s for cluster %s.", goalMachineName, c.Name)
 
 	// validate the goal machine
 	goalConfig, err := a.machineProviderConfig(goalMachine.Spec.ProviderConfig)

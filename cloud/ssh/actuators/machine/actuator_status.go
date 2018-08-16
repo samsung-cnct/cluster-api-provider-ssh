@@ -104,7 +104,7 @@ func (a *Actuator) setMachineStatus(machine *clusterv1.Machine, status MachineSt
 }
 
 func (a *Actuator) updateAnnotations(cluster *clusterv1.Cluster, machine *clusterv1.Machine) error {
-	if a.v1Alpha1Client != nil {
+	if a.v1Alpha1Client == nil {
 		return nil
 	}
 
@@ -122,12 +122,11 @@ func (a *Actuator) updateAnnotations(cluster *clusterv1.Cluster, machine *cluste
 	if err != nil {
 		return err
 	}
-	err = a.updateStatus(machine)
-	return err
+	return a.updateStatus(machine)
 }
 
 func (a *Actuator) deleteAnnotations(cluster *clusterv1.Cluster, machine *clusterv1.Machine) error {
-	if a.v1Alpha1Client != nil {
+	if a.v1Alpha1Client == nil {
 		return nil
 	}
 
@@ -138,6 +137,5 @@ func (a *Actuator) deleteAnnotations(cluster *clusterv1.Cluster, machine *cluste
 	if err != nil {
 		return err
 	}
-	err = a.updateStatus(machine)
-	return err
+	return a.updateStatus(machine)
 }
