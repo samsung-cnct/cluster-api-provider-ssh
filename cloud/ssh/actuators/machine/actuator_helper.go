@@ -20,6 +20,7 @@ const (
 	createEventAction = "Create"
 	deleteEventAction = "Delete"
 	noEventAction     = ""
+	apiServerPort     = 443
 )
 
 func (a *Actuator) machineProviderConfig(providerConfig clusterv1.ProviderConfig) (*v1alpha1.SSHMachineProviderConfig, error) {
@@ -86,6 +87,13 @@ func (a *Actuator) getMetadata(c *clusterv1.Cluster, m *clusterv1.Machine, machi
 		}
 
 		metadataMap = addStringValueMaps(metadataMap, masterMap)
+
+		// Make sure the master endpoint is initialized
+		// This could be fixed upstream: https://github.com/kubernetes-sigs/cluster-api/issues/158
+		err = a.updateClusterObjectEndpoint(c, m)
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		kubeadmToken, err := a.getKubeadmToken()
 		if err != nil {
@@ -126,6 +134,24 @@ func addStringValueMaps(m1 map[string]string, m2 map[string]string) map[string]s
 	}
 
 	return m1
+}
+
+func (a *Actuator) updateClusterObjectEndpoint(c *clusterv1.Cluster, m *clusterv1.Machine) error {
+	if len(c.Status.APIEndpoints) == 0 {
+		masterIP, err := a.GetIP(c, m)
+		if err != nil {
+			return err
+		}
+		c.Status.APIEndpoints = append(c.Status.APIEndpoints,
+			clusterv1.APIEndpoint{
+				Host: masterIP,
+				Port: apiServerPort,
+			})
+
+		_, err = a.v1Alpha1Client.Clusters(c.Namespace).UpdateStatus(c)
+		return err
+	}
+	return nil
 }
 
 func (a *Actuator) updateMasterInplace(c *clusterv1.Cluster, oldMachine *clusterv1.Machine, newMachine *clusterv1.Machine) error {
