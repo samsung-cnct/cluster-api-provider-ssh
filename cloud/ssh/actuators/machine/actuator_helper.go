@@ -3,12 +3,10 @@ package machine
 import (
 	"errors"
 	"fmt"
-
-	"github.com/golang/glog"
-
 	"strings"
 	"time"
 
+	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh"
 	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/providerconfig/v1alpha1"

@@ -67,7 +67,7 @@ func (s *sshProviderClient) ProcessCMD(cmd string) error {
 func (s *sshProviderClient) ProcessCMDWithOutput(cmd string) ([]byte, error) {
 	session, err := GetBasicSession(s)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create session: %s, %v", err)
+		return nil, fmt.Errorf("failed to create session: %v", err)
 	}
 	defer session.Close()
 
@@ -110,7 +110,7 @@ func GetBasicSession(s *sshProviderClient) (*ssh.Session, error) {
 	session, err := connection.NewSession()
 	if err != nil {
 		glog.Errorf("failed to create sesssion", err)
-		return nil, fmt.Errorf("failed to create session:", err)
+		return nil, fmt.Errorf("failed to create session: %v", err)
 	}
 
 	return session, nil
