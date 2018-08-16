@@ -32,7 +32,6 @@ your $GOPATH as follows:
 mkdir -p $GOPATH/src/sigs.k8s.io/
 git clone https://github.com/samsung-cnct/cluster-api-provider-ssh.git $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
 cd $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
-make
 ```
 
 ## Generating cluster, machine, and provider-components files
