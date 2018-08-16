@@ -113,12 +113,12 @@ func (a *Actuator) Create(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 	}
 
 	if exists {
-		glog.Infof("Creating - machine %s for cluster %s exists, skipping.", m.Name, c.Name)
+		glog.Infof("Machine %s for cluster %s exists, skipping.", m.Name, c.Name)
 		return nil
 	}
 
 	// The doesn't exist case here.
-	glog.Infof("Creating - machine %s for cluster %s doesn't exist.", m.Name, c.Name)
+	glog.Infof("Machine %s for cluster %s doesn't exist.", m.Name, c.Name)
 
 	configParams := &MachineParams{
 		Roles:    machineConfig.Roles,
@@ -130,7 +130,7 @@ func (a *Actuator) Create(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 		return err
 	}
 
-	glog.Infof("Creating - metadata retrieved: machine %s for cluster %s", m.Name, c.Name)
+	glog.Infof("Metadata retrieved: machine %s for cluster %s", m.Name, c.Name)
 
 	// Here we deploy and run the scripts to the node.
 	privateKey, passPhrase, err := a.getPrivateKey(c, m.Namespace, machineConfig.SSHConfig.SecretName)
@@ -138,15 +138,15 @@ func (a *Actuator) Create(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 		return err
 	}
 
-	glog.Infof("Creating - running startup script: machine %s for cluster %s...", m.Name, c.Name)
+	glog.Infof("Running startup script: machine %s for cluster %s...", m.Name, c.Name)
 
 	sshClient := ssh.NewSSHProviderClient(privateKey, passPhrase, machineConfig.SSHConfig)
 	if err = sshClient.ProcessCMD(metadata.StartupScript); err != nil {
-		glog.Errorf("running startup script error:", err)
+		glog.Errorf("running startup script error: %v", err)
 		return err
 	}
 
-	glog.Infof("Creating - annotating machine %s for cluster %s.", m.Name, c.Name)
+	glog.Infof("Annotating machine %s for cluster %s.", m.Name, c.Name)
 
 	a.eventRecorder.Eventf(m, corev1.EventTypeNormal, "Created", "Created Machine %v", m.Name)
 	return a.updateAnnotations(c, m)
@@ -178,12 +178,12 @@ func (a *Actuator) Delete(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 	}
 
 	if !exists {
-		glog.Infof("Deleting - machine %s for cluster %s does not exists (maybe it is still bootstrapping), skipping.", m.Name, c.Name)
+		glog.Infof("Machine %s for cluster %s does not exists (maybe it is still bootstrapping), skipping.", m.Name, c.Name)
 		return nil
 	}
 
 	// The exists case here.
-	glog.Infof("Deleting - machine %s for cluster %s exists.", m.Name, c.Name)
+	glog.Infof("Machine %s for cluster %s exists.", m.Name, c.Name)
 
 	configParams := &MachineParams{
 		Roles:    machineConfig.Roles,
@@ -195,18 +195,18 @@ func (a *Actuator) Delete(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 		return err
 	}
 
-	glog.Infof("Deleting - metadata retrieved: machine %s for cluster %s", m.Name, c.Name)
+	glog.Infof("Metadata retrieved: machine %s for cluster %s", m.Name, c.Name)
 
 	privateKey, passPhrase, err := a.getPrivateKey(c, m.Namespace, machineConfig.SSHConfig.SecretName)
 	if err != nil {
 		return err
 	}
 
-	glog.Infof("Deleting - running shutdown script: machine %s for cluster %s...", m.Name, c.Name)
+	glog.Infof("Running shutdown script: machine %s for cluster %s...", m.Name, c.Name)
 
 	sshClient := ssh.NewSSHProviderClient(privateKey, passPhrase, machineConfig.SSHConfig)
 	if err = sshClient.ProcessCMD(metadata.ShutdownScript); err != nil {
-		glog.Errorf("Deleting - running shutdown script:", err)
+		glog.Errorf("running shutdown script failed: %v", err)
 		return err
 	}
 
@@ -225,51 +225,52 @@ func (a *Actuator) Update(c *clusterv1.Cluster, goalMachine *clusterv1.Machine) 
 		return a.handleMachineError(goalMachine, apierrors.InvalidMachineConfiguration("Cannot unmarshal machine's providerConfig field: %v", err), noEventAction)
 	}
 
-	glog.Infof("Updating - machine %s for cluster %s; validating goal machine spec.", goalMachineName, c.Name)
+	glog.Infof("Machine %s for cluster %s; validating goal machine spec.", goalMachineName, c.Name)
 	if verr := a.validateMachine(goalMachine, goalConfig); verr != nil {
 		return a.handleMachineError(goalMachine, verr, noEventAction)
 	}
 
 	// get the current machine that the goal machine is targeting to update
-	glog.Infof("Updating - machine %s for cluster %s; Retrieving current machine if it exists.", goalMachineName, c.Name)
+	glog.Infof("Machine %s for cluster %s; Retrieving current machine if it exists.", goalMachineName, c.Name)
 	currentMachine, err := util.GetMachineIfExists(a.v1Alpha1Client.Machines(goalMachine.Namespace), goalMachine.ObjectMeta.Name)
 	if err != nil {
 		return err
 	}
 
-	glog.Infof("Updating - machine %s for cluster %s: Retrieving currently installed versions.", goalMachineName, c.Name)
+	glog.Infof("Machine %s for cluster %s: Retrieving currently installed versions.", goalMachineName, c.Name)
 	currentVersionInfo, err := a.getMachineInstanceVersions(c, currentMachine)
 	if err != nil {
 		return err
 	}
 
-	glog.V(3).Infof("Updating - machine versions: %+v", currentVersionInfo)
+	glog.V(3).Infof("Machine versions: %+v", currentVersionInfo)
 	currentMachineName := currentMachine.ObjectMeta.Name
 	goalVersions := goalMachine.Spec.Versions
 
 	if goalVersions.ControlPlane == currentVersionInfo.ControlPlane && goalVersions.Kubelet == currentVersionInfo.Kubelet {
-		glog.Infof("Updating - machine %s for cluster %s: not required.", goalMachineName, c.Name)
+		glog.Infof("Machine %s for cluster %s: not required.", goalMachineName, c.Name)
 		return nil
 	}
 
 	currentMachine.Spec.Versions = *currentVersionInfo
 
 	if util.IsMaster(currentMachine) {
-		glog.Infof("Updating - doing an in-place upgrade for master %s.", currentMachineName)
+		glog.Infof("Performing an in-place upgrade for master %s.", currentMachineName)
 		// TODO: should we support custom CAs here?
 		if err = a.updateMasterInplace(c, currentMachine, goalMachine); err != nil {
-			glog.Errorf("Updating - master in-place update failed for %s: %v", currentMachineName, err)
+			glog.Errorf("master in-place update failed for %s: %v", currentMachineName, err)
 			return err
 		}
 	} else {
-		glog.Infof("Updating - re-creating machine %s for update. ", currentMachineName)
+		glog.Infof("Deleting machine %s for update. ", currentMachineName)
 		if err = a.Delete(c, currentMachine); err != nil {
-			glog.Errorf("Updating - delete machine %s for update failed: %v", currentMachineName, err)
+			glog.Errorf("deleting machine %s for update failed: %v", currentMachineName, err)
 			return err
 		}
 
+		glog.Infof("Re-creating machine %s for update. ", currentMachineName)
 		if err = a.Create(c, goalMachine); err != nil {
-			glog.Errorf("Updating - create machine %s for update failed: %v", goalMachineName, err)
+			glog.Errorf("creating machine %s for update failed: %v", goalMachineName, err)
 			return err
 		}
 	}

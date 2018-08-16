@@ -52,7 +52,7 @@ func (a *Actuator) handleMachineError(machine *clusterv1.Machine, err *apierrors
 		a.eventRecorder.Eventf(machine, corev1.EventTypeWarning, "Failed"+eventAction, "%v", err.Reason)
 	}
 
-	glog.Errorf("Machine error: %v", err.Message)
+	glog.Errorf("machine %s error: %v", machine.Name, err.Message)
 	return err
 }
 
@@ -144,7 +144,7 @@ func (a *Actuator) updateMasterInplace(c *clusterv1.Cluster, oldMachine *cluster
 
 	// Upgrade ControlPlane items
 	if oldMachine.Spec.Versions.ControlPlane != newMachine.Spec.Versions.ControlPlane {
-		glog.Infof("updating master node %s; controlplane version from %s to %s", oldMachine.Name, oldMachine.Spec.Versions.ControlPlane, newMachine.Spec.Versions.ControlPlane)
+		glog.Infof("Updating master node %s; controlplane version from %s to %s.", oldMachine.Name, oldMachine.Spec.Versions.ControlPlane, newMachine.Spec.Versions.ControlPlane)
 
 		cmd := fmt.Sprintf(
 			"curl -sSL https://dl.k8s.io/release/v%s/bin/linux/amd64/kubeadm | sudo tee /usr/bin/kubeadm > /dev/null; "+
@@ -159,7 +159,7 @@ func (a *Actuator) updateMasterInplace(c *clusterv1.Cluster, oldMachine *cluster
 		cmd = fmt.Sprintf("sudo kubeadm upgrade apply %s -y", "v"+newMachine.Spec.Versions.ControlPlane)
 		err = sshClient.ProcessCMD(cmd)
 		if err != nil {
-			glog.Errorf("could not upgrade to new version %s: %v", newMachine.Spec.Versions.ControlPlane, err)
+			glog.Errorf("failed to upgrade to new version %s: %v", newMachine.Spec.Versions.ControlPlane, err)
 			return err
 		}
 	}
@@ -175,14 +175,14 @@ func (a *Actuator) updateMasterInplace(c *clusterv1.Cluster, oldMachine *cluster
 		cmd = fmt.Sprintf("sudo apt install kubelet=%s-00", newMachine.Spec.Versions.Kubelet)
 		err = sshClient.ProcessCMD(cmd)
 		if err != nil {
-			glog.Errorf("Could not apt install Kubelet version: %s-00", newMachine.Spec.Versions.Kubelet+"-00: %v", err)
+			glog.Errorf("could not apt install Kubelet version: %s-00", newMachine.Spec.Versions.Kubelet+"-00: %v", err)
 			return err
 		}
 
 		cmd = fmt.Sprintf("sudo kubectl uncordon %s --kubeconfig /etc/kubernetes/admin.conf", newMachine.Name)
 		err = sshClient.ProcessCMD(cmd)
 		if err != nil {
-			glog.Errorf("Could not uncordon the node: %s: %v", newMachine.Name, err)
+			glog.Errorf("failed to uncordon the node: %s: %v", newMachine.Name, err)
 			return err
 		}
 	}
