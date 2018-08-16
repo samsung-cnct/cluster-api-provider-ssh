@@ -149,7 +149,8 @@ func (a *Actuator) Create(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 	glog.Infof("Annotating machine %s for cluster %s.", m.Name, c.Name)
 
 	a.eventRecorder.Eventf(m, corev1.EventTypeNormal, "Created", "Created Machine %v", m.Name)
-	return a.updateAnnotations(c, m)
+
+	return a.updateStatusAndAnnotations(c, m, v1alpha1.MachineCreated)
 }
 
 // Delete deletes a machine and is invoked by the Machine Controller
@@ -275,19 +276,27 @@ func (a *Actuator) Update(c *clusterv1.Cluster, goalMachine *clusterv1.Machine) 
 		}
 	}
 
-	a.eventRecorder.Eventf(goalMachine, corev1.EventTypeNormal, "Updated", "Updated Machine %v", goalMachine.Name)
-	return a.updateAnnotations(c, goalMachine)
+	return a.updateStatusAndAnnotations(c, goalMachine, v1alpha1.MachineUpdated)
 }
 
 // Exists test for the existance of a machine and is invoked by the Machine Controller
 func (a *Actuator) Exists(c *clusterv1.Cluster, m *clusterv1.Machine) (bool, error) {
 	glog.Infof("Checking if machine %s for cluster %s exists.", m.Name, c.Name)
 	// Try to use the last saved status locating the machine
-	status, err := a.status(m)
+
+	if a.v1Alpha1Client == nil {
+		return false, nil
+	}
+
+	currentMachine, err := util.GetMachineIfExists(a.v1Alpha1Client.Machines(m.Namespace), m.ObjectMeta.Name)
 	if err != nil {
 		return false, err
 	}
-	// if status is nil, either it doesnt exist or bootstrapping, however in ssh we assume it exists.
-	// so some status must be returned.
-	return status != nil, nil
+
+	annotations := currentMachine.Annotations
+	if annotations == nil {
+		return false, nil
+	}
+
+	return len(currentMachine.Annotations) > 0, nil
 }

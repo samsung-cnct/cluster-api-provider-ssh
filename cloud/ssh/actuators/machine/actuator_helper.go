@@ -31,6 +31,24 @@ func (a *Actuator) machineProviderConfig(providerConfig clusterv1.ProviderConfig
 	return &config, nil
 }
 
+func (a *Actuator) machineSSHMachineProviderStatus(statusObj clusterv1.MachineStatus) (*v1alpha1.SSHMachineProviderStatus, error) {
+	var currentStatus v1alpha1.SSHMachineProviderStatus
+	err := a.sshProviderConfigCodec.DecodeProviderStatus(statusObj.ProviderStatus, &currentStatus)
+	if err != nil {
+		return nil, err
+	}
+	return &currentStatus, nil
+}
+
+func (a *Actuator) clusterSSHProviderConfig(providerConfig clusterv1.ProviderConfig) (*v1alpha1.SSHClusterProviderConfig, error) {
+	var config v1alpha1.SSHClusterProviderConfig
+	err := a.sshProviderConfigCodec.DecodeFromProviderConfig(providerConfig, &config)
+	if err != nil {
+		return nil, err
+	}
+	return &config, nil
+}
+
 func (a *Actuator) validateMachine(machine *clusterv1.Machine, config *v1alpha1.SSHMachineProviderConfig) *apierrors.MachineError {
 	if machine.Spec.Versions.Kubelet == "" {
 		return apierrors.InvalidMachineConfiguration("spec.versions.kubelet can't be empty")
