@@ -104,6 +104,10 @@ func (a *Actuator) setMachineStatus(machine *clusterv1.Machine, status MachineSt
 }
 
 func (a *Actuator) updateAnnotations(cluster *clusterv1.Cluster, machine *clusterv1.Machine) error {
+	if a.v1Alpha1Client != nil {
+		return nil
+	}
+
 	name := machine.ObjectMeta.Name
 
 	annotations := machine.ObjectMeta.Annotations
@@ -123,6 +127,10 @@ func (a *Actuator) updateAnnotations(cluster *clusterv1.Cluster, machine *cluste
 }
 
 func (a *Actuator) deleteAnnotations(cluster *clusterv1.Cluster, machine *clusterv1.Machine) error {
+	if a.v1Alpha1Client != nil {
+		return nil
+	}
+
 	annotations := make(map[string]string)
 	machine.ObjectMeta.Annotations = annotations
 
