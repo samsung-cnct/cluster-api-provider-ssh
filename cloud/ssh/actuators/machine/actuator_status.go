@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	Name = "machine-name"
+	Name = "machine"
 )
 
 func (a *Actuator) updateStatusAndAnnotations(c *clusterv1.Cluster, m *clusterv1.Machine, s v1alpha1.SSHMachineStatus) error {

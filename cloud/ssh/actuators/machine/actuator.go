@@ -276,7 +276,7 @@ func (a *Actuator) Update(c *clusterv1.Cluster, goalMachine *clusterv1.Machine) 
 		}
 	}
 
-	return a.updateStatusAndAnnotations(c, goalMachine, v1alpha1.MachineUpdated)
+	return a.updateStatusAndAnnotations(c, goalMachine, v1alpha1.MachineCreated)
 }
 
 // Exists test for the existance of a machine and is invoked by the Machine Controller
