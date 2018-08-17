@@ -110,10 +110,6 @@ func getSubnet(netRange clusterv1.NetworkRanges) string {
 	return netRange.CIDRBlocks[0]
 }
 
-func getMachineHostAndPor(m *clusterv1.Machine) {
-
-}
-
 const masterEnvironmentVars = `#!/bin/bash
 KUBELET_VERSION={{ .Machine.Spec.Versions.Kubelet }}
 VERSION=v${KUBELET_VERSION}
