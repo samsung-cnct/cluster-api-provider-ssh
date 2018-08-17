@@ -42,5 +42,7 @@ File provider-components.yaml already exists. Delete it manually before running 
 <!-- markdownlint-enable MD013 -->
 
 Update the `out/machines.yaml` file with ip addresses of ubuntu 16.04 nodes
-in the `spec.providerConfig.value.sshConfig.host` field. Do this for each
-machine that will be part of the new cluster.
+in the `spec.providerConfig.value.sshConfig.host` field.
+These machines must be in the same network as your developer machine, which can
+be accomplished in multiple ways that would be too extensive to cover here.
+Do this for each machine that will be part of the new cluster.
