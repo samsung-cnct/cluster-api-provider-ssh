@@ -73,7 +73,8 @@ func getApiServerCerts() (*caCertParams, error) {
 	return certParams, nil
 }
 
-func getApiServerYaml() (string, error) {
+// GetApiServerYaml returns the clusterapi-apiserver manifest used for deployment
+func GetApiServerYaml() (string, error) {
 	tmpl, err := template.New("config").Parse(ClusterAPIAPIServerConfigTemplate)
 	if err != nil {
 		return "", err
