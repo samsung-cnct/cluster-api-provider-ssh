@@ -114,12 +114,15 @@ const (
 
 func (d *ClusterDeployer) Create(cluster *clusterv1.Cluster, machines []*clusterv1.Machine, provider ProviderDeployer, kubeconfigOutput string, providerComponentsStoreFactory ProviderComponentsStoreFactory) error {
 	master, nodes, err := extractMasterMachine(machines)
+
+	workingNS := master.Namespace
+
 	if err != nil {
 		return fmt.Errorf("unable to seperate master machines from node machines: %v", err)
 	}
 
 	glog.Info("Creating external cluster")
-	externalClient, cleanupExternalCluster, err := d.createExternalCluster()
+	externalClient, cleanupExternalCluster, err := d.createExternalCluster(workingNS)
 	defer cleanupExternalCluster()
 	if err != nil {
 		return fmt.Errorf("could not create external client: %v", err)
@@ -224,7 +227,7 @@ func (d *ClusterDeployer) Delete(internalClient ClusterClient) error {
 	return nil
 }
 
-func (d *ClusterDeployer) createExternalCluster() (ClusterClient, func(), error) {
+func (d *ClusterDeployer) createExternalCluster(ns api.Namespace) (ClusterClient, func(), error) {
 	cleanupFn := func() {}
 	if err := d.externalProvisioner.Create(); err != nil {
 		return nil, cleanupFn, fmt.Errorf("could not create external control plane: %v", err)

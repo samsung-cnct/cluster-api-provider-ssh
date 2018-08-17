@@ -56,7 +56,7 @@ func (a *Actuator) handleMachineError(machine *clusterv1.Machine, err *apierrors
 	return err
 }
 
-func (a *Actuator) getMetadata(c *clusterv1.Cluster, m *clusterv1.Machine, machineParams *MachineParams) (*Metadata, error) {
+func (a *Actuator) getMetadata(c *clusterv1.Cluster, m *clusterv1.Machine, machineParams *MachineParams, sshConfig v1alpha1.SSHConfig) (*Metadata, error) {
 	var err error
 	metadataMap := make(map[string]string)
 
@@ -80,7 +80,7 @@ func (a *Actuator) getMetadata(c *clusterv1.Cluster, m *clusterv1.Machine, machi
 				"invalid master configuration: missing Machine.Spec.Versions.ControlPlane"), createEventAction)
 		}
 
-		masterMap, err := masterMetadata(c, m, &machineSetupMetadata)
+		masterMap, err := masterMetadata(c, m, &machineSetupMetadata, sshConfig)
 		if err != nil {
 			return nil, err
 		}

@@ -8,6 +8,8 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 
 	"fmt"
+
+	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/providerconfig/v1alpha1"
 )
 
 var (
@@ -35,16 +37,18 @@ type metadataParams struct {
 	// These fields are set when executing the template if they are necessary.
 	PodCIDR        string
 	ServiceCIDR    string
-	MasterEndpoint string
+	MasterEndpoint string // for node joining a cluster, should be available after master created
+	MasterIP       string // for injection to startup script
 }
 
-func masterMetadata(c *clusterv1.Cluster, m *clusterv1.Machine, metadata *Metadata) (map[string]string, error) {
+func masterMetadata(c *clusterv1.Cluster, m *clusterv1.Machine, metadata *Metadata, sshConfig v1alpha1.SSHConfig) (map[string]string, error) {
 	params := metadataParams{
 		Cluster:     c,
 		Machine:     m,
 		Metadata:    metadata,
 		PodCIDR:     getSubnet(c.Spec.ClusterNetwork.Pods),
 		ServiceCIDR: getSubnet(c.Spec.ClusterNetwork.Services),
+		MasterIP:    sshConfig.Host,
 	}
 	masterMetadata := map[string]string{}
 	var buf bytes.Buffer
@@ -106,6 +110,10 @@ func getSubnet(netRange clusterv1.NetworkRanges) string {
 	return netRange.CIDRBlocks[0]
 }
 
+func getMachineHostAndPor(m *clusterv1.Machine) {
+
+}
+
 const masterEnvironmentVars = `#!/bin/bash
 KUBELET_VERSION={{ .Machine.Spec.Versions.Kubelet }}
 VERSION=v${KUBELET_VERSION}
@@ -118,6 +126,7 @@ CONTROL_PLANE_VERSION={{ .Machine.Spec.Versions.ControlPlane }}
 CLUSTER_DNS_DOMAIN={{ .Cluster.Spec.ClusterNetwork.ServiceDomain }}
 POD_CIDR={{ .PodCIDR }}
 SERVICE_CIDR={{ .ServiceCIDR }}
+MASTER_IP={{ .MasterIP }}
 `
 const nodeEnvironmentVars = `#!/bin/bash
 KUBELET_VERSION={{ .Machine.Spec.Versions.Kubelet }}

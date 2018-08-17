@@ -127,7 +127,7 @@ func (a *Actuator) Create(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 		Versions: m.Spec.Versions,
 	}
 
-	metadata, err := a.getMetadata(c, m, configParams)
+	metadata, err := a.getMetadata(c, m, configParams, machineConfig.SSHConfig)
 	if err != nil {
 		return err
 	}
@@ -200,7 +200,7 @@ func (a *Actuator) Delete(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 		Versions: m.Spec.Versions,
 	}
 
-	metadata, err := a.getMetadata(c, m, configParams)
+	metadata, err := a.getMetadata(c, m, configParams, machineConfig.SSHConfig)
 	if err != nil {
 		return err
 	}
