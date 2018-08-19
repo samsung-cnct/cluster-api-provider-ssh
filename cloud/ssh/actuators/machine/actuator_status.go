@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/providerconfig/v1alpha1"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 )
 
@@ -12,8 +11,9 @@ const (
 	Name = "machine"
 )
 
-func (a *Actuator) updateStatusAndAnnotations(c *clusterv1.Cluster, m *clusterv1.Machine, s v1alpha1.SSHMachineStatus) error {
-	err := a.updateStatus(c, m, s)
+// In the future we will not use annotations )?) in that case we will no longer need this method
+func (a *Actuator) updateStatusAndAnnotations(c *clusterv1.Cluster, m *clusterv1.Machine) error {
+	err := a.updateStatus(c, m)
 	if err != nil {
 		return err
 	}
@@ -22,7 +22,7 @@ func (a *Actuator) updateStatusAndAnnotations(c *clusterv1.Cluster, m *clusterv1
 }
 
 // Sets the status of the instance identified by the given machine to the given machine
-func (a *Actuator) updateStatus(c *clusterv1.Cluster, m *clusterv1.Machine, s v1alpha1.SSHMachineStatus) error {
+func (a *Actuator) updateStatus(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 	if a.v1Alpha1Client == nil {
 		return nil
 	}

@@ -63,26 +63,12 @@ type SSHConfig struct {
 	SecretName string `json:"secretName"`
 }
 
-type SSHMachineStatus string
-
-const (
-	MachineCreated SSHMachineStatus = "created"
-)
-
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type SSHMachineProviderStatus struct {
 	metav1.TypeMeta `json:",inline"`
-	Status          SSHMachineStatus `json:"status,omitempty"`
 }
-
-type SSHClusterStatus string
-
-const (
-	ClusterCreated SSHClusterStatus = "ClusterCreated"
-)
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type SSHClusterProviderStatus struct {
 	metav1.TypeMeta `json:",inline"`
-	Status          SSHMachineStatus `json:"status,omitempty"`
 }

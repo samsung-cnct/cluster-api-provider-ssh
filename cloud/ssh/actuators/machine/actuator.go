@@ -150,7 +150,7 @@ func (a *Actuator) Create(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 
 	a.eventRecorder.Eventf(m, corev1.EventTypeNormal, "Created", "Created Machine %v", m.Name)
 
-	return a.updateStatusAndAnnotations(c, m, v1alpha1.MachineCreated)
+	return a.updateStatusAndAnnotations(c, m)
 }
 
 // Delete deletes a machine and is invoked by the Machine Controller
@@ -276,7 +276,7 @@ func (a *Actuator) Update(c *clusterv1.Cluster, goalMachine *clusterv1.Machine) 
 		}
 	}
 
-	return a.updateStatusAndAnnotations(c, goalMachine, v1alpha1.MachineCreated)
+	return a.updateStatusAndAnnotations(c, goalMachine)
 }
 
 // Exists test for the existance of a machine and is invoked by the Machine Controller
@@ -288,7 +288,7 @@ func (a *Actuator) Exists(c *clusterv1.Cluster, m *clusterv1.Machine) (bool, err
 		return false, nil
 	}
 
-	currentMachine, err := util.GetMachineIfExists(a.v1Alpha1Client.Machines(m.Namespace), m.ObjectMeta.Name)
+	currentMachine, err := util.GetMachineIfExists(a.v1Alpha1Client.Machines(m.Namespace), m.Name)
 	if err != nil {
 		return false, err
 	}
@@ -298,5 +298,5 @@ func (a *Actuator) Exists(c *clusterv1.Cluster, m *clusterv1.Machine) (bool, err
 		return false, nil
 	}
 
-	return len(currentMachine.Annotations) > 0, nil
+	return len(annotations) > 0, nil
 }
