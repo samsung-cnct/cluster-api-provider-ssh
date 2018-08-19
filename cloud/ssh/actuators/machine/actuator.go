@@ -262,7 +262,7 @@ func (a *Actuator) Update(c *clusterv1.Cluster, goalMachine *clusterv1.Machine) 
 			return err
 		}
 	} else {
-		glog.Infof("Deleting machine %s for update. ", currentMachineName)
+		glog.Infof("Deleting machine %s for update.", currentMachineName)
 		if err = a.Delete(c, currentMachine); err != nil {
 			glog.Errorf("deleting machine %s for update failed: %v", currentMachineName, err)
 			return err
