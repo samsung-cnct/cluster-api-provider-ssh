@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	Name = "machine"
+	MachineNameAnnotationKey = "machine"
 )
 
 // In the future we will not use annotations )?) in that case we will no longer need this method
@@ -56,7 +56,7 @@ func (a *Actuator) updateAnnotations(c *clusterv1.Cluster, m *clusterv1.Machine)
 		annotations = make(map[string]string)
 	}
 
-	annotations[Name] = m.Name
+	annotations[MachineNameAnnotationKey] = m.Name
 	m.ObjectMeta.Annotations = annotations
 
 	_, err := a.v1Alpha1Client.Machines(m.Namespace).Update(m)
