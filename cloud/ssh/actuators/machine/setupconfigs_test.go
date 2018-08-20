@@ -31,8 +31,8 @@ func TestGetYaml(t *testing.T) {
 								},
 							},
 							Metadata: Metadata{
-								StartupScript:  "hello",
-								ShutdownScript: "goodbye",
+								StartupScript:  "Guten Tag",
+								ShutdownScript: "Auf Wiedersehen",
 								Items:          map[string]string{"unicorns": "awesome", "owls": "great"},
 							},
 						},
@@ -49,8 +49,161 @@ func TestGetYaml(t *testing.T) {
 			t.Errorf("unexpected error: for test case %s, failed to get yaml", tc.name)
 		}
 		s := reflect.TypeOf(result).String()
-		if s != "string" {
+		if tc.valid && s != "string" {
 			t.Errorf("expected return value of GetYaml to be a string for test case %s", tc.name)
+		}
+	}
+}
+
+func TestGetMetadata(t *testing.T) {
+	var testcases = []struct {
+		name           string
+		valid          bool
+		expectedParams MachineParams
+		confItems      ValidMachineConfigItems
+	}{
+		{
+			name:  "Hello Goodbye scripts",
+			valid: true,
+			expectedParams: MachineParams{
+				Roles: []v1alpha1.MachineRole{
+					"Node",
+				},
+				Versions: clusterv1.MachineVersionInfo{
+					Kubelet:      "1.10.6",
+					ControlPlane: "1.10.6",
+				},
+			},
+			confItems: ValidMachineConfigItems{
+				machineConfigList: &MachineConfigList{
+					Items: []MachineItem{
+						{
+							Params: MachineParams{
+								Roles: []v1alpha1.MachineRole{
+									"Node",
+								},
+								Versions: clusterv1.MachineVersionInfo{
+									Kubelet:      "1.10.6",
+									ControlPlane: "1.10.6",
+								},
+							},
+							Metadata: Metadata{
+								StartupScript:  "hello",
+								ShutdownScript: "goodbye",
+								Items:          map[string]string{"unicorns": "awesome", "owls": "great"},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+
+			name:  "Two same configs",
+			valid: false,
+			expectedParams: MachineParams{
+				Roles: []v1alpha1.MachineRole{
+					"Node",
+				},
+				Versions: clusterv1.MachineVersionInfo{
+					Kubelet:      "1.10.6",
+					ControlPlane: "1.10.6",
+				},
+			},
+			confItems: ValidMachineConfigItems{
+				machineConfigList: &MachineConfigList{
+					Items: []MachineItem{
+						{
+							Params: MachineParams{
+								Roles: []v1alpha1.MachineRole{
+									"Node",
+								},
+								Versions: clusterv1.MachineVersionInfo{
+									Kubelet:      "1.10.6",
+									ControlPlane: "1.10.6",
+								},
+							},
+							Metadata: Metadata{
+								StartupScript:  "hello",
+								ShutdownScript: "goodbye",
+								Items:          map[string]string{"unicorns": "awesome", "owls": "great"},
+							},
+						},
+						{
+							Params: MachineParams{
+								Roles: []v1alpha1.MachineRole{
+									"Node",
+								},
+								Versions: clusterv1.MachineVersionInfo{
+									Kubelet:      "1.10.6",
+									ControlPlane: "1.10.6",
+								},
+							},
+							Metadata: Metadata{
+								StartupScript:  "hello",
+								ShutdownScript: "goodbye",
+								Items:          map[string]string{"unicorns": "awesome", "owls": "great"},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "Invalid Params",
+			valid: false,
+			expectedParams: MachineParams{
+				Roles: []v1alpha1.MachineRole{
+					"Node",
+				},
+				Versions: clusterv1.MachineVersionInfo{
+					Kubelet:      "1.10.6",
+					ControlPlane: "1.10.6",
+				},
+			},
+			confItems: ValidMachineConfigItems{
+				machineConfigList: &MachineConfigList{
+					Items: []MachineItem{
+						{
+							Params: MachineParams{
+								Roles: []v1alpha1.MachineRole{
+									"Unicorns",
+								},
+								Versions: clusterv1.MachineVersionInfo{
+									Kubelet:      "1.10.6",
+									ControlPlane: "1.10.6",
+								},
+							},
+							Metadata: Metadata{
+								StartupScript:  "hello",
+								ShutdownScript: "goodbye",
+								Items:          map[string]string{"unicorns": "awesome", "owls": "great"},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, tc := range testcases {
+		vc := tc.confItems
+		// cl := *vc.machineConfigList
+		// p := cl.Items[0].Params
+		p := tc.expectedParams
+		md, err := vc.GetMetadata(&p)
+		if err != nil {
+			if tc.name == "Two same configs" && err.Error() != "found multiple matching machine setup configs for params &{Roles:[Node] Versions:{Kubelet:1.10.6 ControlPlane:1.10.6}}" {
+				t.Errorf("expected multiple matching machine setup configs error for test case %s", tc.name)
+			}
+			if tc.name == "Invalid Params" && err.Error() != "could not find a matching machine setup config for params &{Roles:[Node] Versions:{Kubelet:1.10.6 ControlPlane:1.10.6}}" {
+				t.Errorf("expected could not find matching machine setup config error for test case %s", tc.name)
+			}
+			if tc.valid {
+				t.Errorf("unexpected error: for test case %s, failed to get metadata", tc.name)
+			}
+		}
+		if tc.name == "Hello Goodbye scripts" && md.StartupScript != "hello" {
+			t.Errorf("expected metadata startup script for test case %s to equal hello", tc.name)
 		}
 	}
 }
