@@ -1,6 +1,7 @@
 package machine
 
 import (
+	"os"
 	"reflect"
 	"testing"
 
@@ -187,8 +188,6 @@ func TestGetMetadata(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		vc := tc.confItems
-		// cl := *vc.machineConfigList
-		// p := cl.Items[0].Params
 		p := tc.expectedParams
 		md, err := vc.GetMetadata(&p)
 		if err != nil {
@@ -202,8 +201,24 @@ func TestGetMetadata(t *testing.T) {
 				t.Errorf("unexpected error: for test case %s, failed to get metadata", tc.name)
 			}
 		}
-		if tc.name == "Hello Goodbye scripts" && md.StartupScript != "hello" {
+		if tc.name == "Hello Goodbye scripts" && md.StartupScript == "hello" {
 			t.Errorf("expected metadata startup script for test case %s to equal hello", tc.name)
 		}
+	}
+}
+
+func TestParseMachineSetupYaml(t *testing.T) {
+	filename := "./test_files/fake_machine_setup.yaml"
+	testfile, err := os.Open(filename)
+	if err != nil {
+		t.Error("unexpected error opening testfile fake_machine_setup.yaml")
+	}
+	vc, err := parseMachineSetupYaml(testfile)
+	if err != nil {
+		t.Error("unexpected error parsing testfile fake_machine_setup.yaml")
+	}
+	testItem := vc.machineConfigList.Items[0].Metadata.Items["unicorns"]
+	if testItem != "awesome" {
+		t.Error("expected metadata item key \"unicorns\" to have value \"awesome\"")
 	}
 }
