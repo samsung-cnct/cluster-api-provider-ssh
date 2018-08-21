@@ -211,11 +211,11 @@ func TestParseMachineSetupYaml(t *testing.T) {
 	filename := "./test_files/fake_machine_setup.yaml"
 	testfile, err := os.Open(filename)
 	if err != nil {
-		t.Error("unexpected error opening testfile fake_machine_setup.yaml")
+		t.Errorf("unexpected error opening testfile %s", filename)
 	}
 	vc, err := parseMachineSetupYaml(testfile)
 	if err != nil {
-		t.Error("unexpected error parsing testfile fake_machine_setup.yaml")
+		t.Errorf("unexpected error parsing testfile %s", filename)
 	}
 	testItem := vc.machineConfigList.Items[0].Metadata.Items["unicorns"]
 	if testItem != "awesome" {
