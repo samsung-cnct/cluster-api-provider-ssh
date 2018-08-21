@@ -5,9 +5,11 @@ import (
 
 	"bytes"
 
-	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
-
+	"errors"
 	"fmt"
+
+	"github.com/golang/glog"
+	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 )
 
 var (
@@ -66,6 +68,10 @@ func masterMetadata(c *clusterv1.Cluster, m *clusterv1.Machine, metadata *Metada
 }
 
 func nodeMetadata(token string, c *clusterv1.Cluster, m *clusterv1.Machine, metadata *Metadata) (map[string]string, error) {
+	nodeMetadata := map[string]string{}
+	if len(c.Status.APIEndpoints) < 1 {
+		return nodeMetadata, errors.New("The master APIEndpoints has not been initialized in ClusterStatus")
+	}
 	params := metadataParams{
 		Token:          token,
 		Cluster:        c,
@@ -75,7 +81,8 @@ func nodeMetadata(token string, c *clusterv1.Cluster, m *clusterv1.Machine, meta
 		ServiceCIDR:    getSubnet(c.Spec.ClusterNetwork.Services),
 		MasterEndpoint: getEndpoint(c.Status.APIEndpoints[0]),
 	}
-	nodeMetadata := map[string]string{}
+	glog.Infof("nodeMetadata: params.MasterEndpoint = ", params.MasterEndpoint)
+
 	var buf bytes.Buffer
 
 	if err := nodeEnvironmentVarsTemplate.Execute(&buf, params); err != nil {
