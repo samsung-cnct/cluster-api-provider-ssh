@@ -82,6 +82,47 @@ export KUBECONFIG=${PWD}/kubeconfig
 kubectl get nodes
 ```
 
+# Deploying and creating a cluster without clusterctl
+
+## Deploying the cluster-api provisioner
+
+Follow the directions [here](./clusterctl/examples/ssh/README.md)
+Copy the machines-kubectl-format.yaml file to the ./out dir
+
+```bash
+cd ./clusterctl/examples/ssh
+cp machines-kubectl-format.yaml.template out/machines-kubectl-format.yaml
+cd ./out
+```
+
+Generate (one-time) the clusterapi-apiserver.yaml
+
+```bash
+
+go run go run ../../../../cloud/ssh/tools/genClusterApiYaml.go > clusterapi-apiserver.yaml
+cd ./out
+```
+
+Deploy cluster-api provisioner:
+
+```bash
+
+kubectl create -f clusterapi-apiserver.yaml
+kubectl create -f provider-components.yaml
+```
+
+## Creating a Cluster
+
+Modify machines-kubectl-format.yaml to add the IP Addresses of your machines.
+
+Create cluster
+
+```bash
+
+kubectl create -f cluster.yaml --validate=false
+kubectl create -f machines-kubectl-format.yaml --validate=false
+```
+
 ## Building and deploying new controller images for development
 
 To test custom changes to either of the machine controller or the cluster
