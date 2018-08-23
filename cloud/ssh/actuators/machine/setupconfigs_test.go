@@ -201,7 +201,7 @@ func TestGetMetadata(t *testing.T) {
 				t.Errorf("unexpected error: for test case %s, failed to get metadata", tc.name)
 			}
 		}
-		if tc.name == "Hello Goodbye scripts" && md.StartupScript == "hello" {
+		if tc.name == "Hello Goodbye scripts" && md.StartupScript != "hello" {
 			t.Errorf("expected metadata startup script for test case %s to equal hello", tc.name)
 		}
 	}
