@@ -74,6 +74,9 @@ func (a *Actuator) Reconcile(cluster *clusterv1.Cluster) error {
 			if err != nil {
 				return err
 			}
+			if len(m.Spec.Annotations) < 1 {
+				continue
+			}
 
 			newAPIEndpoints = append(newAPIEndpoints,
 				clusterv1.APIEndpoint{Host: config.SSHConfig.Host,
