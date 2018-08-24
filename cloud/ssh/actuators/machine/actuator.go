@@ -211,7 +211,7 @@ func (a *Actuator) Delete(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 	}
 
 	a.eventRecorder.Eventf(m, corev1.EventTypeNormal, "Deleted", "Deleted Machine %v", m.Name)
-	return a.deleteAnnotations(c, m)
+	return nil
 }
 
 // Update updates a machine and is invoked by the Machine Controller
