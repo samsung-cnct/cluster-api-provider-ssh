@@ -12,31 +12,37 @@ import (
 	"io/ioutil"
 )
 
+// MachineSetupConfig defines the methods necessaty for a setup config
 type MachineSetupConfig interface {
 	GetYaml() (string, error)
 	GetMetadata(params *MachineParams) (Metadata, error)
 }
 
+// MachineItem holds MachineParams and Metadata
 type MachineItem struct {
 	//TODO originally this was a list, investigate if we would.
 	Params   MachineParams `json:"machineParams"`
 	Metadata Metadata      `json:"metadata"`
 }
 
+// MachineParams holds api roles and versions for a machine item.
 type MachineParams struct {
 	Roles    []v1alpha1.MachineRole       `json:"roles"`
 	Versions clusterv1.MachineVersionInfo `json:"versions"`
 }
 
-// The valid machine setup configs parsed out of the machine setup configs yaml file held in ConfigWatch.
+// ValidMachineConfigItems refers to the valid machine setup configs parsed
+// out of the machine setup configs yaml file held in ConfigWatch.
 type ValidMachineConfigItems struct {
 	machineConfigList *MachineConfigList
 }
 
+// MachineConfigList is a list of MachineItems
 type MachineConfigList struct {
 	Items []MachineItem `json:"items"`
 }
 
+//GetYaml returns a string yaml representation of ValidMachineConfigItems.
 func (vc *ValidMachineConfigItems) GetYaml() (string, error) {
 	bytes, err := yaml.Marshal(vc.machineConfigList)
 	if err != nil {
@@ -45,17 +51,18 @@ func (vc *ValidMachineConfigItems) GetYaml() (string, error) {
 	return string(bytes), nil
 }
 
-func (v *ValidMachineConfigItems) GetMetadata(params *MachineParams) (Metadata, error) {
-	machineSetupConfig, err := v.matchMachineSetupConfig(params)
+//GetMetadata returns the metadata contained in ValidMachineConfigItems.
+func (vc *ValidMachineConfigItems) GetMetadata(params *MachineParams) (Metadata, error) {
+	machineSetupConfig, err := vc.matchMachineSetupConfig(params)
 	if err != nil {
 		return Metadata{}, err
 	}
 	return machineSetupConfig.Metadata, nil
 }
 
-func (v *ValidMachineConfigItems) matchMachineSetupConfig(params *MachineParams) (*MachineItem, error) {
+func (vc *ValidMachineConfigItems) matchMachineSetupConfig(params *MachineParams) (*MachineItem, error) {
 	matchingConfigs := make([]MachineItem, 0)
-	for _, conf := range v.machineConfigList.Items {
+	for _, conf := range vc.machineConfigList.Items {
 		validParams := conf.Params
 		validRoles := rolesToMap(validParams.Roles)
 		paramRoles := rolesToMap(params.Roles)
