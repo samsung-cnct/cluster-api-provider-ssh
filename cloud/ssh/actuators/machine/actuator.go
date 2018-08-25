@@ -148,6 +148,14 @@ func (a *Actuator) Create(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 
 	glog.Infof("Annotating machine %s for cluster %s.", m.Name, c.Name)
 
+	// TODO find a way to do this in the cluster controller
+	if util.IsMaster(m) {
+		err = a.updateClusterObjectEndpoint(c, m)
+		if err != nil {
+			return err
+		}
+	}
+
 	a.eventRecorder.Eventf(m, corev1.EventTypeNormal, "Created", "Created Machine %v", m.Name)
 	return a.updateAnnotations(c, m)
 }

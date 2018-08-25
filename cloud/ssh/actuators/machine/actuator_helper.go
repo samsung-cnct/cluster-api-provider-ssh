@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
@@ -12,7 +11,6 @@ import (
 	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/providerconfig/v1alpha1"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 	apierrors "sigs.k8s.io/cluster-api/pkg/errors"
-	"sigs.k8s.io/cluster-api/pkg/kubeadm"
 	"sigs.k8s.io/cluster-api/pkg/util"
 )
 
@@ -20,6 +18,8 @@ const (
 	createEventAction = "Create"
 	deleteEventAction = "Delete"
 	noEventAction     = ""
+	// TODO should this move to the cluster controller?
+	apiServerPort = 443
 )
 
 func (a *Actuator) machineProviderConfig(providerConfig clusterv1.ProviderConfig) (*v1alpha1.SSHMachineProviderConfig, error) {
@@ -87,12 +87,38 @@ func (a *Actuator) getMetadata(c *clusterv1.Cluster, m *clusterv1.Machine, machi
 
 		metadataMap = addStringValueMaps(metadataMap, masterMap)
 	} else {
-		kubeadmToken, err := a.getKubeadmToken()
+		// TODO put all of this code in it's own method getKubeadmTokenOnMaster
+		// create token on the master
+		machineConfig, err := a.machineProviderConfig(m.Spec.ProviderConfig)
 		if err != nil {
 			return nil, err
 		}
+		privateKey, passPhrase, err := a.getPrivateKey(c, m.Namespace, machineConfig.SSHConfig.SecretName)
+		if err != nil {
+			return nil, err
+		}
+		// init master ip address
+		if len(c.Status.APIEndpoints) < 1 {
+			return nil, errors.New("getMetadata: The master APIEndpoints has not been initialized in ClusterStatus")
+		}
+		masterSSHConfig := v1alpha1.SSHConfig{Username: machineConfig.SSHConfig.Username,
+			Host: c.Status.APIEndpoints[0].Host,
+			Port: machineConfig.SSHConfig.Port,
+		}
 
-		nodeMap, err := nodeMetadata(kubeadmToken, c, m, &machineSetupMetadata)
+		masterSSHClient := ssh.NewSSHProviderClient(privateKey, passPhrase, masterSSHConfig)
+
+		glog.Infof("Creating token on master")
+		// TODO use kubeadm ttl option and try without full path
+		output, err := masterSSHClient.ProcessCMDWithOutput("sudo /usr/bin/kubeadm token create")
+		if err != nil {
+			glog.Errorf("error creating token on master: %v", err)
+			return nil, err
+		}
+		token := string(output)
+		glog.Infof("token created = ", strings.TrimSpace(token))
+
+		nodeMap, err := nodeMetadata(strings.TrimSpace(token), c, m, &machineSetupMetadata)
 		if err != nil {
 			return nil, err
 		}
@@ -108,24 +134,31 @@ func (a *Actuator) getMetadata(c *clusterv1.Cluster, m *clusterv1.Machine, machi
 	return &metadata, nil
 }
 
-func (a *Actuator) getKubeadmToken() (string, error) {
-	tokenParams := kubeadm.TokenCreateParams{
-		Ttl: time.Duration(10) * time.Minute,
-	}
-	output, err := a.kubeadm.TokenCreate(tokenParams)
-	if err != nil {
-		glog.Errorf("unable to create token: %s, %v", output, err)
-		return "", err
-	}
-	return strings.TrimSpace(output), err
-}
-
 func addStringValueMaps(m1 map[string]string, m2 map[string]string) map[string]string {
 	for k, v := range m2 {
 		m1[k] = v
 	}
 
 	return m1
+}
+
+// TODO move this to the cluster controller?
+func (a *Actuator) updateClusterObjectEndpoint(c *clusterv1.Cluster, m *clusterv1.Machine) error {
+	if len(c.Status.APIEndpoints) == 0 {
+		masterIP, err := a.GetIP(c, m)
+		if err != nil {
+			return err
+		}
+		c.Status.APIEndpoints = append(c.Status.APIEndpoints,
+			clusterv1.APIEndpoint{
+				Host: masterIP,
+				Port: apiServerPort,
+			})
+
+		_, err = a.v1Alpha1Client.Clusters(c.Namespace).UpdateStatus(c)
+		return err
+	}
+	return nil
 }
 
 func (a *Actuator) updateMasterInplace(c *clusterv1.Cluster, oldMachine *clusterv1.Machine, newMachine *clusterv1.Machine) error {
