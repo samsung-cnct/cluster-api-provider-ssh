@@ -85,7 +85,7 @@ func nodeMetadata(token string, c *clusterv1.Cluster, m *clusterv1.Machine, meta
 		ServiceCIDR:    getSubnet(c.Spec.ClusterNetwork.Services),
 		MasterEndpoint: getEndpoint(c.Status.APIEndpoints[0]),
 	}
-	glog.Infof("nodeMetadata: params.MasterEndpoint = ", params.MasterEndpoint)
+	glog.Infof("The MasterEndpoint = %s, machine %s cluster %s", params.MasterEndpoint, m.Name, c.Name)
 	var buf bytes.Buffer
 
 	if err := nodeEnvironmentVarsTemplate.Execute(&buf, params); err != nil {
