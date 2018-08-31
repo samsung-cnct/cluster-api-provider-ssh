@@ -1,0 +1,42 @@
+---
+apiVersion: "cluster.k8s.io/v1alpha1"
+kind: Machine
+metadata:
+  generateName: ssh-controlplane-
+  namespace: test-1
+spec:
+  providerConfig:
+    value:
+      apiVersion: "sshproviderconfig/v1alpha1"
+      kind: "SSHMachineProviderConfig"
+      roles:
+        - Master
+        - Etcd
+      sshConfig:
+        username: ubuntu
+        host: 192.168.2.133
+        port: 22
+        secretName: cluster-private-key
+  versions:
+    kubelet: 1.10.6
+    controlPlane: 1.10.6
+---
+apiVersion: "cluster.k8s.io/v1alpha1"
+kind: Machine
+metadata:
+  generateName: ssh-node-
+  namespace: test-1
+spec:
+  providerConfig:
+    value:
+      apiVersion: "sshproviderconfig/v1alpha1"
+      kind: "SSHMachineProviderConfig"
+      roles:
+        - Node
+      sshConfig:
+        username: ubuntu
+        host: 192.168.2.113
+        port: 22
+        secretName: cluster-private-key
+  versions:
+    kubelet: 1.10.6
