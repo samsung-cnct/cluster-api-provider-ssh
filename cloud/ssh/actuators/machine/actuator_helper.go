@@ -87,38 +87,17 @@ func (a *Actuator) getMetadata(c *clusterv1.Cluster, m *clusterv1.Machine, machi
 
 		metadataMap = addStringValueMaps(metadataMap, masterMap)
 	} else {
-		// TODO put all of this code in it's own method getKubeadmTokenOnMaster
 		// create token on the master
-		machineConfig, err := a.machineProviderConfig(m.Spec.ProviderConfig)
-		if err != nil {
-			return nil, err
-		}
-		privateKey, passPhrase, err := a.getPrivateKey(c, m.Namespace, machineConfig.SSHConfig.SecretName)
-		if err != nil {
-			return nil, err
-		}
-		// init master ip address
 		if len(c.Status.APIEndpoints) < 1 {
-			return nil, errors.New("getMetadata: The master APIEndpoints has not been initialized in ClusterStatus")
+			msg := fmt.Sprintf("getMetadata: The master APIEndpoint has not been initialized, machine %s cluster %s", m.Name, c.Name)
+			return nil, errors.New(msg)
 		}
-		masterSSHConfig := v1alpha1.SSHConfig{Username: machineConfig.SSHConfig.Username,
-			Host: c.Status.APIEndpoints[0].Host,
-			Port: machineConfig.SSHConfig.Port,
-		}
-
-		masterSSHClient := ssh.NewSSHProviderClient(privateKey, passPhrase, masterSSHConfig)
-
-		glog.Infof("Creating token on master")
-		// TODO use kubeadm ttl option and try without full path
-		output, err := masterSSHClient.ProcessCMDWithOutput("sudo /usr/bin/kubeadm token create")
+		kubeadmToken, err := a.getKubeadmTokenOnMaster(c, m)
 		if err != nil {
-			glog.Errorf("error creating token on master: %v", err)
 			return nil, err
 		}
-		token := string(output)
-		glog.Infof("token created = ", strings.TrimSpace(token))
 
-		nodeMap, err := nodeMetadata(strings.TrimSpace(token), c, m, &machineSetupMetadata)
+		nodeMap, err := nodeMetadata(kubeadmToken, c, m, &machineSetupMetadata)
 		if err != nil {
 			return nil, err
 		}
@@ -132,6 +111,38 @@ func (a *Actuator) getMetadata(c *clusterv1.Cluster, m *clusterv1.Machine, machi
 		ShutdownScript: metadataMap["shutdown-script"],
 	}
 	return &metadata, nil
+}
+
+func (a *Actuator) getKubeadmTokenOnMaster(c *clusterv1.Cluster, m *clusterv1.Machine) (string, error) {
+	if m.ObjectMeta.DeletionTimestamp != nil {
+		// No need to create token on a delete.
+		return "", nil
+	}
+	machineConfig, err := a.machineProviderConfig(m.Spec.ProviderConfig)
+	if err != nil {
+		return "", err
+	}
+	privateKey, passPhrase, err := a.getPrivateKey(c, m.Namespace, machineConfig.SSHConfig.SecretName)
+	if err != nil {
+		return "", err
+	}
+	// init master ip address
+	masterSSHConfig := v1alpha1.SSHConfig{Username: machineConfig.SSHConfig.Username,
+		Host: c.Status.APIEndpoints[0].Host,
+		Port: machineConfig.SSHConfig.Port,
+	}
+
+	masterSSHClient := ssh.NewSSHProviderClient(privateKey, passPhrase, masterSSHConfig)
+
+	glog.Infof("Creating token on master, machine %s cluster %s", m.Name, c.Name)
+	output, err := masterSSHClient.ProcessCMDWithOutput("sudo /usr/bin/kubeadm token create --ttl 10m")
+	if err != nil {
+		glog.Errorf("Error creating token on master for machine %s cluster %s error: %v", m.Name, c.Name, err)
+		return "", err
+	}
+	token := string(output)
+	glog.Infof("Token created successfully for machine %s cluster %s", m.Name, c.Name)
+	return strings.TrimSpace(token), err
 }
 
 func addStringValueMaps(m1 map[string]string, m2 map[string]string) map[string]string {
