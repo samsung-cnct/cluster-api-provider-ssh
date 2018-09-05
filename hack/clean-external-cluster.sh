@@ -13,6 +13,8 @@ cluster=$2
 echo "Deleting machine object"
 kubectl patch machine ${machine} -p '{"metadata":{"finalizers": [null]}}'
 kubectl delete machine ${machine}
+kubectl delete secret master-private-key
+kubectl delete secret node-private-key
 
 echo "Deleting cluster object"
 kubectl patch cluster ${cluster} -p '{"metadata":{"finalizers": [null]}}'
@@ -24,3 +26,4 @@ kubectl delete configmap cluster-info -n kube-public
 kubectl delete deployment clusterapi-controllers
 kubectl delete deployment clusterapi-apiserver
 kubectl delete statefulsets  etcd-clusterapi
+kubectl delete secret cluster-apiserver-certs
