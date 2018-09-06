@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+ARG KUBEADM_VERSION=1.10.6
+
 # Reproducible builder image
 FROM golang:1.10.0 as builder
 WORKDIR /go/src/sigs.k8s.io/cluster-api-provider-ssh
@@ -24,6 +26,10 @@ RUN CGO_ENABLED=0 GOOS=linux go install -a -ldflags '-extldflags "-static"' sigs
 
 # Final container
 FROM debian:stretch-slim
+ARG KUBEADM_VERSION
+
 RUN apt-get update && apt-get install -y ca-certificates openssh-server && rm -rf /var/lib/apt/lists/*
+
+ADD https://storage.googleapis.com/kubernetes-release/release/v${KUBEADM_VERSION}/bin/linux/amd64/kubeadm /usr/bin/kubeadm
 
 COPY --from=builder /go/bin/cluster-controller .
