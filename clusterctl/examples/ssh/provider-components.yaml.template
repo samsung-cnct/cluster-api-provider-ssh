@@ -47,6 +47,7 @@ spec:
               memory: 30Mi
         - name: ssh-cluster-controller
           image: quay.io/samsung_cnct/ssh-cluster-controller:prod
+          imagePullPolicy: Always
           volumeMounts:
             - name: config
               mountPath: /etc/kubernetes
@@ -73,6 +74,7 @@ spec:
               memory: 500Mi
         - name: ssh-machine-controller
           image: quay.io/samsung_cnct/ssh-machine-controller:prod
+          imagePullPolicy: Always
           volumeMounts:
             - name: config
               mountPath: /etc/kubernetes
