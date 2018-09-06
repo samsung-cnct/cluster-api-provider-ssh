@@ -80,8 +80,6 @@ spec:
               mountPath: /etc/ssl/certs
             - name: machine-setup
               mountPath: /etc/machinesetup
-            - name: kubeadm
-              mountPath: /usr/bin/kubeadm
           env:
             - name: NODE_NAME
               valueFrom:
@@ -110,9 +108,6 @@ spec:
         - name: machine-setup
           configMap:
             name: machine-setup
-        - name: kubeadm
-          hostPath:
-            path: /usr/bin/kubeadm
 ---
 apiVersion: v1
 kind: Secret
