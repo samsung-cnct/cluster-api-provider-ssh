@@ -135,7 +135,8 @@ func (a *Actuator) getKubeadmTokenOnMaster(c *clusterv1.Cluster, m *clusterv1.Ma
 	masterSSHClient := ssh.NewSSHProviderClient(privateKey, passPhrase, masterSSHConfig)
 
 	glog.Infof("Creating token on master, machine %s cluster %s", m.Name, c.Name)
-	output, err := masterSSHClient.ProcessCMDWithOutput("sudo /usr/bin/kubeadm token create --ttl 10m")
+	// TODO use kubeadm ttl option and try without full path
+	output, err := masterSSHClient.ProcessCMDWithOutput("sudo /usr/bin/kubeadm token create")
 	if err != nil {
 		glog.Errorf("Error creating token on master for machine %s cluster %s error: %v", m.Name, c.Name, err)
 		return "", err
