@@ -287,7 +287,7 @@ func (a *Actuator) Update(c *clusterv1.Cluster, goalMachine *clusterv1.Machine) 
 	return a.updateAnnotations(c, goalMachine)
 }
 
-// Exists test for the existance of a machine and is invoked by the Machine Controller
+// Exists test for the existence of a machine and is invoked by the Machine Controller
 func (a *Actuator) Exists(c *clusterv1.Cluster, m *clusterv1.Machine) (bool, error) {
 	glog.Infof("Checking if machine %s for cluster %s exists.", m.Name, c.Name)
 	// Try to use the last saved status locating the machine
@@ -295,7 +295,7 @@ func (a *Actuator) Exists(c *clusterv1.Cluster, m *clusterv1.Machine) (bool, err
 	if err != nil {
 		return false, err
 	}
-	// if status is nil, either it doesnt exist or bootstrapping, however in ssh we assume it exists.
+	// if status is nil, either it doesn't exist or bootstrapping, however in ssh we assume it exists.
 	// so some status must be returned.
 	return status != nil, nil
 }

@@ -30,13 +30,12 @@ func (a *Actuator) GetKubeConfig(c *clusterv1.Cluster, m *clusterv1.Machine) (st
 	}
 
 	// this is used primarily by clusterctl which is run in the machine that starts up a call to the external cluster
-	// as such, this does not actually do much with the machine exect execute a command
+	// as such, this does not actually do much with the machine except execute a command
 	sshClient := ssh.NewSSHProviderClient("", "", machineConfig.SSHConfig)
 	return sshClient.GetKubeConfig()
 }
 
 func (a *Actuator) getPrivateKey(c *clusterv1.Cluster, namespace string, secretName string) (string, string, error) {
-
 	if a.kubeClient == nil {
 		return "", "", fmt.Errorf("kubeclient is nil, should not happen")
 	}
