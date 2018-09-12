@@ -11,11 +11,16 @@ import (
 	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/providerconfig/v1alpha1"
 )
 
+const (
+	GetKubeconfigCommand = "sudo cat /etc/kubernetes/admin.conf"
+)
+
 type SSHProviderClientInterface interface {
 	ProcessCMD(cmd string) error
 	WritePublicKeys(machineSSHConfig v1alpha1.SSHConfig) error
 	DeletePublicKeys(machineSSHConfig v1alpha1.SSHConfig) error
 	GetKubeConfig() (string, error)
+	GetKubeConfigBytes() ([]byte, error)
 }
 
 type sshProviderClient struct {
@@ -45,12 +50,21 @@ func (s *sshProviderClient) DeletePublicKeys(machineSSHConfig v1alpha1.SSHConfig
 }
 
 func (s *sshProviderClient) GetKubeConfig() (string, error) {
-	bytes, err := s.ProcessCMDWithOutput("sudo cat /etc/kubernetes/admin.conf")
+	bytes, err := s.ProcessCMDWithOutput(GetKubeconfigCommand)
 	if err != nil {
 		return "", err
 	}
 
 	return string(bytes), nil
+}
+
+func (s *sshProviderClient) GetKubeConfigBytes() ([]byte, error) {
+	bytes, err := s.ProcessCMDWithOutput(GetKubeconfigCommand)
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes, nil
 }
 
 func (s *sshProviderClient) ProcessCMD(cmd string) error {

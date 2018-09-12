@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh"
 	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/providerconfig/v1alpha1"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
@@ -111,6 +112,42 @@ func (a *Actuator) getMetadata(c *clusterv1.Cluster, m *clusterv1.Machine, machi
 		ShutdownScript: metadataMap["shutdown-script"],
 	}
 	return &metadata, nil
+}
+
+func (a *Actuator) createKubeconfigSecret(c *clusterv1.Cluster, m *clusterv1.Machine, sshClient ssh.SSHProviderClientInterface) error {
+	if a.kubeClient == nil {
+		return fmt.Errorf("kubeclient is nil, should not happen")
+	}
+
+	glog.Infof("Getting kubeconfig from master, machine %s cluster %s", m.Name, c.Name)
+	output, err := sshClient.GetKubeConfigBytes()
+	if err != nil {
+		glog.Errorf("Error getting kubeconfig from master for machine %s cluster %s error: %v", m.Name, c.Name, err)
+		return err
+	}
+
+	// create secret
+	coreV1Client := a.kubeClient.CoreV1()
+	if coreV1Client == nil {
+		return errors.New("createKubeconfigSecret, could not initialize coreV1Client")
+	}
+
+	glog.Infof("Creating kubeconfig Secret for cluster name: %s namespace: %s", c.Name, c.Namespace)
+	data := map[string][]byte{
+		"kubeconfig": output,
+	}
+	_, err = coreV1Client.Secrets(c.Namespace).Create(&corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      c.Name + "-kubeconfig",
+			Namespace: c.Namespace,
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: data,
+	})
+	if err != nil {
+		glog.Infof("createKubeconfigSecret Error from Secrets(%s).Create = %s", c.Namespace, err)
+	}
+	return err
 }
 
 func (a *Actuator) getKubeadmTokenOnMaster(c *clusterv1.Cluster, m *clusterv1.Machine) (string, error) {

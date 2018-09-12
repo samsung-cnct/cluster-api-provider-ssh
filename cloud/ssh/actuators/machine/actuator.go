@@ -154,6 +154,11 @@ func (a *Actuator) Create(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 		if err != nil {
 			return err
 		}
+		// create kubeconfig secret
+		err = a.createKubeconfigSecret(c, m, sshClient)
+		if err != nil {
+			return err
+		}
 	}
 
 	a.eventRecorder.Eventf(m, corev1.EventTypeNormal, "Created", "Created Machine %v", m.Name)
