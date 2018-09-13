@@ -5,7 +5,7 @@
 
           #TODO do we drain? or require the operator of the machine to drain before updating? a node has no permission to do so internally
           # sudo kubectl --kubeconfig=/etc/kubernetes/kubelet.conf drain $(hostname) --delete-local-data --ignore-daemonsets --force
-          sudo kubectl --kubeconfig=/etc/kubernetes/kubelet.conf delete node $(hostname)
+          sudo kubectl --kubeconfig=/etc/kubernetes/kubelet.conf delete node $(hostname) || true
 
           sudo kubeadm reset
 
