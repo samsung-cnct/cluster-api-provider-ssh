@@ -9,6 +9,7 @@ import (
 	"github.com/samsung-cnct/cluster-api-provider-ssh/cloud/ssh"
 	"github.com/samsung-cnct/cluster-api-provider-ssh/cloud/ssh/providerconfig/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	corev1errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 	apierrors "sigs.k8s.io/cluster-api/pkg/errors"
@@ -136,16 +137,29 @@ func (a *Actuator) createKubeconfigSecret(c *clusterv1.Cluster, m *clusterv1.Mac
 	data := map[string][]byte{
 		"kubeconfig": output,
 	}
+	secretMeta := metav1.ObjectMeta{
+		Name:      c.Name + "-kubeconfig",
+		Namespace: c.Namespace,
+	}
 	_, err = coreV1Client.Secrets(c.Namespace).Create(&corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      c.Name + "-kubeconfig",
-			Namespace: c.Namespace,
-		},
-		Type: corev1.SecretTypeOpaque,
-		Data: data,
+		ObjectMeta: secretMeta,
+		Type:       corev1.SecretTypeOpaque,
+		Data:       data,
 	})
 	if err != nil {
-		glog.Infof("createKubeconfigSecret Error from Secrets(%s).Create = %s", c.Namespace, err)
+		if corev1errors.IsAlreadyExists(err) {
+			_, err = coreV1Client.Secrets(c.Namespace).Update(&corev1.Secret{
+				ObjectMeta: secretMeta,
+				Type:       corev1.SecretTypeOpaque,
+				Data:       data,
+			})
+			if err != nil {
+				glog.Infof("createKubeconfigSecret Error from Secrets(%s).Update = %s", c.Namespace, err)
+				return err
+			}
+		} else {
+			glog.Infof("createKubeconfigSecret Error from Secrets(%s).Create = %s", c.Namespace, err)
+		}
 	}
 	return err
 }
