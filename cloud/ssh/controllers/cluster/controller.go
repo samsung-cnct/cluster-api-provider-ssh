@@ -37,8 +37,8 @@ import (
 	"sigs.k8s.io/cluster-api/pkg/controller/config"
 	"sigs.k8s.io/cluster-api/pkg/controller/sharedinformers"
 
-	clusteractuator "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/actuators/cluster"
-	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/controllers/cluster/options"
+	clusteractuator "github.com/samsung-cnct/cluster-api-provider-ssh/cloud/ssh/actuators/cluster"
+	"github.com/samsung-cnct/cluster-api-provider-ssh/cloud/ssh/controllers/cluster/options"
 )
 
 const (

@@ -32,15 +32,15 @@ depend-update: ## Update dependencies to the latest allowed by Gopkg.toml
 generate: gendeepcopy ## Create generated code
 
 gendeepcopy:
-	go build -o $$GOPATH/bin/deepcopy-gen sigs.k8s.io/cluster-api-provider-ssh/vendor/k8s.io/code-generator/cmd/deepcopy-gen
+	go build -o $$GOPATH/bin/deepcopy-gen github.com/samsung-cnct/cluster-api-provider-ssh/vendor/k8s.io/code-generator/cmd/deepcopy-gen
 	deepcopy-gen \
 	  -i ./cloud/ssh/providerconfig,./cloud/ssh/providerconfig/v1alpha1 \
 	  -O zz_generated.deepcopy \
 	  -h boilerplate.go.txt
 
 build: ## Build the cluster-controller and machine-controller binaries and install them in $GOPATH/bin
-	CGO_ENABLED=0 go install -a -ldflags '-extldflags "-static"' sigs.k8s.io/cluster-api-provider-ssh/cmd/cluster-controller
-	CGO_ENABLED=0 go install -a -ldflags '-extldflags "-static"' sigs.k8s.io/cluster-api-provider-ssh/cmd/machine-controller
+	CGO_ENABLED=0 go install -a -ldflags '-extldflags "-static"' github.com/samsung-cnct/cluster-api-provider-ssh/cmd/cluster-controller
+	CGO_ENABLED=0 go install -a -ldflags '-extldflags "-static"' github.com/samsung-cnct/cluster-api-provider-ssh/cmd/machine-controller
 
 images: ## Make cluster-controller and machine-controller images
 	$(MAKE) -C cmd/cluster-controller image

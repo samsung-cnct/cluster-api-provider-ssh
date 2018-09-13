@@ -17,7 +17,7 @@ limitations under the License.
 package main
 
 import (
-	_ "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/actuators/machine"
+	_ "github.com/samsung-cnct/cluster-api-provider-ssh/cloud/ssh/actuators/machine"
 	"sigs.k8s.io/cluster-api/clusterctl/cmd"
 )
 

@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang/glog"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh"
+	"github.com/samsung-cnct/cluster-api-provider-ssh/cloud/ssh"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 )
 

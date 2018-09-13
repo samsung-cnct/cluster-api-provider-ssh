@@ -23,15 +23,9 @@ Participation in the Kubernetes community is governed by the
 
 ## Obtaining the code
 
-Imports in the code refer to `sigs.k8s.io/cluster-api*` even though this
-repository lives under the `samsung-cnct` GitHub organization.
-For Go dependencies to be built correctly with `dep`, place this repository in
-your $GOPATH as follows:
-
 ```bash
-mkdir -p $GOPATH/src/sigs.k8s.io/
-git clone https://github.com/samsung-cnct/cluster-api-provider-ssh.git $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
-cd $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
+go get github.com/samsung-cnct/cluster-api-provider-ssh
+cd $GOPATH/src/samsung-cnct/cluster-api-provider-ssh
 ```
 
 ## Generating cluster, machine, and provider-components files
