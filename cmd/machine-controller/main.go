@@ -24,8 +24,8 @@ import (
 	"k8s.io/apiserver/pkg/util/logs"
 	"sigs.k8s.io/cluster-api/pkg/controller/config"
 
-	machineController "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/controllers/machine"
-	machineOptions "sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/controllers/machine/options"
+	machineController "github.com/samsung-cnct/cluster-api-provider-ssh/cloud/ssh/controllers/machine"
+	machineOptions "github.com/samsung-cnct/cluster-api-provider-ssh/cloud/ssh/controllers/machine/options"
 )
 
 func main() {

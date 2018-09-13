@@ -22,7 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 
-	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/providerconfig"
+	"github.com/samsung-cnct/cluster-api-provider-ssh/cloud/ssh/providerconfig"
 )
 
 // +k8s:deepcopy-gen=false

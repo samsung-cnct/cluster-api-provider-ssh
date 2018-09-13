@@ -11,7 +11,7 @@ import (
 
 	"fmt"
 
-	"sigs.k8s.io/cluster-api-provider-ssh/cloud/ssh/providerconfig/v1alpha1"
+	"github.com/samsung-cnct/cluster-api-provider-ssh/cloud/ssh/providerconfig/v1alpha1"
 )
 
 var (
