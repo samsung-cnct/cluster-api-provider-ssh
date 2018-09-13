@@ -87,7 +87,6 @@ For example:
 - push both ssh-cluster-controller and ssh-machine-controller images
 
 ```bash
-cd $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
 make dev_push
 
 ```
@@ -95,14 +94,12 @@ make dev_push
 - push ssh-machine-controller image
 
 ```bash
-cd $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
 make dev_push_machine
 ```
 
 - push ssh-cluster-controller image
 
 ```bash
-cd $GOPATH/src/sigs.k8s.io/cluster-api-provider-ssh
 make dev_push_cluster
 ```
 
