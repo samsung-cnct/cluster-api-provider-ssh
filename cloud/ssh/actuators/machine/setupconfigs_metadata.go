@@ -19,6 +19,11 @@ var (
 	nodeEnvironmentVarsTemplate   *template.Template
 )
 
+const (
+	startupScriptKey  = "startup-script"
+	shutdownScriptKey = "shutdown-script"
+)
+
 type Metadata struct {
 	StartupScript  string `json:"startupScript"`
 	ShutdownScript string `json:"shutdownScript"`
@@ -59,14 +64,14 @@ func masterMetadata(c *clusterv1.Cluster, m *clusterv1.Machine, metadata *Metada
 		return nil, err
 	}
 	buf.WriteString(params.Metadata.StartupScript)
-	masterMetadata["startup-script"] = buf.String()
+	masterMetadata[startupScriptKey] = buf.String()
 
 	buf.Reset()
 	if err := masterEnvironmentVarsTemplate.Execute(&buf, params); err != nil {
 		return nil, err
 	}
 	buf.WriteString(params.Metadata.ShutdownScript)
-	masterMetadata["shutdown-script"] = buf.String()
+	masterMetadata[shutdownScriptKey] = buf.String()
 
 	return masterMetadata, nil
 }
@@ -92,14 +97,14 @@ func nodeMetadata(token string, c *clusterv1.Cluster, m *clusterv1.Machine, meta
 		return nil, err
 	}
 	buf.WriteString(params.Metadata.StartupScript)
-	nodeMetadata["startup-script"] = buf.String()
+	nodeMetadata[startupScriptKey] = buf.String()
 
 	buf.Reset()
 	if err := nodeEnvironmentVarsTemplate.Execute(&buf, params); err != nil {
 		return nil, err
 	}
 	buf.WriteString(params.Metadata.ShutdownScript)
-	nodeMetadata["shutdown-script"] = buf.String()
+	nodeMetadata[shutdownScriptKey] = buf.String()
 
 	return nodeMetadata, nil
 }

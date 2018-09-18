@@ -109,8 +109,8 @@ func (a *Actuator) getMetadata(c *clusterv1.Cluster, m *clusterv1.Machine, machi
 
 	metadata := Metadata{
 		Items:          metadataMap,
-		StartupScript:  metadataMap["startup-script"],
-		ShutdownScript: metadataMap["shutdown-script"],
+		StartupScript:  metadataMap[startupScriptKey],
+		ShutdownScript: metadataMap[shutdownScriptKey],
 	}
 	return &metadata, nil
 }
