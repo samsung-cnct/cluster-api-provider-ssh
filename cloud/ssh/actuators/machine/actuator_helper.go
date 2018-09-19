@@ -21,7 +21,21 @@ const (
 	deleteEventAction = "Delete"
 	noEventAction     = ""
 	// TODO should this move to the cluster controller?
-	apiServerPort = 443
+	apiServerPort          = 443
+	upgradeControlPlaneCmd = "sudo curl -o /usr/bin/kubeadm -sSL https://dl.k8s.io/release/v%[1]s/bin/linux/amd64/kubeadm && " +
+		"sudo chmod a+rx /usr/bin/kubeadm && " +
+		"sudo kubeadm upgrade apply v%[1]s -y"
+	upgradeMasterPackagesCmd = "sudo kubectl drain %[1]s --ignore-daemonsets --kubeconfig /etc/kubernetes/admin.conf && " +
+		"sudo apt-get update && " +
+		"sudo apt-get upgrade -y kubelet=%[2]s-00 kubeadm=%[2]s-00 && " +
+		"sudo systemctl restart kubelet && sudo kubectl uncordon %[1]s --kubeconfig /etc/kubernetes/admin.conf"
+	getNodeCmd               = "sudo kubectl get no -o go-template='{{range .items}}{{.metadata.name}}:{{.metadata.annotations.machine}}{{\"\\n\"}}{{end}}' --kubeconfig /etc/kubernetes/admin.conf"
+	drainWorkerCmd           = "sudo kubectl drain %[1]s --ignore-daemonsets --kubeconfig /etc/kubernetes/admin.conf"
+	uncordonWorkerCmd        = "sudo kubectl uncordon %[1]s --kubeconfig /etc/kubernetes/admin.conf"
+	upgradeWorkerPackagesCmd = "sudo apt-get update && " +
+		"sudo apt-get upgrade -y kubelet=%[1]s-00 kubeadm=%[1]s-00 && " +
+		"sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2) && " +
+		"sudo systemctl restart kubelet"
 )
 
 func (a *Actuator) machineProviderConfig(providerConfig clusterv1.ProviderConfig) (*v1alpha1.SSHMachineProviderConfig, error) {
@@ -115,13 +129,33 @@ func (a *Actuator) getMetadata(c *clusterv1.Cluster, m *clusterv1.Machine, machi
 	return &metadata, nil
 }
 
-func (a *Actuator) createKubeconfigSecret(c *clusterv1.Cluster, m *clusterv1.Machine, sshClient ssh.SSHProviderClientInterface) error {
+func (a *Actuator) getNodeForMachine(c *clusterv1.Cluster, m *clusterv1.Machine) (string, error) {
+	masterSSHClient, err := a.getMasterSSHClient(c, m)
+	if err != nil {
+		glog.Error("Error getting master sshClient")
+		return "", err
+	}
+	nodeCmd := getNodeCmd + " | grep " + m.Namespace + "/" + m.Name
+	glog.Infof("nodeCmd = %s", nodeCmd)
+	output, err := masterSSHClient.ProcessCMDWithOutput(nodeCmd)
+	if err != nil {
+		glog.Errorf("Error getting node: cmd = %s, error = %s", nodeCmd, err)
+		return "", err
+	}
+	strs := strings.Split(string(output), ":")
+	if len(strs) == 0 {
+		return "", errors.New("Error getting node name for machine")
+	}
+	return strs[0], nil
+}
+
+func (a *Actuator) createKubeconfigSecret(c *clusterv1.Cluster, m *clusterv1.Machine, sshMasterClient ssh.SSHProviderClientInterface) error {
 	if a.kubeClient == nil {
 		return fmt.Errorf("kubeclient is nil, should not happen")
 	}
 
 	glog.Infof("Getting kubeconfig from master, machine %s cluster %s", m.Name, c.Name)
-	output, err := sshClient.GetKubeConfigBytes()
+	output, err := sshMasterClient.GetKubeConfigBytes()
 	if err != nil {
 		glog.Errorf("Error getting kubeconfig from master for machine %s cluster %s error: %v", m.Name, c.Name, err)
 		return err
@@ -164,27 +198,34 @@ func (a *Actuator) createKubeconfigSecret(c *clusterv1.Cluster, m *clusterv1.Mac
 	return err
 }
 
-func (a *Actuator) getKubeadmTokenOnMaster(c *clusterv1.Cluster, m *clusterv1.Machine) (string, error) {
-	if m.ObjectMeta.DeletionTimestamp != nil {
-		// No need to create token on a delete.
-		return "", nil
-	}
+func (a *Actuator) getMasterSSHClient(c *clusterv1.Cluster, m *clusterv1.Machine) (ssh.SSHProviderClientInterface, error) {
 	machineConfig, err := a.machineProviderConfig(m.Spec.ProviderConfig)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	privateKey, passPhrase, err := a.getPrivateKey(c, m.Namespace, machineConfig.SSHConfig.SecretName)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	// init master ip address
 	masterSSHConfig := v1alpha1.SSHConfig{Username: machineConfig.SSHConfig.Username,
 		Host: c.Status.APIEndpoints[0].Host,
 		Port: machineConfig.SSHConfig.Port,
 	}
-
 	masterSSHClient := ssh.NewSSHProviderClient(privateKey, passPhrase, masterSSHConfig)
+	return masterSSHClient, nil
+}
 
+func (a *Actuator) getKubeadmTokenOnMaster(c *clusterv1.Cluster, m *clusterv1.Machine) (string, error) {
+	if m.ObjectMeta.DeletionTimestamp != nil {
+		// No need to create token on a delete.
+		return "", nil
+	}
+	masterSSHClient, err := a.getMasterSSHClient(c, m)
+	if err != nil {
+		glog.Error("Error getting master sshClient")
+		return "", err
+	}
 	glog.Infof("Creating token on master, machine %s cluster %s", m.Name, c.Name)
 	// TODO use kubeadm ttl option and try without full path
 	output, err := masterSSHClient.ProcessCMDWithOutput("sudo /usr/bin/kubeadm token create")
@@ -224,66 +265,100 @@ func (a *Actuator) updateClusterObjectEndpoint(c *clusterv1.Cluster, m *clusterv
 	return nil
 }
 
-func (a *Actuator) updateMasterInplace(c *clusterv1.Cluster, oldMachine *clusterv1.Machine, newMachine *clusterv1.Machine) error {
+func (a *Actuator) updateMasterInPlace(c *clusterv1.Cluster, oldMachine *clusterv1.Machine, newMachine *clusterv1.Machine) error {
 	glog.Infof("updating master node %s", oldMachine.Name)
 	machineConfig, err := a.machineProviderConfig(newMachine.Spec.ProviderConfig)
 	if err != nil {
 		return err
 	}
-
 	privateKey, passPhrase, err := a.getPrivateKey(c, newMachine.Namespace, machineConfig.SSHConfig.SecretName)
 	if err != nil {
 		return err
 	}
-
 	sshClient := ssh.NewSSHProviderClient(privateKey, passPhrase, machineConfig.SSHConfig)
 
-	// Upgrade ControlPlane items
+	// Perform kubeadm upgrade on the ControlPlane
 	if oldMachine.Spec.Versions.ControlPlane != newMachine.Spec.Versions.ControlPlane {
 		glog.Infof("Updating master node %s; controlplane version from %s to %s.", oldMachine.Name, oldMachine.Spec.Versions.ControlPlane, newMachine.Spec.Versions.ControlPlane)
+		cmd := fmt.Sprintf(upgradeControlPlaneCmd, newMachine.Spec.Versions.ControlPlane)
+		glog.Infof("updateControlPlaneCmd = %s", cmd)
 
-		cmd := fmt.Sprintf(
-			"curl -sSL https://dl.k8s.io/release/v%s/bin/linux/amd64/kubeadm | sudo tee /usr/bin/kubeadm > /dev/null; "+
-				"sudo chmod a+rx /usr/bin/kubeadm", newMachine.Spec.Versions.ControlPlane)
 		err := sshClient.ProcessCMD(cmd)
 		if err != nil {
-			glog.Errorf("could not install kubeadm binary: %v", err)
-			return err
-		}
-
-		// Upgrade control plane.
-		cmd = fmt.Sprintf("sudo kubeadm upgrade apply %s -y", "v"+newMachine.Spec.Versions.ControlPlane)
-		err = sshClient.ProcessCMD(cmd)
-		if err != nil {
-			glog.Errorf("failed to upgrade to new version %s: %v", newMachine.Spec.Versions.ControlPlane, err)
+			glog.Errorf("Could not perform kubeadm upgrade on ControlPlane: %v", err)
 			return err
 		}
 	}
-
-	// Upgrade Kubelet.
+	// Upgrade ControlPlane packages (kubelet)
 	if oldMachine.Spec.Versions.Kubelet != newMachine.Spec.Versions.Kubelet {
 		glog.Infof("updating master node %s; kubelet version from %s to %s.", oldMachine.Name, oldMachine.Spec.Versions.Kubelet, newMachine.Spec.Versions.Kubelet)
-		cmd := fmt.Sprintf("sudo kubectl drain %s --kubeconfig /etc/kubernetes/admin.conf --ignore-daemonsets", newMachine.Name)
-		// The errors are intentionally ignored as master has static pods.
-		_ = sshClient.ProcessCMD(cmd)
 
-		// Upgrade kubelet to desired version.
-		cmd = fmt.Sprintf("sudo apt install kubelet=%s-00", newMachine.Spec.Versions.Kubelet)
-		err = sshClient.ProcessCMD(cmd)
+		node, err := a.getNodeForMachine(c, newMachine)
 		if err != nil {
-			glog.Errorf("could not apt install Kubelet version: %s-00", newMachine.Spec.Versions.Kubelet+"-00: %v", err)
-			return err
+			return errors.New("updateMasterInPlace Error getting node name for machine")
 		}
+		cmd := fmt.Sprintf(upgradeMasterPackagesCmd, node, newMachine.Spec.Versions.Kubelet)
+		glog.Infof("upgradeMasterPackagesCmd = %s", cmd)
 
-		cmd = fmt.Sprintf("sudo kubectl uncordon %s --kubeconfig /etc/kubernetes/admin.conf", newMachine.Name)
 		err = sshClient.ProcessCMD(cmd)
 		if err != nil {
-			glog.Errorf("failed to uncordon the node: %s: %v", newMachine.Name, err)
+			glog.Errorf("Could not upgrade Kubelet version: %s-00 on ControlPlane %s: %s", newMachine.Spec.Versions.Kubelet, newMachine.Name, err)
 			return err
 		}
 	}
-
 	glog.Infof("updating master node %s; done.", oldMachine.Name)
+
+	return nil
+}
+
+func (a *Actuator) updateWorkerInPlace(c *clusterv1.Cluster, oldMachine *clusterv1.Machine, newMachine *clusterv1.Machine) error {
+	glog.Infof("updating worker node %s", oldMachine.Name)
+	machineConfig, err := a.machineProviderConfig(newMachine.Spec.ProviderConfig)
+	if err != nil {
+		return err
+	}
+	privateKey, passPhrase, err := a.getPrivateKey(c, newMachine.Namespace, machineConfig.SSHConfig.SecretName)
+	if err != nil {
+		return err
+	}
+	sshClient := ssh.NewSSHProviderClient(privateKey, passPhrase, machineConfig.SSHConfig)
+	masterSSHClient, err := a.getMasterSSHClient(c, newMachine)
+	if err != nil {
+		glog.Error("updateWorkerInPlace Error getting master sshClient")
+		return err
+	}
+
+	// Upgrade Worker packages (kubelet)
+	if oldMachine.Spec.Versions.Kubelet != newMachine.Spec.Versions.Kubelet {
+		glog.Infof("updating worker node %s; kubelet version from %s to %s.", oldMachine.Name, oldMachine.Spec.Versions.Kubelet, newMachine.Spec.Versions.Kubelet)
+
+		node, err := a.getNodeForMachine(c, newMachine)
+		if err != nil {
+			return errors.New("updateWorkerInPlace Error getting node name for machine")
+		}
+		drainCmd := fmt.Sprintf(drainWorkerCmd, node)
+		glog.Infof("drainWorkerCmd = %s", drainCmd)
+		err = masterSSHClient.ProcessCMD(drainCmd)
+		if err != nil {
+			glog.Errorf("Failed to drain worker node %s for machine %s: %s", node, newMachine.Name, err)
+			return err
+		}
+		upgradePkgCmd := fmt.Sprintf(upgradeWorkerPackagesCmd, newMachine.Spec.Versions.Kubelet)
+		glog.Infof("upgradeWorkerPackagesCmd = %s", upgradePkgCmd)
+		err = sshClient.ProcessCMD(upgradePkgCmd)
+		if err != nil {
+			glog.Errorf("Could not upgrade Kubelet version: %s-00 on Worker %s: %s", newMachine.Spec.Versions.Kubelet, newMachine.Name, err)
+			return err
+		}
+		uncordonCmd := fmt.Sprintf(uncordonWorkerCmd, node)
+		glog.Infof("uncordonWorkerCmd = %s", uncordonCmd)
+		err = masterSSHClient.ProcessCMD(uncordonCmd)
+		if err != nil {
+			glog.Errorf("Failed to uncordon worker node %s for machine %s: %s", node, newMachine.Name, err)
+			return err
+		}
+	}
+	glog.Infof("updating worker node %s; done.", oldMachine.Name)
 
 	return nil
 }
