@@ -6,9 +6,9 @@ import (
 	"os"
 
 	"github.com/golang/glog"
+	"github.com/samsung-cnct/cluster-api-provider-ssh/cloud/ssh/providerconfig/v1alpha1"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
-	"github.com/samsung-cnct/cluster-api-provider-ssh/cloud/ssh/providerconfig/v1alpha1"
 )
 
 const (
@@ -17,6 +17,7 @@ const (
 
 type SSHProviderClientInterface interface {
 	ProcessCMD(cmd string) error
+	ProcessCMDWithOutput(cmd string) ([]byte, error)
 	WritePublicKeys(machineSSHConfig v1alpha1.SSHConfig) error
 	DeletePublicKeys(machineSSHConfig v1alpha1.SSHConfig) error
 	GetKubeConfig() (string, error)

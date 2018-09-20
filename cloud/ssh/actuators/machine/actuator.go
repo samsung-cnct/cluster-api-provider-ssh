@@ -17,12 +17,12 @@ import (
 	"github.com/golang/glog"
 	clustercommon "sigs.k8s.io/cluster-api/pkg/apis/cluster/common"
 
+	"github.com/samsung-cnct/cluster-api-provider-ssh/cloud/ssh"
+	"github.com/samsung-cnct/cluster-api-provider-ssh/cloud/ssh/providerconfig/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
-	"github.com/samsung-cnct/cluster-api-provider-ssh/cloud/ssh"
-	"github.com/samsung-cnct/cluster-api-provider-ssh/cloud/ssh/providerconfig/v1alpha1"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 	client "sigs.k8s.io/cluster-api/pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1"
 	apierrors "sigs.k8s.io/cluster-api/pkg/errors"
@@ -270,20 +270,14 @@ func (a *Actuator) Update(c *clusterv1.Cluster, goalMachine *clusterv1.Machine) 
 	if util.IsMaster(currentMachine) {
 		glog.Infof("Performing an in-place upgrade for master %s.", currentMachineName)
 		// TODO: should we support custom CAs here?
-		if err = a.updateMasterInplace(c, currentMachine, goalMachine); err != nil {
+		if err = a.updateMasterInPlace(c, currentMachine, goalMachine); err != nil {
 			glog.Errorf("master in-place update failed for %s: %v", currentMachineName, err)
 			return err
 		}
 	} else {
-		glog.Infof("Deleting machine %s for update.", currentMachineName)
-		if err = a.Delete(c, currentMachine); err != nil {
-			glog.Errorf("deleting machine %s for update failed: %v", currentMachineName, err)
-			return err
-		}
-
-		glog.Infof("Re-creating machine %s for update. ", currentMachineName)
-		if err = a.Create(c, goalMachine); err != nil {
-			glog.Errorf("creating machine %s for update failed: %v", goalMachineName, err)
+		glog.Infof("Performing upgrade for worker %s.", currentMachineName)
+		if err = a.updateWorkerInPlace(c, currentMachine, goalMachine); err != nil {
+			glog.Errorf("worker update failed for %s: v%", currentMachineName, err)
 			return err
 		}
 	}
