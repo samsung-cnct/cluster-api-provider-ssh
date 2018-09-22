@@ -30,7 +30,7 @@ const (
 		"sudo apt-get upgrade -y kubelet=%[2]s-00 kubeadm=%[2]s-00 && " +
 		"sudo systemctl restart kubelet && sudo kubectl uncordon %[1]s --kubeconfig /etc/kubernetes/admin.conf"
 	getNodeCmd               = "sudo kubectl get no -o go-template='{{range .items}}{{.metadata.name}}:{{.metadata.annotations.machine}}{{\"\\n\"}}{{end}}' --kubeconfig /etc/kubernetes/admin.conf"
-	drainWorkerCmd           = "sudo kubectl drain %[1]s --ignore-daemonsets --kubeconfig /etc/kubernetes/admin.conf"
+	drainWorkerCmd           = "sudo kubectl drain %[1]s --ignore-daemonsets --delete-local-data --force --kubeconfig /etc/kubernetes/admin.conf"
 	uncordonWorkerCmd        = "sudo kubectl uncordon %[1]s --kubeconfig /etc/kubernetes/admin.conf"
 	upgradeWorkerPackagesCmd = "sudo apt-get update && " +
 		"sudo apt-get upgrade -y kubelet=%[1]s-00 kubeadm=%[1]s-00 && " +
