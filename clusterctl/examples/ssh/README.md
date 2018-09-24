@@ -24,10 +24,18 @@ cat id_ecdsa | base64 | tr -d \\r\\n > id_ecdsa.b64
 export CLUSTER_PRIVATE_KEY=$(cat id_ecdsa.b64)
 ```
 
-- Run the script:
+- Run the generate-yaml.sh script:
+
+For ubuntu (default):
 
 ```bash
 ./generate-yaml.sh
+```
+
+For centos:
+
+```bash
+./generate-yaml.sh centos
 ```
 
 If yaml file already exists, you will see an error like the one below:
