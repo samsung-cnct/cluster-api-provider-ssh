@@ -1,0 +1,10 @@
+          set -e
+          set -x
+          (
+          sudo yum upgrade -y kubelet=${KUBELET_VERSION} --disableexcludes=kubernetes
+          sudo yum upgrade -y kubectl=${KUBELET_VERSION} --disableexcludes=kubernetes
+          sudo yum upgrade -y kubeadm=${KUBELET_VERSION} --disableexcludes=kubernetes
+          
+          sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
+          sudo systemctl restart kubelet
+          ) 2>&1 | sudo tee /var/log/upgrade.log

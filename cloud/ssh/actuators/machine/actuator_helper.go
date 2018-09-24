@@ -25,15 +25,10 @@ const (
 	upgradeControlPlaneCmd = "sudo curl -o /usr/bin/kubeadm -sSL https://dl.k8s.io/release/v%[1]s/bin/linux/amd64/kubeadm && " +
 		"sudo chmod a+rx /usr/bin/kubeadm && " +
 		"sudo kubeadm upgrade apply v%[1]s -y"
-	upgradeUbuntuPackagesCmd = "export DEBIAN_FRONTEND=noninteractive && " + "sudo apt-get update && " +
-		"sudo apt-get upgrade -y kubelet=%[1]s-00 kubeadm=%[1]s-00"
-	upgradeCentosPackagesCmd = "sudo yum upgrade -y kubelet=%[1]s-00 kubeadm=%[1]s-00 --disableexcludes=kubernetes"
-	upgradeKubeletConfigCmd  = "sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)"
-	restartKubeletCmd        = "sudo systemctl restart kubelet"
-	getNodeCmd               = "sudo kubectl get no -o go-template='{{range .items}}{{.metadata.name}}:{{.metadata.annotations.machine}}{{\"\\n\"}}{{end}}' --kubeconfig /etc/kubernetes/admin.conf"
-	drainWorkerCmd           = "sudo kubectl drain %[1]s --ignore-daemonsets --delete-local-data --force --kubeconfig /etc/kubernetes/admin.conf"
-	uncordonCmd              = "sudo kubectl uncordon %[1]s --kubeconfig /etc/kubernetes/admin.conf"
-	drainMasterCmd           = "sudo kubectl drain %[1]s --ignore-daemonsets --kubeconfig /etc/kubernetes/admin.conf"
+	getNodeCmd     = "sudo kubectl get no -o go-template='{{range .items}}{{.metadata.name}}:{{.metadata.annotations.machine}}{{\"\\n\"}}{{end}}' --kubeconfig /etc/kubernetes/admin.conf"
+	drainWorkerCmd = "sudo kubectl drain %[1]s --ignore-daemonsets --delete-local-data --force --kubeconfig /etc/kubernetes/admin.conf"
+	uncordonCmd    = "sudo kubectl uncordon %[1]s --kubeconfig /etc/kubernetes/admin.conf"
+	drainMasterCmd = "sudo kubectl drain %[1]s --ignore-daemonsets --kubeconfig /etc/kubernetes/admin.conf"
 )
 
 func (a *Actuator) machineProviderConfig(providerConfig clusterv1.ProviderConfig) (*v1alpha1.SSHMachineProviderConfig, error) {
@@ -123,6 +118,7 @@ func (a *Actuator) getMetadata(c *clusterv1.Cluster, m *clusterv1.Machine, machi
 		Items:          metadataMap,
 		StartupScript:  metadataMap[startupScriptKey],
 		ShutdownScript: metadataMap[shutdownScriptKey],
+		UpgradeScript:  metadataMap[upgradeScriptKey],
 	}
 	return &metadata, nil
 }
@@ -263,16 +259,6 @@ func (a *Actuator) updateClusterObjectEndpoint(c *clusterv1.Cluster, m *clusterv
 	return nil
 }
 
-func (a *Actuator) getUpgradePackageCmd(ostype string, version string) string {
-	upgradePackagesCmd := ""
-	if ostype != "ubuntu" {
-		upgradePackagesCmd = fmt.Sprintf(upgradeCentosPackagesCmd, version)
-	} else {
-		upgradePackagesCmd = fmt.Sprintf(upgradeUbuntuPackagesCmd, version)
-	}
-	return upgradePackagesCmd
-}
-
 func (a *Actuator) updateMasterInPlace(c *clusterv1.Cluster, oldMachine *clusterv1.Machine, newMachine *clusterv1.Machine) error {
 	glog.Infof("updating master node %s", oldMachine.Name)
 	machineConfig, err := a.machineProviderConfig(newMachine.Spec.ProviderConfig)
@@ -301,36 +287,38 @@ func (a *Actuator) updateMasterInPlace(c *clusterv1.Cluster, oldMachine *cluster
 	if oldMachine.Spec.Versions.Kubelet != newMachine.Spec.Versions.Kubelet {
 		glog.Infof("updating master node %s; kubelet version from %s to %s.", oldMachine.Name, oldMachine.Spec.Versions.Kubelet, newMachine.Spec.Versions.Kubelet)
 
+		configParams := &MachineParams{
+			Roles:    machineConfig.Roles,
+			Versions: newMachine.Spec.Versions,
+		}
+		metadata, err := a.getMetadata(c, newMachine, configParams, machineConfig.SSHConfig)
+		if err != nil {
+			return err
+		}
 		node, err := a.getNodeForMachine(c, newMachine)
 		if err != nil {
 			return errors.New("updateMasterInPlace Error getting node name for machine")
 		}
 		drainCmd := fmt.Sprintf(drainMasterCmd, node)
+		glog.Infof("drain on master %s with cmd %s", newMachine.Name, drainCmd)
 		err = sshClient.ProcessCMD(drainCmd)
 		if err != nil {
 			glog.Errorf("could not drain master machine %s: %s", newMachine.Name, err)
 			return err
 		}
-		// TODO is ssh username the best way to pass ostype?
-		upgradePackagesCmd := a.getUpgradePackageCmd(machineConfig.SSHConfig.Username, newMachine.Spec.Versions.Kubelet)
-		glog.Infof("upgradePackagesCmd = %s", upgradePackagesCmd)
-		err = sshClient.ProcessCMD(upgradePackagesCmd)
+		glog.Infof("running upgrade packages script for master %s", newMachine.Name)
+		err = sshClient.ProcessCMD(metadata.UpgradeScript)
 		if err != nil {
 			glog.Errorf("could not upgrade kubelet version: %s-00 on controlPlane %s: %s", newMachine.Spec.Versions.Kubelet, newMachine.Name, err)
 			return err
 		}
-		err = sshClient.ProcessCMD(restartKubeletCmd)
-		if err != nil {
-			glog.Errorf("could not restart kubelet version: %s-00 on controlPlane %s: %s", newMachine.Spec.Versions.Kubelet, newMachine.Name, err)
-			return err
-		}
 		uncordCmd := fmt.Sprintf(uncordonCmd, node)
+		glog.Infof("uncordon on master %s with cmd %s", newMachine.Name, uncordCmd)
 		err = sshClient.ProcessCMD(uncordCmd)
 		if err != nil {
 			glog.Errorf("could not uncordon master machine %s: %s", newMachine.Name, err)
 			return err
 		}
-
 	}
 	glog.Infof("updating master node %s; done.", oldMachine.Name)
 	return nil
@@ -352,41 +340,37 @@ func (a *Actuator) updateWorkerInPlace(c *clusterv1.Cluster, oldMachine *cluster
 		glog.Error("updateWorkerInPlace Error getting master sshClient")
 		return err
 	}
-
 	// Upgrade Worker packages (kubelet)
 	if oldMachine.Spec.Versions.Kubelet != newMachine.Spec.Versions.Kubelet {
 		glog.Infof("updating worker node %s; kubelet version from %s to %s.", oldMachine.Name, oldMachine.Spec.Versions.Kubelet, newMachine.Spec.Versions.Kubelet)
 
+		configParams := &MachineParams{
+			Roles:    machineConfig.Roles,
+			Versions: newMachine.Spec.Versions,
+		}
+		metadata, err := a.getMetadata(c, newMachine, configParams, machineConfig.SSHConfig)
+		if err != nil {
+			return err
+		}
 		node, err := a.getNodeForMachine(c, newMachine)
 		if err != nil {
 			return errors.New("updateWorkerInPlace Error getting node name for machine")
 		}
 		drainCmd := fmt.Sprintf(drainWorkerCmd, node)
-		glog.Infof("drainWorkerCmd = %s", drainCmd)
+		glog.Infof("drain on worker %s with cmd %s", newMachine.Name, drainCmd)
 		err = masterSSHClient.ProcessCMD(drainCmd)
 		if err != nil {
 			glog.Errorf("failed to drain worker node %s for machine %s: %s", node, newMachine.Name, err)
 			return err
 		}
-		// TODO is ssh username the best way to pass ostype?
-		upgradePackagesCmd := a.getUpgradePackageCmd(machineConfig.SSHConfig.Username, newMachine.Spec.Versions.Kubelet)
-		glog.Infof("upgradeWorkerPackagesCmd = %s", upgradePackagesCmd)
-		err = sshClient.ProcessCMD(upgradePackagesCmd)
+		glog.Infof("running upgrade packages script for worker %s", newMachine.Name)
+		err = sshClient.ProcessCMD(metadata.UpgradeScript)
 		if err != nil {
 			glog.Errorf("could not upgrade kubelet version: %s-00 on worker %s: %s", newMachine.Spec.Versions.Kubelet, newMachine.Name, err)
 			return err
 		}
-		err = sshClient.ProcessCMD(upgradeKubeletConfigCmd)
-		if err != nil {
-			glog.Errorf("could not upgrade kubelet config on worker %s: %s", newMachine.Name, err)
-			return err
-		}
-		err = sshClient.ProcessCMD(restartKubeletCmd)
-		if err != nil {
-			glog.Errorf("could not restart kubelet version: %s-00 on worker %s: %s", newMachine.Spec.Versions.Kubelet, newMachine.Name, err)
-			return err
-		}
 		uncordCmd := fmt.Sprintf(uncordonCmd, node)
+		glog.Infof("uncordon on worker %s with cmd %s", newMachine.Name, uncordCmd)
 		err = sshClient.ProcessCMD(uncordCmd)
 		if err != nil {
 			glog.Errorf("could not uncordon worker machine %s: %s", newMachine.Name, err)
