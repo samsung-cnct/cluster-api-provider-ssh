@@ -140,6 +140,8 @@ data:
           $MASTER_BOOTSTRAP_SCRIPT
         shutdownScript: |
           $MASTER_TEARDOWN_SCRIPT
+        upgradeScript: |
+          $MASTER_UPGRADE_SCRIPT
     - machineParams:
         roles:
         - Master
@@ -152,6 +154,8 @@ data:
           $MASTER_BOOTSTRAP_SCRIPT
         shutdownScript: |
           $MASTER_TEARDOWN_SCRIPT
+        upgradeScript: |
+          $MASTER_UPGRADE_SCRIPT
     - machineParams:
         roles:
         - Master
@@ -164,6 +168,8 @@ data:
           $MASTER_BOOTSTRAP_SCRIPT
         shutdownScript: |
           $MASTER_TEARDOWN_SCRIPT
+        upgradeScript: |
+          $MASTER_UPGRADE_SCRIPT
     - machineParams:
         roles:
         - Node
@@ -174,6 +180,8 @@ data:
           $NODE_BOOTSTRAP_SCRIPT
         shutdownScript: |
           $NODE_TEARDOWN_SCRIPT
+        upgradeScript: |
+          $NODE_UPGRADE_SCRIPT
     - machineParams:
         roles:
         - Node
@@ -184,6 +192,8 @@ data:
           $NODE_BOOTSTRAP_SCRIPT
         shutdownScript: |
           $NODE_TEARDOWN_SCRIPT
+        upgradeScript: |
+          $NODE_UPGRADE_SCRIPT
     - machineParams:
         roles:
         - Node
@@ -194,3 +204,5 @@ data:
           $NODE_BOOTSTRAP_SCRIPT
         shutdownScript: |
           $NODE_TEARDOWN_SCRIPT
+        upgradeScript: |
+          $NODE_UPGRADE_SCRIPT
