@@ -319,8 +319,8 @@ func (a *Actuator) updateMasterInPlace(c *clusterv1.Cluster, oldMachine *cluster
 			glog.Errorf("could not uncordon master machine %s: %s", newMachine.Name, err)
 			return err
 		}
+		glog.Infof("updating master node %s; done.", oldMachine.Name)
 	}
-	glog.Infof("updating master node %s; done.", oldMachine.Name)
 	return nil
 }
 
@@ -371,13 +371,13 @@ func (a *Actuator) updateWorkerInPlace(c *clusterv1.Cluster, oldMachine *cluster
 		}
 		uncordCmd := fmt.Sprintf(uncordonCmd, node)
 		glog.Infof("uncordon on worker %s with cmd %s", newMachine.Name, uncordCmd)
-		err = sshClient.ProcessCMD(uncordCmd)
+		err = masterSSHClient.ProcessCMD(uncordCmd)
 		if err != nil {
 			glog.Errorf("could not uncordon worker machine %s: %s", newMachine.Name, err)
 			return err
 		}
+		glog.Infof("updating worker node %s; done.", oldMachine.Name)
 	}
-	glog.Infof("updating worker node %s; done.", oldMachine.Name)
 	return nil
 }
 

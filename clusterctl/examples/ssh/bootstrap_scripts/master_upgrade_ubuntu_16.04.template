@@ -21,10 +21,13 @@
               echo $version
           }
           KUBELET=$(getversion kubelet ${KUBELET_VERSION}-)
-          KUBEADM=$(getversion kubeadm ${KUBELET_VERSION}-)
           KUBECTL=$(getversion kubectl ${KUBELET_VERSION}-)
-          sudo apt install -y \
-              kubelet=${KUBELET} \
-              kubeadm=${KUBEADM}
+          KUBEADM=$(getversion kubeadm ${KUBELET_VERSION}-)
+
+          # upgrade kubelet last, so that dependencies don't overwrite the patch version
+          sudo -E apt upgrade -y --allow-downgrades kubectl=${KUBECTL}
+          sudo -E apt upgrade -y --allow-downgrades kubeadm=${KUBEADM}
+          sudo -E apt upgrade -y --allow-downgrades kubelet=${KUBELET}
+          
           sudo systemctl restart kubelet
           ) 2>&1 | sudo tee /var/log/upgrade.log
