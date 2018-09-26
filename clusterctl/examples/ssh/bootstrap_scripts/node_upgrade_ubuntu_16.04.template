@@ -6,11 +6,6 @@
           # Run in noninteractive mode to avoid erroring when a config file preexists.
           export DEBIAN_FRONTEND=noninteractive
           
-          sudo sh -c "curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -"
-          cat << EOF | sudo tee /etc/apt/sources.list.d/kubernetes.list
-          deb http://apt.kubernetes.io/ kubernetes-xenial main
-          EOF
-
           sudo apt update -y
 
           # Our Debian packages have versions like "1.8.0-00" or "1.8.0-01". Do a prefix
@@ -26,11 +21,14 @@
               echo $version
           }
           KUBELET=$(getversion kubelet ${KUBELET_VERSION}-)
-          KUBEADM=$(getversion kubeadm ${KUBELET_VERSION}-)
           KUBECTL=$(getversion kubectl ${KUBELET_VERSION}-)
-          sudo apt install -y \
-              kubelet=${KUBELET} \
-              kubeadm=${KUBEADM}
+          KUBEADM=$(getversion kubeadm ${KUBELET_VERSION}-)
+         
+          # upgrade kubelet last, so that dependencies don't overwrite the patch version
+          sudo -E apt upgrade -y --allow-downgrades kubectl=${KUBECTL}
+          sudo -E apt upgrade -y --allow-downgrades kubeadm=${KUBEADM}  
+          sudo -E apt upgrade -y --allow-downgrades kubelet=${KUBELET}              
+
           sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
           sudo systemctl restart kubelet
           ) 2>&1 | sudo tee /var/log/upgrade.log
