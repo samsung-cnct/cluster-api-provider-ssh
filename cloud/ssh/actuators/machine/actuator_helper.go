@@ -25,7 +25,7 @@ const (
 	upgradeControlPlaneCmd = "sudo curl -o /usr/bin/kubeadm -sSL https://dl.k8s.io/release/v%[1]s/bin/linux/amd64/kubeadm && " +
 		"sudo chmod a+rx /usr/bin/kubeadm && " +
 		"sudo kubeadm upgrade apply v%[1]s -y"
-	getNodeCmd     = "sudo kubectl get no -o go-template='{{range .items}}{{.metadata.name}}:{{.metadata.annotations.machine}}{{\"\\n\"}}{{end}}' --kubeconfig /etc/kubernetes/admin.conf"
+	getNodeCmd     = "sudo kubectl get no -o go-template='{{range .items}}{{.metadata.name}}:{{.status.nodeInfo.kubeletVersion}}:{{.metadata.annotations.machine}}{{\"\\n\"}}{{end}}' --kubeconfig /etc/kubernetes/admin.conf"
 	drainWorkerCmd = "sudo kubectl drain %[1]s --ignore-daemonsets --delete-local-data --force --kubeconfig /etc/kubernetes/admin.conf"
 	uncordonCmd    = "sudo kubectl uncordon %[1]s --kubeconfig /etc/kubernetes/admin.conf"
 	drainMasterCmd = "sudo kubectl drain %[1]s --ignore-daemonsets --kubeconfig /etc/kubernetes/admin.conf"
@@ -123,24 +123,33 @@ func (a *Actuator) getMetadata(c *clusterv1.Cluster, m *clusterv1.Machine, machi
 	return &metadata, nil
 }
 
-func (a *Actuator) getNodeForMachine(c *clusterv1.Cluster, m *clusterv1.Machine) (string, error) {
+func (a *Actuator) semanticVersion(version string) string {
+	semVersion := strings.TrimPrefix(version, "v")
+	semVersion = strings.TrimSpace(semVersion)
+	return semVersion
+}
+
+// getNodeForMachine returns node, version, error
+func (a *Actuator) getNodeForMachine(c *clusterv1.Cluster, m *clusterv1.Machine) (string, string, error) {
 	masterSSHClient, err := a.getMasterSSHClient(c, m)
 	if err != nil {
 		glog.Error("Error getting master sshClient")
-		return "", err
+		return "", "", err
 	}
 	nodeCmd := getNodeCmd + " | grep " + m.Namespace + "/" + m.Name
 	glog.Infof("nodeCmd = %s", nodeCmd)
 	output, err := masterSSHClient.ProcessCMDWithOutput(nodeCmd)
 	if err != nil {
 		glog.Errorf("Error getting node: cmd = %s, error = %s", nodeCmd, err)
-		return "", err
+		return "", "", err
 	}
 	strs := strings.Split(string(output), ":")
-	if len(strs) == 0 {
-		return "", errors.New("Error getting node name for machine")
+	if len(strs) < 2 {
+		return "", "", errors.New("Error getting node name for machine")
 	}
-	return strs[0], nil
+	node := strs[0]
+	version := a.semanticVersion(strs[1])
+	return node, version, nil
 }
 
 func (a *Actuator) createKubeconfigSecret(c *clusterv1.Cluster, m *clusterv1.Machine, sshMasterClient ssh.SSHProviderClientInterface) error {
@@ -295,7 +304,7 @@ func (a *Actuator) updateMasterInPlace(c *clusterv1.Cluster, oldMachine *cluster
 		if err != nil {
 			return err
 		}
-		node, err := a.getNodeForMachine(c, newMachine)
+		node, _, err := a.getNodeForMachine(c, newMachine)
 		if err != nil {
 			return errors.New("updateMasterInPlace Error getting node name for machine")
 		}
@@ -352,7 +361,7 @@ func (a *Actuator) updateWorkerInPlace(c *clusterv1.Cluster, oldMachine *cluster
 		if err != nil {
 			return err
 		}
-		node, err := a.getNodeForMachine(c, newMachine)
+		node, _, err := a.getNodeForMachine(c, newMachine)
 		if err != nil {
 			return errors.New("updateWorkerInPlace Error getting node name for machine")
 		}
@@ -384,41 +393,37 @@ func (a *Actuator) updateWorkerInPlace(c *clusterv1.Cluster, oldMachine *cluster
 func (a *Actuator) getMachineInstanceVersions(c *clusterv1.Cluster, m *clusterv1.Machine) (*clusterv1.MachineVersionInfo, error) {
 	glog.Infof("retrieving machine versions: machine %s for cluster %s...", m.Name, c.Name)
 	// First get provider config
+
 	machineConfig, err := a.machineProviderConfig(m.Spec.ProviderConfig)
 	if err != nil {
-		return nil, fmt.Errorf("retrieving machine versions: %v", err)
+		return nil, fmt.Errorf("error retrieving machine %s versions: %v", m.Name, err)
 	}
 
 	// Here we deploy and run the scripts to the node.
 	privateKey, passPhrase, err := a.getPrivateKey(c, m.Namespace, machineConfig.SSHConfig.SecretName)
 	if err != nil {
-		return nil, fmt.Errorf("retrieving machine versions: %v", err)
+		return nil, fmt.Errorf("error retrieving machine %s versions: %v", m.Name, err)
 	}
 
 	// Get Kubelet version
 	sshClient := ssh.NewSSHProviderClient(privateKey, passPhrase, machineConfig.SSHConfig)
 
-	versionResult, err := sshClient.ProcessCMDWithOutput("kubelet --version")
+	_, version, err := a.getNodeForMachine(c, m)
 	if err != nil {
-		glog.Errorf("retrieving machine versions: %v", err)
-		return nil, err
+		return nil, errors.New("getMachineInstanceVersions error getting version for machine " + m.Name)
 	}
-
-	kubeletVersion := strings.Split(string(versionResult), " v")[1]
-	kubeletVersion = strings.TrimSpace(kubeletVersion)
+	kubeletVersion := a.semanticVersion(version)
 
 	if util.IsMaster(m) {
 		// Get ControlPlane
 		// TODO this is way too provisioning specific.
 		cmd := "kubeadm version | awk -F, '{print $3}' | awk -F\\\" '{print $2}'"
-		versionResult, err = sshClient.ProcessCMDWithOutput(cmd)
+		kubeadmVersionResult, err := sshClient.ProcessCMDWithOutput(cmd)
 		if err != nil {
-			glog.Errorf("error, retrieving machine controlPlane versions %s: %v", cmd, err)
+			glog.Errorf("error, retrieving machine controlPlane versions for machine %s %s: %v", m.Name, cmd, err)
 			return nil, err
 		}
-
-		controlPlaneVersion := strings.Replace(string(versionResult), "v", "", 1)
-		controlPlaneVersion = strings.TrimSpace(controlPlaneVersion)
+		controlPlaneVersion := a.semanticVersion(string(kubeadmVersionResult))
 
 		return &clusterv1.MachineVersionInfo{Kubelet: kubeletVersion, ControlPlane: controlPlaneVersion}, nil
 	} else {
