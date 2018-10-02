@@ -277,7 +277,7 @@ func (a *Actuator) Update(c *clusterv1.Cluster, goalMachine *clusterv1.Machine) 
 	} else {
 		glog.Infof("Performing upgrade for worker %s.", currentMachineName)
 		if err = a.updateWorkerInPlace(c, currentMachine, goalMachine); err != nil {
-			glog.Errorf("worker update failed for %s: v%", currentMachineName, err)
+			glog.Errorf("worker update failed for %s: %v", currentMachineName, err)
 			return err
 		}
 	}

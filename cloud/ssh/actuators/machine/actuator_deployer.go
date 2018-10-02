@@ -48,7 +48,7 @@ func (a *Actuator) getPrivateKey(c *clusterv1.Cluster, namespace string, secretN
 
 		secret, err := secretsClient.Get(secretName, meta_v1.GetOptions{})
 		if err != nil {
-			glog.Errorf("could not retrieve machine secret", err)
+      glog.Errorf("could not retrieve machine secret: %v", err)
 			return "", "", err
 		}
 
