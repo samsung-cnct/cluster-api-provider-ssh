@@ -25,7 +25,6 @@ type CWTestCase struct {
   Description  string `json:"description"`
   Type         string `json:"type"`
   Valid        bool   `json:"valid"`
-  ExpectedPath string `json:"expectedPath"`
   Path         string `json:"path"`
   Cw           ConfigWatch
 }
@@ -54,16 +53,16 @@ func TestNewConfigWatch(t *testing.T) {
     if tc.Type == "configwatch" {
       fmt.Printf("Test case: %v\n", tc.Name)
 
-      cw, err := NewConfigWatch(tc.ExpectedPath)
+      cw, err := NewConfigWatch(tc.Path)
 
       if err != nil && tc.Valid == true {
         t.Errorf("Unexpected error: could not create ConfigWatch for test ")
         t.Errorf("case: '%s' error: '%s'", tc.Name, err)
       }
 
-      if tc.Valid && cw.path != tc.ExpectedPath {
+      if tc.Valid && cw.path != tc.Path {
         t.Errorf("Error: wrong path for ConfigWatch.path for test case '%s'. ", tc.Name)
-        t.Errorf("Should be '%s', but was '%s'.", tc.ExpectedPath, cw.path)
+        t.Errorf("Should be '%s', but was '%s'.", tc.Path, cw.path)
       }
     }
   }
@@ -72,8 +71,8 @@ func TestNewConfigWatch(t *testing.T) {
 func TestGetMachineSetupConfig(t *testing.T) {
   for _, tc := range config.Testcases {
 
-    machine, err := tc.Cw.GetMachineSetupConfig()
     tc.Cw         = ConfigWatch{path: tc.Path}
+    machine, err := tc.Cw.GetMachineSetupConfig()
 
     if tc.Type == "configmachine" {
       fmt.Printf("Test case: %v\n", tc.Name)

@@ -5,14 +5,14 @@
         "type":         "configwatch",
         "description":  "Valid test file - test if valid file exists.",
         "valid":         true,
-        "expectedPath": "./test-files/fake_machine_setup.yaml"
+        "path":         "./test-files/fake_machine_setup.yaml"
       },
       {
         "name":         "invalid test file",
         "type":         "configwatch",
         "description":  "Invalid test file - test if invalid file exists.",
         "valid":         false,
-        "expectedPath": "this/path/does/not/exist"
+        "path":         "this/path/does/not/exist"
       },
       {
         "name":         "valid test config path",
