@@ -27,7 +27,10 @@
           # upgrade kubelet last, so that dependencies don't overwrite the patch version
           sudo -E apt upgrade -y --allow-downgrades kubectl=${KUBECTL}
           sudo -E apt upgrade -y --allow-downgrades kubeadm=${KUBEADM}  
-          sudo -E apt upgrade -y --allow-downgrades kubelet=${KUBELET}              
+          sudo -E apt upgrade -y --allow-downgrades kubelet=${KUBELET}
+          # curl kubeadm to make sure it matches the desired version
+          sudo curl -o /usr/bin/kubeadm -sSL https://dl.k8s.io/release/v${KUBELET_VERSION}/bin/linux/amd64/kubeadm
+          sudo chmod a+rx /usr/bin/kubeadm
 
           sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
           sudo systemctl restart kubelet
