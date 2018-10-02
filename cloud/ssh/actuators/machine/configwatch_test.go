@@ -7,14 +7,10 @@ import (
   "path/filepath"
   "testing"
   "fmt"
+  "log"
 )
 
 var config CWTestCases
-
-type allTests struct {
-  tests  []string
-  test   string
-}
 
 type CWTestCases struct {
   Testcases   []CWTestCase `json:"testcases"`
@@ -36,7 +32,7 @@ func TestMain(m *testing.M) {
   err             := json.Unmarshal(testJSONFile, &config)
 
   if err != nil {
-    err.Error()
+    log.Fatal(err)
   }
 
   os.Exit(m.Run())
@@ -55,7 +51,7 @@ func TestNewConfigWatch(t *testing.T) {
 
       cw, err := NewConfigWatch(tc.Path)
 
-      if err != nil && tc.Valid == true {
+      if err != nil && tc.Valid {
         t.Errorf("Unexpected error: could not create ConfigWatch for test ")
         t.Errorf("case: '%s' error: '%s'", tc.Name, err)
       }
@@ -77,7 +73,7 @@ func TestGetMachineSetupConfig(t *testing.T) {
     if tc.Type == "configmachine" {
       fmt.Printf("Test case: %v\n", tc.Name)
 
-      if err != nil && tc.Valid == true {
+      if err != nil && tc.Valid {
         t.Errorf("Unexpected error: could not get MachineSetupConfig:")
         t.Errorf("case: '%s' error: '%s'", tc.Name, err)
       }
