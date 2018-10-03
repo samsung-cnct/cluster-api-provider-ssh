@@ -1,9 +1,6 @@
 package machine
 
-import (
-  "testing"
-  "fmt"
-)
+import "testing"
 
 // TestNewConfigWatch add new tests in test-cases/configwatch.json
 func TestNewConfigWatch(t *testing.T) {
