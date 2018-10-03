@@ -39,9 +39,9 @@
           sudo systemctl enable --now docker 
 
           # install k8s tools
-          sudo yum install -y kubelet-${VERSION}
-          sudo yum install -y kubectl-${VERSION}
-          sudo yum install -y kubeadm-${VERSION}
+          sudo yum install -y kubelet-${KUBELET_VERSION}
+          sudo yum install -y kubectl-${KUBELET_VERSION}
+          sudo yum install -y kubeadm-${KUBELET_VERSION}
 
           function prips() {
             cidr=$1
