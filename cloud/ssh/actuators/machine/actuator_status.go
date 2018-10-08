@@ -83,6 +83,36 @@ func (a *Actuator) updateStatus(machine *clusterv1.Machine) error {
 	return err
 }
 
+// updateMachineProviderStatus is called at the end of a Create, or Update
+func (a *Actuator) updateMachineProviderStatus(c *clusterv1.Cluster, m *clusterv1.Machine) error {
+	currentVersionInfo, err := a.getMachineInstanceVersions(c, m)
+	if err != nil {
+		return err
+	}
+	status, err := a.machineProviderStatus(m)
+	if err != nil {
+		return err
+	}
+
+	status.Versions.Kubelet = currentVersionInfo.Kubelet
+	if util.IsMaster(m) {
+		status.Versions.ControlPlane = currentVersionInfo.ControlPlane
+	}
+
+	machinesClient := a.v1Alpha1Client.Machines(m.Namespace)
+	encodedProviderStatus, err := a.sshProviderConfigCodec.EncodeProviderStatus(status)
+	if err != nil {
+		return fmt.Errorf("failed to encode provider status: %v", err)
+	}
+	if encodedProviderStatus != nil {
+		m.Status.ProviderStatus = encodedProviderStatus
+		if _, err := machinesClient.UpdateStatus(m); err != nil {
+			return fmt.Errorf("failed to update machine status: %v", err)
+		}
+	}
+	return nil
+}
+
 // Applies the state of an instance onto a given machine CRD
 func (a *Actuator) setMachineStatus(machine *clusterv1.Machine, status MachineStatus) (*clusterv1.Machine, error) {
 	// Avoid status within status within status ...

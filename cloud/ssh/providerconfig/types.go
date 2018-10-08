@@ -63,9 +63,22 @@ type SSHConfig struct {
 	SecretName string `json:"secretName"`
 }
 
+type MachineVersionInfo struct {
+	// Semantic version of kubelet to run
+	Kubelet string `json:"kubelet"`
+
+	// Semantic version of the Kubernetes control plane to
+	// run. This should only be populated when the machine is a
+	// master.
+	// +optional
+	ControlPlane string `json:"controlPlane,omitempty"`
+}
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type SSHMachineProviderStatus struct {
 	metav1.TypeMeta `json:",inline"`
+
+	Versions MachineVersionInfo `json:"versions,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
