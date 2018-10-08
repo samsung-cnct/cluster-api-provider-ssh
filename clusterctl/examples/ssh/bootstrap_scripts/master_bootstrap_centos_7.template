@@ -7,7 +7,7 @@
           DEBIAN_FRONTEND=noninteractive
 
           # install and configure docker
-          sudo yum install -y docker 
+          sudo yum install -y docker
           sudo cp /dev/stdin /etc/sysconfig/docker <<< 'DOCKER_OPTS="--iptables=false --ip-masq=false"'
 
           # enable insecure image registry
@@ -32,11 +32,11 @@
           sudo cp /dev/stdin /etc/hosts <<< '
           127.0.0.1 localhost localhost.localdomain localhost4 localhost4.localdomain4
           ::1 localhost localhost.localdomain localhost6 localhost6.localdomain6
-          
+
           182.195.81.113 quay.io gcr.io k8s.gcr.io registry-1.docker.io docker.io
           '
 
-          sudo systemctl enable --now docker 
+          sudo systemctl enable --now docker
 
           # install k8s tools
           sudo yum install -y kubelet-${KUBELET_VERSION}
@@ -45,14 +45,14 @@
 
           function prips() {
             cidr=$1
-          
+
             # range is bounded by network (-n) & broadcast (-b) addresses.
             lo=$(ipcalc -n $cidr |cut -f2 -d=)
             hi=$(ipcalc -b $cidr |cut -f2 -d=)
-          
+
             read a b c d <<< $(echo $lo |tr . ' ')
             read e f g h <<< $(echo $hi |tr . ' ')
-          
+
             eval "echo {$a..$e}.{$b..$f}.{$c..$g}.{$d..$h}"
           }
 
