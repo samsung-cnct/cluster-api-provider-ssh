@@ -37,7 +37,9 @@ For centos:
 ```bash
 ./generate-yaml.sh centos
 ```
-Note: The current centos bootstrap scripts are very environment specific due to an air gap requirement:
+
+Note: The current centos bootstrap scripts are very
+environment specific due to an air gap requirement:
 
 - `clusterctl/examples/ssh/bootstrap_scripts/master_bootstrap_air_gapped_centos_7.template`
 - `clusterctl/examples/ssh/bootstrap_scripts/node_bootstrap_air_gapped_centos_7.template`
