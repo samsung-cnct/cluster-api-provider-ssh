@@ -1,0 +1,90 @@
+          set -e
+          set -x
+          (
+          ARCH=amd64
+
+          # Run in noninteractive mode to avoid erroring when a config file preexists.
+          DEBIAN_FRONTEND=noninteractive
+
+          # install and configure docker
+          sudo yum install -y docker
+          sudo cp /dev/stdin /etc/sysconfig/docker <<< 'DOCKER_OPTS="--iptables=false --ip-masq=false"'
+
+          # enable insecure image registry (sds-cloud specific)
+          sudo cp /dev/stdin /etc/docker/daemon.json  <<< '
+          {
+              "insecure-registries": [
+                  "docker",
+                  "docker.io",
+                  "registry-1.docker.io",
+                  "gcr.io",
+                  "k8s.gcr.io",
+                  "quay.io",
+                  "182.195.81.113:9401",
+                  "182.195.81.113:9402",
+                  "182.195.81.113:9403",
+                  "182.195.81.113:9404"
+              ]
+          }
+          '
+
+          # redirect public image repos to nexus (sds-cloud specific)
+          sudo cp /dev/stdin /etc/hosts <<< '
+          127.0.0.1 localhost localhost.localdomain localhost4 localhost4.localdomain4
+          ::1 localhost localhost.localdomain localhost6 localhost6.localdomain6
+
+          182.195.81.113 quay.io gcr.io k8s.gcr.io registry-1.docker.io docker.io
+          '
+
+          sudo systemctl enable --now docker 
+
+          # install k8s tools
+          sudo yum install -y kubelet-${KUBELET_VERSION}
+          sudo yum install -y kubectl-${KUBELET_VERSION}
+          sudo yum install -y kubeadm-${KUBELET_VERSION}
+
+          function prips() {
+            cidr=$1
+
+            # range is bounded by network (-n) & broadcast (-b) addresses.
+            lo=$(ipcalc -n $cidr |cut -f2 -d=)
+            hi=$(ipcalc -b $cidr |cut -f2 -d=)
+
+            read a b c d <<< $(echo $lo |tr . ' ')
+            read e f g h <<< $(echo $hi |tr . ' ')
+
+            eval "echo {$a..$e}.{$b..$f}.{$c..$g}.{$d..$h}"
+          }
+
+          # kubeadm uses 10th IP as DNS server
+          export CLUSTER_DNS_SERVER=$(prips ${SERVICE_CIDR} | awk '{print $11}')
+
+          # configure kubelet
+          sudo cp /dev/stdin /etc/systemd/system/kubelet.service.d/20-kubenet.conf <<< '[Service]
+          Environment="KUBELET_DNS_ARGS=--cluster-dns=${CLUSTER_DNS_SERVER} --cluster-domain=${CLUSTER_DNS_DOMAIN}"
+          '
+          sudo systemctl disable --now firewalld
+          sudo systemctl enable --now kubelet
+
+          # Create and set bridge-nf-call-iptables to 1 to pass the kubeadm preflight check.
+          # Workaround was found here:
+          # http://zeeshanali.com/sysadmin/fixed-sysctl-cannot-stat-procsysnetbridgebridge-nf-call-iptables/
+          sudo modprobe br_netfilter
+
+          # [ERROR Swap]: running with swap on is not supported. Please disable swap
+          # this was put in place since its something that must be done on ubuntu machines
+          # when provisioning for use with kubeadm. Note, kubelet requires this to be off
+          # and may be something we remove in the future and leave it as part of provisioning
+          sudo swapoff -a
+
+          sudo kubeadm join --token "${TOKEN}" "${MASTER}" \
+            --ignore-preflight-errors=all \
+            --discovery-token-unsafe-skip-ca-verification
+
+          for tries in $(seq 1 60); do
+              sudo kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node $(hostname) machine=${MACHINE} && break
+              sleep 1
+          done
+
+          echo done.
+          ) 2>&1 | sudo tee /var/log/startup.log

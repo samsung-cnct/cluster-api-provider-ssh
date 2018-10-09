@@ -1,7 +1,7 @@
 ---
 type: chart
 builds:
-# This build pulls in dependencies and autogenerates any required code.
+  # This build pulls in dependencies and autogenerates any required code.
   - image: golang:1.10.0
     commands: |
       curl -sL https://deb.nodesource.com/setup_8.x | bash -
