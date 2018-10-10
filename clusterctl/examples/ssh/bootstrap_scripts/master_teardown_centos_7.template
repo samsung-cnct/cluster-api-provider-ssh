@@ -15,7 +15,6 @@
           # what we installed.
           #
           # !? TODO: This is an incomplete list of packages to remove
-          DEBIAN_FRONTEND=noninteractive
           sudo yum remove -y kubeadm kubectl kubelet kubernetes-cni docker
 
           RM_RF_DIRS="/etc/cni \
