@@ -3,9 +3,6 @@
           (
           ARCH=amd64
 
-          # Run in noninteractive mode to avoid erroring when a config file preexists.
-          DEBIAN_FRONTEND=noninteractive
-
           # install and configure docker
           sudo yum install -y docker
           sudo cp /dev/stdin /etc/sysconfig/docker <<< 'DOCKER_OPTS="--iptables=false --ip-masq=false"'
