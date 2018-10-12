@@ -9,9 +9,14 @@ import (
 	"github.com/samsung-cnct/cluster-api-provider-ssh/cloud/ssh/providerconfig/v1alpha1"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
+	"time"
 )
 
 const (
+	// TODO: This is to quickly work around a customer problem. We should
+	// implement a connection pool instead.
+	SshTimeoutSeconds    = 600
+	SshTimeout           = time.Duration(SshTimeoutSeconds) * time.Second
 	GetKubeconfigCommand = "sudo cat /etc/kubernetes/admin.conf"
 )
 
@@ -112,8 +117,11 @@ func GetBasicSession(s *sshProviderClient) (*ssh.Session, error) {
 		User: s.username,
 		Auth: sshAuthMethods,
 		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+			// TODO: Host key checking is required to guard against
+			// MITM attacks.
 			return nil
 		},
+		Timeout: SshTimeout,
 	}
 
 	connection, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", s.address, s.port), sshConfig)
