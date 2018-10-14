@@ -32,10 +32,11 @@ For ubuntu (default):
 ./generate-yaml.sh
 ```
 
-For centos:
+For _air gapped_ centos:
 
 ```bash
-./generate-yaml.sh centos
+export OS_TYPE=centos
+./generate-yaml.sh
 ```
 
 Note: The current centos bootstrap scripts are very
