@@ -4,12 +4,17 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+# All configuration is done using environment variables.
+if [ "$#" -ne 0 ]; then
+    echo "Illegal number of parameters"
+fi
+
 OUTPUT_DIR=out
 mkdir -p ${OUTPUT_DIR}
 
 BOOTSTRAP_DIR=bootstrap_scripts
 
-OS_TYPE=${1:-ubuntu}
+OS_TYPE=${OS_TYPE:-ubuntu}
 
 # --- MACHINES ---
 MACHINE_TEMPLATE_FILE=machines.yaml.template
