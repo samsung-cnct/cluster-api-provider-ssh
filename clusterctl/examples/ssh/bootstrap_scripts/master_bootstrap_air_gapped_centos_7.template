@@ -90,10 +90,8 @@
           # http://zeeshanali.com/sysadmin/fixed-sysctl-cannot-stat-procsysnetbridgebridge-nf-call-iptables/
           sudo modprobe br_netfilter
 
-          # [ERROR Swap]: running with swap on is not supported. Please disable swap
-          # this was put in place since its something that must be done on ubuntu machines
-          # when provisioning for use with kubeadm. Note, kubelet requires this to be off
-          # and may be something we remove in the future and leave it as part of provisioning
+          # Allowing swap may not be reliable:
+          # https://github.com/kubernetes/kubernetes/issues/53533
           sudo swapoff -a
 
           sudo kubeadm init --config /etc/kubernetes/kubeadm_config.yaml
