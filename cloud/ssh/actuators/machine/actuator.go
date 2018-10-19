@@ -160,10 +160,7 @@ func (a *Actuator) Create(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 			return err
 		}
 	}
-	err = a.updateMachineProviderStatus(c, m)
-	if err != nil {
-		glog.Errorf("failure updating Machine ProviderStatus for machine %s", m.Name)
-	}
+
 	a.eventRecorder.Eventf(m, corev1.EventTypeNormal, "Created", "Created Machine %v", m.Name)
 	return a.updateAnnotations(c, m)
 }
@@ -283,11 +280,6 @@ func (a *Actuator) Update(c *clusterv1.Cluster, goalMachine *clusterv1.Machine) 
 			glog.Errorf("worker update failed for %s: v%", currentMachineName, err)
 			return err
 		}
-	}
-
-	err = a.updateMachineProviderStatus(c, goalMachine)
-	if err != nil {
-		glog.Errorf("failure updating Machine ProviderStatus for machine %s", goalMachine.Name)
 	}
 
 	a.eventRecorder.Eventf(goalMachine, corev1.EventTypeNormal, "Updated", "Updated Machine %v", goalMachine.Name)
