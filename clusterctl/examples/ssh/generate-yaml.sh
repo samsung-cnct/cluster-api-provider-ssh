@@ -114,12 +114,10 @@ generate_yaml()
 
   echo "Done generating $providercomponent_generated_file"
 
-  cat "$machine_template_file" \
-    > "$machine_generated_file"
+  envsubst < "$machine_template_file" > "$machine_generated_file"
   echo "Done generating $machine_generated_file"
 
-  cat "$cluster_template_file" \
-    > "$cluster_generated_file"
+  envsubst < "$cluster_template_file" > "$cluster_generated_file"
   echo "Done generating $cluster_generated_file"
 
   echo "You will still need to _edit_ the cluster.yaml and machines.yaml manifests! See the README.md for details."
