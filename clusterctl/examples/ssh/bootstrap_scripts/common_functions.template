@@ -194,4 +194,7 @@
               sudo kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node "$(hostname)" machine="${MACHINE}" && break
               sleep 1
             done
+
+            # By default, use flannel for container network plugin, should make this configurable.
+            sudo kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/coreos/flannel/v0.10.0/Documentation/kube-flannel.yml
           }
