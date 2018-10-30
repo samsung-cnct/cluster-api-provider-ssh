@@ -4,7 +4,12 @@
           ARCH=amd64
 
           # install and configure docker
-          sudo yum install -y docker
+          if ! docker version >/dev/null 2>&1; then
+            sudo yum install -y docker
+          else
+            echo "Skipping installation of docker. Already installed."
+          fi
+
           sudo cp /dev/stdin /etc/sysconfig/docker <<< 'DOCKER_OPTS="--iptables=false --ip-masq=false"'
 
           # enable insecure image registry
@@ -44,11 +49,11 @@
             cidr=$1
 
             # range is bounded by network (-n) & broadcast (-b) addresses.
-            lo=$(ipcalc -n $cidr |cut -f2 -d=)
-            hi=$(ipcalc -b $cidr |cut -f2 -d=)
+            lo=$(ipcalc -n $cidr | cut -f2 -d=)
+            hi=$(ipcalc -b $cidr | cut -f2 -d=)
 
-            read a b c d <<< $(echo $lo |tr . ' ')
-            read e f g h <<< $(echo $hi |tr . ' ')
+            IFS='.' read a b c d <<< "$lo"
+            IFS='.' read e f g h <<< "$hi"
 
             eval "echo {$a..$e}.{$b..$f}.{$c..$g}.{$d..$h}"
           }

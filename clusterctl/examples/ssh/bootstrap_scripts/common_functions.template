@@ -1,0 +1,186 @@
+
+          prune_kubeadm_env()
+          {
+            [[ -z "$1" ]] && \
+              {
+                echo >&2 "prune_kubeadm_env(): caller failed to pass required argument"
+                return 10
+              }
+
+            local what_to_prune=$1
+
+            # remove this from the current env file.
+            sudo sed -r -i 's#(KUBELET_KUBEADM_ARGS="?.*)'"${what_to_prune}"'(.*"?)#\1\2#' /var/lib/kubelet/kubeadm-flags.env
+          }
+
+          install_docker()
+          {
+            # install and configure docker
+            if ! docker version >/dev/null 2>&1; then
+              if sudo yum install -y docker; then
+                echo >&2 "Success!"
+
+                return 0
+              else
+                return 50
+              fi
+            else
+              echo >&2 "Skipping installation of docker. Already installed."
+              return 0
+            fi
+
+            # enable insecure image registry
+            sudo cp /dev/stdin /etc/docker/daemon.json  <<< '
+            {
+                "insecure-registries": [
+                    "docker",
+                    "docker.io",
+                    "registry-1.docker.io",
+                    "gcr.io",
+                    "k8s.gcr.io",
+                    "quay.io",
+                    "182.195.81.113:9401",
+                    "182.195.81.113:9402",
+                    "182.195.81.113:9403",
+                    "182.195.81.113:9404"
+                ]
+            }
+            '
+
+            if sudo cp /dev/stdin /etc/sysconfig/docker <<< 'DOCKER_OPTS="--iptables=false --ip-masq=false"'; then
+              if sudo systemctl enable --now docker;then
+                if sudo systemctl daemon-reload; then
+                  return 50
+                fi
+              else
+                return 51
+              fi
+            else
+              return 52
+            fi
+          }
+
+          install_k8s()
+          {
+            [[ -z ${KUBELET_VERSION} ]] &&\
+              {
+                echo >&2 "Usage: install_k8s(): \$KUBELET_VERSION must be set."
+                return 60
+              }
+
+            sudo cp /dev/stdin /etc/yum.repos.d/kubernetes.repo <<< '
+            [kubernetes]
+            name=Kubernetes
+            baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+            enabled=1
+            gpgcheck=1
+            repo_gpgcheck=1
+            gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+            exclude=kube*' && \
+
+            sudo sed -r -i 's#^\ +##g' /etc/yum.repos.d/kubernetes.repo
+
+            # Set SELinux in permissive mode (effectively disabling it)
+            sudo setenforce 0
+            sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+
+            sudo yum install -y "kubelet-${KUBELET_VERSION}" \
+                                "kubeadm-${KUBELET_VERSION}" \
+                                "kubectl-${KUBELET_VERSION}" \
+                                conntrack --disableexcludes=kubernetes
+
+            # See https://samsung-cnct.atlassian.net/browse/CMS-391
+            # If the file exists, grok it first (preserving current settings)
+            if [[ -f /var/lib/kubelet/kubeadm-flags.env ]]; then
+              source /var/lib/kubelet/kubeadm-flags.env
+
+              # prune arg we want to change
+              [[ -n "${KUBELET_KUBEADM_ARGS}" ]] && prune_kubeadm_env "--cgroup-driver"
+
+              # change the one we want to change
+              echo "KUBELET_KUBEADM_ARGS=$KUBELET_KUBEADM_ARGS --cgroup-driver=systemd" >> /var/lib/kubelet/kubeadm-flags.env
+            fi
+
+            sudo systemctl enable kubelet && sudo systemctl start kubelet
+          }
+
+          prips()
+          {
+            cidr=$1
+
+            # range is bounded by network (-n) & broadcast (-b) addresses.
+            # the following uses `read` with a here-statement to assign the output of
+            # ipcalc -bn into two variables; $hi and $lo the output of which is cut and then
+            # delimited by a ":". Read uses $IFS to automatically split on that delimiter.
+            IFS=':' read -r hi lo <<< "$(ipcalc -bn "$cidr" | cut -f 2 -d = | sed -r 'N;s/\n/:/')"
+
+            # similar to above only this is splitting on '.'.
+            IFS='.' read -r a b c d <<< "$lo"
+            IFS='.' read -r e f g h <<< "$hi"
+
+            # kubeadm uses 10th IP as DNS server
+            eval "echo {$a..$e}.{$b..$f}.{$c..$g}.{$d..$h}" | awk '{print $11}'
+          }
+
+          configure_kubelet()
+          {
+            # configure kubelet
+            sudo cp /dev/stdin /etc/systemd/system/kubelet.service.d/20-kubelet.conf <<< '[Service]
+            Environment="KUBELET_DNS_ARGS=--cluster-dns=${CLUSTER_DNS_SERVER} --cluster-domain=${CLUSTER_DNS_DOMAIN}"
+            '
+            sudo systemctl enable --now kubelet
+          }
+
+          configure_kubeadm()
+          {
+            if [[ $(sysctl -a 2>/dev/null | grep net.bridge.bridge-nf-call-iptables | cut -d = -f 2) != 1 ]];
+            then
+              sudo sysctl -w net.bridge.bridge-nf-call-iptables=1
+            fi
+
+            if [[ $(systemctl is-active firewalld.service) == "active" ]]; then
+               sudo systemctl disable --now firewalld
+            fi
+
+            # configure kubeadm
+            sudo cp /dev/stdin /etc/kubernetes/kubeadm_config.yaml <<< "
+            apiVersion: kubeadm.k8s.io/v1alpha1
+            kind: MasterConfiguration
+            api:
+              advertiseAddress: ${MASTER_IP}
+              bindPort: 443
+            etcd:
+              local:
+                dataDir: /var/lib/etcd
+                image:
+            kubernetesVersion: v${CONTROL_PLANE_VERSION}
+            token: ${TOKEN}
+            kubeProxy:
+              config:
+                clusterCIDR: ${POD_CIDR}
+            networking:
+              dnsDomain: ${CLUSTER_DNS_DOMAIN}
+              podSubnet: ${POD_CIDR}
+              serviceSubnet: ${SERVICE_CIDR}
+            "
+
+            # Create and set bridge-nf-call-iptables to 1 to pass the kubeadm preflight check.
+            # Workaround was found here:
+            # http://zeeshanali.com/sysadmin/fixed-sysctl-cannot-stat-procsysnetbridgebridge-nf-call-iptables/
+            if [[ $(sudo lsmod | grep br_netfilter -c) == 0 ]];then
+              sudo modprobe br_netfilter
+            fi
+
+            # Allowing swap may not be reliable:
+            # https://github.com/kubernetes/kubernetes/issues/53533
+            sudo swapoff -a
+          }
+
+          run_kubeadm()
+          {
+            sudo kubeadm init --config /etc/kubernetes/kubeadm_config.yaml
+            for (( i = 0; i < 60; i++ )); do
+              sudo kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node "$(hostname)" machine="${MACHINE}" && break
+              sleep 1
+            done
+          }
