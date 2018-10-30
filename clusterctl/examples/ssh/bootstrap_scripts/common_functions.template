@@ -26,7 +26,6 @@
               fi
             else
               echo >&2 "Skipping installation of docker. Already installed."
-              return 0
             fi
 
             # enable insecure image registry
@@ -47,7 +46,19 @@
             }
             '
 
+            if ! sudo sed -r -i 's#^(ExecStart=/usr/bin/dockerd)#\1 --exec-opt native.cgroupdriver=systemd#' \
+                 /usr/lib/systemd/system/docker.service; then
+              echo >&2 'Unable to update docker.service with proper cgroupdriver.'
+              return 19
+            fi
+
             if sudo cp /dev/stdin /etc/sysconfig/docker <<< 'DOCKER_OPTS="--iptables=false --ip-masq=false"'; then
+
+              [[ -z ${USER+x} ]] && USER=$(whoami)
+              sudo usermod -a -G docker $USER
+              sudo chmod 640 /etc/sysconfig/docker
+              newgrp
+
               if sudo systemctl enable --now docker;then
                 if sudo systemctl daemon-reload; then
                   return 50
