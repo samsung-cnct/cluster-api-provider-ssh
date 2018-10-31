@@ -187,7 +187,7 @@
             sudo swapoff -a
           }
 
-          run_kubeadm()
+          run_kubeadm_master()
           {
             sudo kubeadm init --config /etc/kubernetes/kubeadm_config.yaml
             for (( i = 0; i < 60; i++ )); do
