@@ -42,7 +42,8 @@ generate_yaml()
 {
   local bootstrap_dir machine_template_file machine_generated_file cluster_template_file
   local cluster_generated_file providercomponent_template_file providercomponent_generated_file
-  local master_upgrade_script master_teardown_script node_upgrade_script node_teardown_script
+  local MASTER_UPGRADE_SCRIPT MASTER_TEARDOWN_SCRIPT NODE_UPGRADE_SCRIPT NODE_TEARDOWN_SCRIPT
+  local MASTER_BOOTSTRAP_SCRIPT NODE_BOOTSTRAP_SCRIPT
 
   if ! mkdir -p "${OUTPUT_DIR}" 2>/dev/null; then
     echo >&2 "Unable to mkdir $OUTPUT_DIR"

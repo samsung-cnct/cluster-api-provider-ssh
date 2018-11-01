@@ -1,6 +1,4 @@
-          ### TODO
-          ### NOT YET COMPLETE
-          ### NEEDS TO BE FINISHED
+
           set -e
           set -x
           (

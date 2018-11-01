@@ -1,3 +1,4 @@
+
           set -e
           set -x
           (
@@ -56,7 +57,7 @@
           if run_kubeadm_master; then
             echo "Done..."
           else
-            echo >&2 "Erroring occurred during Kubeadm for master k8s runtime."
+            echo >&2 "Error occurred during Kubeadm for master k8s runtime."
             exit 84
           fi
 

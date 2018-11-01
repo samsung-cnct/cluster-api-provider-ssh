@@ -1,3 +1,4 @@
+
           set -e
           set -x
           (
@@ -5,7 +6,7 @@
 
           # Run in noninteractive mode to avoid erroring when a config file preexists.
           export DEBIAN_FRONTEND=noninteractive
-          
+
           sudo apt update -y
 
           # Our Debian packages have versions like "1.8.0-00" or "1.8.0-01". Do a prefix

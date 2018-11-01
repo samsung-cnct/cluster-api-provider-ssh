@@ -15,13 +15,15 @@
 
           install_docker()
           {
-            # install and configure docker
-            if ! docker version >/dev/null 2>&1; then
-              if sudo yum install -y docker; then
-                echo >&2 "Success!"
+            local docker_service
 
-                return 0
-              else
+            docker_service='/usr/lib/systemd/system/docker.service'
+
+            # install and configure docker
+            if ! which docker 2>/dev/null; then
+              sudo yum install -y docker
+
+              if ! docker version >/dev/null 2>&1; then
                 return 50
               fi
             else
@@ -46,10 +48,19 @@
             }
             '
 
-            if ! sudo sed -r -i 's#^(ExecStart=/usr/bin/dockerd)#\1 --exec-opt native.cgroupdriver=systemd#' \
-                 /usr/lib/systemd/system/docker.service; then
-              echo >&2 'Unable to update docker.service with proper cgroupdriver.'
-              return 19
+            if [[ ! -f "$docker_service" ]]; then
+              echo >&2 'Cannot update docker.service file. "$docker_service" does not exist.'
+              return 16
+            fi
+
+            if [[ $(grep -c "native.cgroupdriver=systemd" "$docker_service" 2>/dev/null) == 0 ]]; then
+              if ! sudo sed -r -i 's#^(ExecStart=/usr/bin/dockerd)#\1 --exec-opt native.cgroupdriver=systemd#' \
+                   "$docker_service"; then
+                echo >&2 "Unable to update '$docker_service' with proper cgroupdriver."
+                return 19
+              fi
+            else
+              echo >&2 "WARNING: Looks like '$docker_service' was already updated. Skipping."
             fi
 
             if sudo cp /dev/stdin /etc/sysconfig/docker <<< 'DOCKER_OPTS="--iptables=false --ip-masq=false"'; then
@@ -60,8 +71,11 @@
               newgrp
 
               if sudo systemctl enable --now docker;then
-                if sudo systemctl daemon-reload; then
-                  return 50
+                if ! sudo systemctl daemon-reload; then
+                  echo >&2 "Unable to reload systemctl daemon."
+                  return 51
+                else
+                  sudo systemctl restart docker.service
                 fi
               else
                 return 51
@@ -73,9 +87,9 @@
 
           install_k8s()
           {
-            [[ -z ${KUBELET_VERSION} ]] &&\
+            [[ -z ${KUBELET_VERSION} ]] && \
               {
-                echo >&2 "Usage: install_k8s(): \$KUBELET_VERSION must be set."
+                echo >&2 'Usage: install_k8s(): caller must pass $KUBELET_VERSION.'
                 return 60
               }
 
@@ -136,25 +150,24 @@
           configure_kubelet()
           {
             # configure kubelet
-            sudo cp /dev/stdin /etc/systemd/system/kubelet.service.d/20-kubelet.conf <<< '[Service]
-            Environment="KUBELET_DNS_ARGS=--cluster-dns=${CLUSTER_DNS_SERVER} --cluster-domain=${CLUSTER_DNS_DOMAIN}"
-            '
+            sudo cp /dev/stdin /etc/systemd/system/kubelet.service.d/20-kubelet.conf <<< "[Service]
+          Environment='KUBELET_DNS_ARGS=--cluster-dns=${CLUSTER_DNS_SERVER} --cluster-domain=${CLUSTER_DNS_DOMAIN}'
+            "
             sudo systemctl enable --now kubelet
           }
 
           configure_kubeadm()
           {
-            if [[ $(sysctl -a 2>/dev/null | grep net.bridge.bridge-nf-call-iptables | cut -d = -f 2) != 1 ]];
-            then
-              sudo sysctl -w net.bridge.bridge-nf-call-iptables=1
-            fi
+            sudo sysctl -w net.bridge.bridge-nf-call-iptables=1
+            sudo sysctl -w net.bridge.bridge-nf-call-ip6tables=1
+            sudo sysctl -p
 
             if [[ $(systemctl is-active firewalld.service) == "active" ]]; then
                sudo systemctl disable --now firewalld
             fi
 
             # configure kubeadm
-            sudo cp /dev/stdin /etc/kubernetes/kubeadm_config.yaml <<< "
+            sudo cp /dev/stdin /etc/kubernetes/kubeadm_config.yaml <<< "---
             apiVersion: kubeadm.k8s.io/v1alpha1
             kind: MasterConfiguration
             api:
@@ -175,6 +188,9 @@
               serviceSubnet: ${SERVICE_CIDR}
             "
 
+            # YAML is whitespace picky. So, need to fix kubeadm_config
+            sudo sed -r -i 's#^[[:blank:]]{2}##' /etc/kubernetes/kubeadm_config.yaml
+
             # Create and set bridge-nf-call-iptables to 1 to pass the kubeadm preflight check.
             # Workaround was found here:
             # http://zeeshanali.com/sysadmin/fixed-sysctl-cannot-stat-procsysnetbridgebridge-nf-call-iptables/
@@ -189,7 +205,11 @@
 
           run_kubeadm_master()
           {
-            sudo kubeadm init --config /etc/kubernetes/kubeadm_config.yaml
+            if ! sudo kubeadm init --config /etc/kubernetes/kubeadm_config.yaml; then
+              echo >&2 "Unable to start kubeadm."
+              return 95
+            fi
+
             for (( i = 0; i < 60; i++ )); do
               sudo kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node "$(hostname)" machine="${MACHINE}" && break
               sleep 1
