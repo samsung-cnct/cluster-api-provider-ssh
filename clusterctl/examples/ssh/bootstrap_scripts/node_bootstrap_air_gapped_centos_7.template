@@ -1,3 +1,4 @@
+
           set -e
           set -x
           (
@@ -33,7 +34,7 @@
           182.195.81.113 quay.io gcr.io k8s.gcr.io registry-1.docker.io docker.io
           '
 
-          sudo systemctl enable --now docker 
+          sudo systemctl enable --now docker
 
           # install k8s tools
           sudo yum install -y kubelet-${KUBELET_VERSION}
