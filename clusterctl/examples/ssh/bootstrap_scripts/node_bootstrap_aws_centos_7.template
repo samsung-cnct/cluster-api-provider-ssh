@@ -33,7 +33,7 @@
 
           CLUSTER_DNS_SERVER="$(prips "${SERVICE_CIDR}")"
           export CLUSTER_DNS_SERVER
-
+          
           if ! install_docker; then
             echo >&2 "Error installing docker components..."
             exit 80
