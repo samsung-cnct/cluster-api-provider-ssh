@@ -1,0 +1,3 @@
+version: "1"
+domain: cluster.k8s.io
+repo: github.com/samsung-cnct/cluster-api-provider-ssh

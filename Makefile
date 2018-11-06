@@ -1,92 +1,52 @@
-# Copyright 2018 The Kubernetes Authors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
-.PHONY: help
-help:
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+# Image URL to use all building/pushing image targets
+IMG ?= controller:latest
 
-.DEFAULT_GOAL := help
+all: test manager
 
-.PHONY: gendeepcopy
+# Run tests
+test: generate fmt vet manifests
+	go test ./pkg/... ./cmd/... -coverprofile cover.out
 
-all: generate build images ## Create generated code, build binaries and docker images
+# Build manager binary
+manager: generate fmt vet
+	go build -o bin/manager github.com/samsung-cnct/cluster-api-provider-ssh/cmd/manager
 
-depend: ## Ensure dependencies are consistent with Gopkg.toml
-	dep version || go get -u github.com/golang/dep/cmd/dep
-	dep ensure
+# Run against the configured Kubernetes cluster in ~/.kube/config
+run: generate fmt vet
+	go run ./cmd/manager/main.go
 
-depend-update: ## Update dependencies to the latest allowed by Gopkg.toml
-	dep ensure -update
+# Install CRDs into a cluster
+install: manifests
+	kubectl apply -f config/crds
 
-generate: gendeepcopy ## Create generated code
+# Deploy controller in the configured Kubernetes cluster in ~/.kube/config
+deploy: manifests
+	kubectl apply -f config/crds
+	kustomize build config/default | kubectl apply -f -
 
-gendeepcopy:
-	go build -o $$GOPATH/bin/deepcopy-gen github.com/samsung-cnct/cluster-api-provider-ssh/vendor/k8s.io/code-generator/cmd/deepcopy-gen
-	deepcopy-gen \
-	  -i ./cloud/ssh/providerconfig,./cloud/ssh/providerconfig/v1alpha1 \
-	  -O zz_generated.deepcopy \
-	  -h boilerplate.go.txt
+# Generate manifests e.g. CRD, RBAC etc.
+manifests:
+	go run vendor/sigs.k8s.io/controller-tools/cmd/controller-gen/main.go all
 
-build: ## Build the cluster-controller and machine-controller binaries and install them in $GOPATH/bin
-	CGO_ENABLED=0 go install -a -ldflags '-extldflags "-static"' github.com/samsung-cnct/cluster-api-provider-ssh/cmd/cluster-controller
-	CGO_ENABLED=0 go install -a -ldflags '-extldflags "-static"' github.com/samsung-cnct/cluster-api-provider-ssh/cmd/machine-controller
-
-images: ## Make cluster-controller and machine-controller images
-	$(MAKE) -C cmd/cluster-controller image
-	$(MAKE) -C cmd/machine-controller image
-
-push: ## Push cluster-controller and machine-controller images to the image registry
-	$(MAKE) -C cmd/cluster-controller push
-	$(MAKE) -C cmd/machine-controller push
-
-dev_push: dev_push_cluster dev_push_machine ## Push the development tagged cluster-controller and machine-controller images to the registry
-
-dev_push_cluster: ## Push the development tagged cluster-controller image to the registry
-	$(MAKE) -C cmd/cluster-controller dev_push
-
-dev_push_machine: ## Push the development tagged machine-controller image to the registry
-	$(MAKE) -C cmd/machine-controller dev_push
-
-check: golint yamllint mdlint ## Do linting
-
-test: ## Run tests
-	go test -race -cover ./cmd/... ./cloud/...
-
+# Run go fmt against code
 fmt:
-	hack/verify-gofmt.sh
+	go fmt ./pkg/... ./cmd/...
 
+# Run go vet against code
 vet:
-	go vet ./...
+	go vet ./pkg/... ./cmd/...
 
-golint:
-	@command -v golangci-lint > /dev/null | go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
-	golangci-lint run
+# Generate code
+generate:
+	go generate ./pkg/... ./cmd/...
 
-yamllint:
-	git ls-files '*.yml' '*.yaml' '*.yaml.template' | grep -v '^vendor' | xargs yamllint
+# Build the docker image
+docker-build: test
+	docker build . -t ${IMG}
+	@echo "updating kustomize image patch file for manager resource"
+	sed -i'' -e 's@image: .*@image: '"${IMG}"'@' ./config/default/manager_image_patch.yaml
 
-mdlint:
-	git ls-files '*.md' | grep -v '^vendor' | xargs -n 1 markdownlint
-
-compile: ## Compile the binaries into the ./bin directory
-	mkdir -p ./bin
-	go build -o ./bin/cluster-controller ./cmd/cluster-controller
-	go build -o ./bin/machine-controller ./cmd/machine-controller
-	go build -o ./bin/clusterctl ./clusterctl
-
-clean: ## Clean up built files
-	rm -rf ./bin
-
-goimport: ## Run goimports
-	goimports -w $(shell git ls-files "**/*.go" "*.go" | grep -v -e "vendor" | xargs echo)
+# Push the docker image
+docker-push:
+	docker push ${IMG}
