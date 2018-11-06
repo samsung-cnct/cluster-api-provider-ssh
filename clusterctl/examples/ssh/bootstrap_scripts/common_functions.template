@@ -218,3 +218,13 @@
             # By default, use flannel for container network plugin, should make this configurable.
             sudo kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/coreos/flannel/v0.10.0/Documentation/kube-flannel.yml
           }
+
+          run_kubeadm_join()
+          {
+            sudo kubeadm join --token "${TOKEN}" "${MASTER}" --ignore-preflight-errors=all --discovery-token-unsafe-skip-ca-verification
+            for (( i = 0; i < 60; i++ )); do
+                sudo kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node $(hostname) machine=${MACHINE} && break
+                sleep 1
+            done
+
+          }
