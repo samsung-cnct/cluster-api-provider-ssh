@@ -5,7 +5,7 @@
           ARCH=amd64
           ${FUNCTIONS}
 
-          if ! upgrade_master; then
+          if ! yum_upgrade_master; then
             echo >&2 "FATAL: upgrade failed. Quitting."
             exit 117
           fi

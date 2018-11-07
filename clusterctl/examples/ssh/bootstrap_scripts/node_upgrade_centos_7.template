@@ -5,7 +5,7 @@
           ARCH=amd64
           ${FUNCTIONS}
 
-          if ! upgrade_node; then
+          if ! yum_upgrade_node; then
             echo >&2 "FATAL: upgrade failed. Quitting."
             exit 80
           fi
