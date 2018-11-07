@@ -39,12 +39,12 @@
             exit 80
           fi
 
-          if ! install_k8s_by_curl; then
+          if ! install_k8s_w_curl; then
             echo >&2 "Error installing Kubernetes components..."
             exit 81
           fi
 
-          if ! configure_kubelet; then
+          if ! configure_kubelet_systemd; then
             echo >&2 "Error configuring Kubernetes components..."
             exit 82
           fi
