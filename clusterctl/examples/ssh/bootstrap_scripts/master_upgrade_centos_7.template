@@ -9,6 +9,4 @@
             echo >&2 "FATAL: upgrade failed. Quitting."
             exit 117
           fi
-
-          sudo systemctl restart kubelet
           ) 2>&1 | sudo tee /var/log/upgrade.log
