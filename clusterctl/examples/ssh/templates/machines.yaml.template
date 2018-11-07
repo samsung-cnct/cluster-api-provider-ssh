@@ -1,0 +1,42 @@
+---
+items:
+  - apiVersion: "cluster.k8s.io/v1alpha1"
+    kind: Machine
+    metadata:
+      generateName: ssh-controlplane-
+    spec:
+      providerConfig:
+        value:
+          apiVersion: "sshproviderconfig/v1alpha1"
+          kind: "SSHMachineProviderConfig"
+          roles:
+            - Master
+            - Etcd
+          sshConfig:
+            username: $OS_TYPE
+            host: 192.168.2.121
+            port: 22
+            secretName: cluster-private-key
+      versions:
+        kubelet: $KUBELET_VERSION
+        controlPlane: $KUBELET_VERSION
+  # Nodes are defined as those items that do NOT have controlPlane
+  # versions entry.
+  - apiVersion: "cluster.k8s.io/v1alpha1"
+    kind: Machine
+    metadata:
+      generateName: ssh-node-
+    spec:
+      providerConfig:
+        value:
+          apiVersion: "sshproviderconfig/v1alpha1"
+          kind: "SSHMachineProviderConfig"
+          roles:
+            - Node
+          sshConfig:
+            username: $OS_TYPE
+            host: 192.168.2.187
+            port: 22
+            secretName: cluster-private-key
+      versions:
+        kubelet: $KUBELET_VERSION
