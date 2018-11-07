@@ -1,0 +1,208 @@
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: clusterapi-controllers
+  labels:
+    api: clusterapi
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        api: clusterapi
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/master
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - effect: NoExecute
+          key: node.alpha.kubernetes.io/notReady
+          operator: Exists
+        - effect: NoExecute
+          key: node.alpha.kubernetes.io/unreachable
+          operator: Exists
+      containers:
+        - name: controller-manager
+          image: gcr.io/k8s-cluster-api/controller-manager:0.0.8
+          volumeMounts:
+            - name: config
+              mountPath: /etc/kubernetes
+            - name: certs
+              mountPath: /etc/ssl/certs
+          command:
+            - "./controller-manager"
+          args:
+            - --kubeconfig=/etc/kubernetes/admin.conf
+            - --leader-elect
+          resources:
+            requests:
+              cpu: 100m
+              memory: 20Mi
+            limits:
+              cpu: 100m
+              memory: 30Mi
+        - name: ssh-cluster-controller
+          image: quay.io/samsung_cnct/ssh-cluster-controller:prod
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: config
+              mountPath: /etc/kubernetes
+            - name: certs
+              mountPath: /etc/ssl/certs
+            - name: machine-setup
+              mountPath: /etc/machinesetup
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          command:
+            - "./cluster-controller"
+          args:
+            - --kubeconfig=/etc/kubernetes/admin.conf
+            - --leader-elect
+          resources:
+            requests:
+              cpu: 200m
+              memory: 200Mi
+            limits:
+              cpu: 400m
+              memory: 500Mi
+        - name: ssh-machine-controller
+          image: quay.io/samsung_cnct/ssh-machine-controller:prod
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: config
+              mountPath: /etc/kubernetes
+            - name: certs
+              mountPath: /etc/ssl/certs
+            - name: machine-setup
+              mountPath: /etc/machinesetup
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          command:
+            - "./machine-controller"
+          args:
+            - --kubeconfig=/etc/kubernetes/admin.conf
+            - --machinesetup=/etc/machinesetup/machine_setup_configs.yaml
+            - --leader-elect
+          resources:
+            requests:
+              cpu: 200m
+              memory: 200Mi
+            limits:
+              cpu: 400m
+              memory: 500Mi
+      volumes:
+        - name: config
+          hostPath:
+            path: /etc/kubernetes
+        - name: certs
+          hostPath:
+            path: /etc/ssl/certs
+        - name: machine-setup
+          configMap:
+            name: machine-setup
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: cluster-private-key
+  namespace: default
+data:
+  private-key: $CLUSTER_PRIVATE_KEY
+  pass-phrase: $CLUSTER_PASSPHRASE
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: machine-setup
+data:
+  machine_setup_configs.yaml: |-
+    items:
+    - machineParams:
+        roles:
+        - Master
+        - Etcd
+        versions:
+          kubelet: 1.10.4
+          controlPlane: 1.10.4
+      metadata:
+        startupScript: |
+          $MASTER_BOOTSTRAP_SCRIPT
+        shutdownScript: |
+          $MASTER_TEARDOWN_SCRIPT
+        upgradeScript: |
+          $MASTER_UPGRADE_SCRIPT
+    - machineParams:
+        roles:
+        - Master
+        - Etcd
+        versions:
+          kubelet: 1.10.6
+          controlPlane: 1.10.6
+      metadata:
+        startupScript: |
+          $MASTER_BOOTSTRAP_SCRIPT
+        shutdownScript: |
+          $MASTER_TEARDOWN_SCRIPT
+        upgradeScript: |
+          $MASTER_UPGRADE_SCRIPT
+    - machineParams:
+        roles:
+        - Master
+        - Etcd
+        versions:
+          kubelet: 1.11.2
+          controlPlane: 1.11.2
+      metadata:
+        startupScript: |
+          $MASTER_BOOTSTRAP_SCRIPT
+        shutdownScript: |
+          $MASTER_TEARDOWN_SCRIPT
+        upgradeScript: |
+          $MASTER_UPGRADE_SCRIPT
+    - machineParams:
+        roles:
+        - Node
+        versions:
+          kubelet: 1.10.4
+      metadata:
+        startupScript: |
+          $NODE_BOOTSTRAP_SCRIPT
+        shutdownScript: |
+          $NODE_TEARDOWN_SCRIPT
+        upgradeScript: |
+          $NODE_UPGRADE_SCRIPT
+    - machineParams:
+        roles:
+        - Node
+        versions:
+          kubelet: 1.10.6
+      metadata:
+        startupScript: |
+          $NODE_BOOTSTRAP_SCRIPT
+        shutdownScript: |
+          $NODE_TEARDOWN_SCRIPT
+        upgradeScript: |
+          $NODE_UPGRADE_SCRIPT
+    - machineParams:
+        roles:
+        - Node
+        versions:
+          kubelet: 1.11.2
+      metadata:
+        startupScript: |
+          $NODE_BOOTSTRAP_SCRIPT
+        shutdownScript: |
+          $NODE_TEARDOWN_SCRIPT
+        upgradeScript: |
+          $NODE_UPGRADE_SCRIPT
