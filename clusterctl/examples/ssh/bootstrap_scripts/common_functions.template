@@ -93,7 +93,6 @@
               if sudo systemctl restart docker.service; then
                 echo "docker is installed successfully."
               fi
-              exit
             else
               echo >&2 "Hmm, could not newgrp. Strange. Cannot continue."
               return 54
