@@ -79,19 +79,24 @@
               return 52
             fi
 
-            newgrp
-            if ! sudo systemctl enable --now docker;then
-              echo >&2 "Unable to 'systemctl enable docker'. Quitting."
-              return 51
-            fi
+            if newgrp; then
+              if ! sudo systemctl enable --now docker;then
+                echo >&2 "Unable to 'systemctl enable docker'. Quitting."
+                return 51
+              fi
 
-            if ! sudo systemctl daemon-reload; then
-              echo >&2 "Unable to reload systemctl daemon."
-              return 51
-            fi
+              if ! sudo systemctl daemon-reload; then
+                echo >&2 "Unable to reload systemctl daemon."
+                return 52
+              fi
 
-            if sudo systemctl restart docker.service; then
-              echo "docker is installed successfully."
+              if sudo systemctl restart docker.service; then
+                echo "docker is installed successfully."
+              fi
+              exit
+            else
+              echo >&2 "Hmm, could not newgrp. Strange. Cannot continue."
+              return 54
             fi
           }
 
