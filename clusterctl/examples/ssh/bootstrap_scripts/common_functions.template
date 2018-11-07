@@ -265,13 +265,17 @@
               return 73
             fi
 
-            if ! sudo kubeadm plan; then
+            if ! sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2) --kubeconfig /etc/kubernetes/admin.conf; then
               return 74
             fi
 
-            if ! sudo kubeadm apply v$KUBELET_VERSION; then
-              return 75
-            fi
+            #if ! sudo kubeadm upgrade plan; then
+            #  return 74
+            #fi
+
+            #if ! sudo kubeadm upgrade apply v$KUBELET_VERSION; then
+            #  return 75
+            #fi
 
             if ! sudo systemctl daemon-reload; then
             return 76
@@ -285,7 +289,11 @@
           yum_upgrade_node()
           {
             if ! sudo yum install -y {kubelet,kubeadm,kubectl}-"${KUBELET_VERSION}" conntrack --disableexcludes=kubernetes; then
-              return 73
+              return 74
+            fi
+
+            if ! sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2); then
+              return 75
             fi
 
             if ! sudo systemctl daemon-reload; then
@@ -308,22 +316,6 @@
           curl_upgrade_node()
           {
             if install_k8s_w_curl; then
-              sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
-              sudo systemctl restart kubelet
-            fi
-          }
-
-          yum_upgrade_master()
-          {
-            if upgrade_k8s_w_yum; then
-              sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2) --kubeconfig /etc/kubernetes/admin.conf
-              sudo systemctl restart kubelet
-            fi
-          }
-
-          yum_upgrade_node()
-          {
-            if upgrade_k8s_w_yum; then
               sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
               sudo systemctl restart kubelet
             fi
