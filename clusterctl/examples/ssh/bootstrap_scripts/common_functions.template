@@ -265,24 +265,24 @@
               return 73
             fi
 
-            if ! sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2) --kubeconfig /etc/kubernetes/admin.conf; then
+            if ! sudo kubeadm upgrade plan; then
               return 74
             fi
 
-            #if ! sudo kubeadm upgrade plan; then
-            #  return 74
-            #fi
+            if ! sudo kubeadm upgrade apply --force v$KUBELET_VERSION; then
+              return 75
+            fi
 
-            #if ! sudo kubeadm upgrade apply v$KUBELET_VERSION; then
-            #  return 75
-            #fi
+            if ! sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2) --kubeconfig /etc/kubernetes/admin.conf; then
+              return 76
+            fi
 
             if ! sudo systemctl daemon-reload; then
-            return 76
+            return 77
             fi
 
             if ! sudo systemctl restart kubelet.service; then
-              return 77
+              return 78
             fi
           }
 
