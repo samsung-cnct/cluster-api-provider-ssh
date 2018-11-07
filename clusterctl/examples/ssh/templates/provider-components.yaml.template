@@ -133,20 +133,6 @@ data:
         - Master
         - Etcd
         versions:
-          kubelet: 1.10.4
-          controlPlane: 1.10.4
-      metadata:
-        startupScript: |
-          $MASTER_BOOTSTRAP_SCRIPT
-        shutdownScript: |
-          $MASTER_TEARDOWN_SCRIPT
-        upgradeScript: |
-          $MASTER_UPGRADE_SCRIPT
-    - machineParams:
-        roles:
-        - Master
-        - Etcd
-        versions:
           kubelet: 1.10.6
           controlPlane: 1.10.6
       metadata:
@@ -170,18 +156,6 @@ data:
           $MASTER_TEARDOWN_SCRIPT
         upgradeScript: |
           $MASTER_UPGRADE_SCRIPT
-    - machineParams:
-        roles:
-        - Node
-        versions:
-          kubelet: 1.10.4
-      metadata:
-        startupScript: |
-          $NODE_BOOTSTRAP_SCRIPT
-        shutdownScript: |
-          $NODE_TEARDOWN_SCRIPT
-        upgradeScript: |
-          $NODE_UPGRADE_SCRIPT
     - machineParams:
         roles:
         - Node
