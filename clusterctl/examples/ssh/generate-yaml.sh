@@ -53,15 +53,15 @@ generate_yaml()
   bootstrap_dir=bootstrap_scripts
 
   # --- MACHINES ---
-  machine_template_file="$BASEDIR/machines.yaml.template"
+  machine_template_file="$BASEDIR/templates/machines.yaml.template"
   machine_generated_file=${OUTPUT_DIR}/machines.yaml
 
   # --- CLUSTERS ---
-  cluster_template_file="$BASEDIR/cluster.yaml.template"
+  cluster_template_file="$BASEDIR/templates/cluster.yaml.template"
   cluster_generated_file=${OUTPUT_DIR}/cluster.yaml
 
   # --- PROVIDER_CONFIG ---
-  providercomponent_template_file="$BASEDIR/provider-components.yaml.template"
+  providercomponent_template_file="$BASEDIR/templates/provider-components.yaml.template"
   providercomponent_generated_file=${OUTPUT_DIR}/provider-components.yaml
 
   if [[ $OVERWRITE -ne 1 ]] && [[ -f $providercomponent_generated_file ]]; then
@@ -79,19 +79,11 @@ generate_yaml()
     NODE_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/node_teardown_ubuntu_16.04.template)"
     NODE_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/node_upgrade_ubuntu_16.04.template)"
   else
-    if [[ ${SDS_CASE} == 0 ]]; then
-      MASTER_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/master_bootstrap_aws_centos_7.template)"
-
-      NODE_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/node_bootstrap_aws_centos_7.template)"
-    else
-      MASTER_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/master_bootstrap_air_gapped_centos_7.template)"
-
-      NODE_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/node_bootstrap_air_gapped_centos_7.template)"
-    fi
-
+    MASTER_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/master_bootstrap_centos_7.template)"
     MASTER_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/master_teardown_centos_7.template)"
     MASTER_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/master_upgrade_centos_7.template)"
 
+    NODE_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/node_bootstrap_centos_7.template)"
     NODE_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/node_teardown_centos_7.template)"
     NODE_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/node_upgrade_centos_7.template)"
   fi
@@ -127,12 +119,11 @@ generate_yaml()
 main()
 {
   SCRIPT=$(basename "$0")
-  OS_TYPE=${OS_TYPE:-ubuntu}
+  OS_TYPE=${OS_TYPE:-centos}
   BASEDIR="$(runpath)"
   OUTPUT_DIR="$BASEDIR/out"
   KUBELET_VERSION=${KUBELET_VERSION:-1.10.6}
   OVERWRITE=0
-  SDS_CASE=${SDS_CASE:-0}
 
   while test $# -gt 0; do
     case "$1" in
@@ -143,10 +134,8 @@ main()
         variables are needed set for $SCRIPT to properly function:
 
         CLUSTER_PRIVATE_KEY   : base64 encoded private key used when make_cluster was run.
-        OS_TYPE               : One of "ubuntu" or "centos" -- defaults to "ubuntu"
+        OS_TYPE               : One of "ubuntu" or "centos" -- defaults to "centos"
         CLUSTER_PASSPHRASE    : Only used if CLUSTER_PRIVATE_KEY was generated using a passphrase.
-        SDS_CASE              : 0 or 1 -- use 0 if creating a cluster in AWS or MaaS. Use 1 if
-                                creating a cluster in SDS Cloud -- defaults to 0.
         KUBELET_VERSION       : e.g. 1.10.6 -- do not prepend a 'v' in front of it -- currently defaults to 1.10.6
 
   $SCRIPT [options]
@@ -187,19 +176,6 @@ main()
   else
     echo >&2 "Invalid parameter for \$OS_TYPE: '$OS_TYPE'. Must be either 'ubuntu' or 'centos'"
     exit 15
-  fi
-
-  if [[ "${SDS_CASE}" =~ [01] ]]; then
-    case ${SDS_CASE} in
-      0) echo "Creating templates for non-SDS Cloud environment.";;
-      1) echo "Creating templates for SDS Cloud environment.";;
-      *) echo "Invalid option: for SDS_CASE: ${SDS_CASE}";
-        exit 30
-      ;;
-    esac
-  else
-    echo >&2 "Invalid parameter for \$SDS_CASE: '$SDS_CASE'. Must be either '1' or '0'."
-    exit 20
   fi
 
   if ! generate_yaml; then

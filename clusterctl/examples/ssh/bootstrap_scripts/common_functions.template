@@ -13,6 +13,12 @@
             sudo sed -r -i 's#(KUBELET_KUBEADM_ARGS="?.*)'"${what_to_prune}"'(.*"?)#\1\2#' /var/lib/kubelet/kubeadm-flags.env
           }
 
+          centos_install_reqs()
+          {
+            # need curl and jq
+            sudo yum -y install epel-release && sudo yum -y install jq curl
+          }
+
           install_docker()
           {
             local docker_service
@@ -85,7 +91,7 @@
             fi
           }
 
-          install_k8s()
+          install_k8s_by_yum()
           {
             [[ -z ${KUBELET_VERSION} ]] && \
               {
@@ -127,6 +133,95 @@
             fi
 
             sudo systemctl enable kubelet && sudo systemctl start kubelet
+          }
+
+          get_k8s_bin_version()
+          {
+            if [[ -n $1 ]]; then
+              $1 version 2>/dev/null | grep -Po 'GitVersion:"v\d+\.\d+\.\d+"' | awk -F '"' '{print $2}'
+            else
+              return 99
+            fi
+          }
+
+          # handles initial install, upgrade, and downgrades.
+          install_k8s_by_curl()
+          {
+            local fail app_url suf p ptmp
+
+            fail=0
+            app_url="https://storage.googleapis.com/kubernetes-release/release/v${KUBELET_VERSION}/bin/linux/amd64/kube$suf"
+
+
+            if [[ -z $KUBELET_VERSION ]]; then
+              echo >&2 "FATAL: \$KUBELET_VERSION is nil! Cannot continue."
+              return 31
+            fi
+
+            [[ ! -d /usr/local/bin ]] && sudo mkdir -p /usr/local/bin
+
+            echo "KUBELET_VERSION to get to: $KUBELET_VERSION"
+
+            for suf in ctl adm let; do
+              p="/usr/local/bin/kube$suf"
+              ptmp="$p-downloaded"
+
+              if which kube$suf >/dev/null 2>&1; then
+                echo "kube$suf is currently installed with version $(get_k8_sbin_version "kube$suf" || "unknown")"
+              fi
+
+              echo "Attempting to installing kube$suf v$KUBELET_VERSION as $p (using temporary file $ptmp first)..."
+
+              if status=$(sudo curl -sL "$app_url" -o $p -w '{"status":"%{http_code}"}'); then
+                if [[ "$(echo "$status" | jq -M -r '.status')" == 200 ]]; then
+
+                  echo "  $status"
+
+                  if ! sudo chmod 755 $ptmp; then
+                    echo >&2 "Unable to chmod 755 $ptmp. Return code was $?."
+                    return 101
+                  fi
+
+                  if $ptmp version >/dev/null 2>&1; then
+                    echo >&2 "The downloaded file is not a proper k8s binary. Please investigate..."
+                    return 102
+                  fi
+
+                  if mv $ptmp $p; then
+                    echo "  done."
+                  else
+                    echo >&2 "Unable to mv $ptmp to $p. Return code for chmod was $?"
+                    return 103
+                  fi
+                else
+                  echo >&2 "FATAL: download of '$p' failed with $status"
+                  ((fail++))
+                fi
+              else
+                echo >&2 "Unable to download kube$suf using curl. HTTP status code was $(echo "$status" | jq -r -M '.status')."
+                return 28
+              fi
+            done
+
+            if [[ $fail -gt 0 ]]; then
+              return 34
+            fi
+          }
+
+          upgrade_master()
+          {
+            if install_k8s_by_curl; then
+              sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2) --kubeconfig /etc/kubernetes/admin.conf
+              sudo systemctl restart kubelet
+            fi
+          }
+
+          upgrade_node()
+          {
+            if install_k8s_by_curl; then
+              sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
+              sudo systemctl restart kubelet
+            fi
           }
 
           prips()
@@ -226,5 +321,34 @@
                 sudo kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node $(hostname) machine=${MACHINE} && break
                 sleep 1
             done
+          }
 
+          drain()
+          {
+            sudo kubectl --kubeconfig=/etc/kubernetes/admin.conf drain $(hostname) --delete-local-data --ignore-daemonsets && \
+            sudo kubectl --kubeconfig=/etc/kubernetes/admin.conf delete node $(hostname)
+          }
+
+          teardown()
+          {
+            sudo kubeadm reset
+
+            sudo yum remove -y kubeadm kubectl kubelet kubernetes-cni docker
+
+            RM_RF_DIRS="/etc/cni \
+                        /etc/docker \
+                        /etc/sysconfig/docker \
+                        /etc/ethertypes \
+                        /etc/kubernetes \
+                        /etc/systemd/system/kubelet.service.d \
+                        /var/lib/cni \
+                        /var/lib/docker \
+                        /var/lib/dockershim \
+                        /var/lib/etcd \
+                        /var/lib/etcd2 \
+                        /var/lib/kubelet"
+
+            for d in ${RM_RF_DIRS}; do
+              sudo rm -rf $d
+            done
           }

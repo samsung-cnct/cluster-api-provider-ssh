@@ -2,9 +2,13 @@
           set -e
           set -x
           (
-          sudo yum upgrade -y kubectl=${KUBELET_VERSION} --disableexcludes=kubernetes
-          sudo yum upgrade -y kubeadm=${KUBELET_VERSION} --disableexcludes=kubernetes
-          sudo yum upgrade -y kubelet=${KUBELET_VERSION} --disableexcludes=kubernetes
+          ARCH=amd64
+          ${FUNCTIONS}
+
+          if ! upgrade_master; then
+            echo >&2 "FATAL: upgrade failed. Quitting."
+            exit 117
+          fi
 
           sudo systemctl restart kubelet
           ) 2>&1 | sudo tee /var/log/upgrade.log
