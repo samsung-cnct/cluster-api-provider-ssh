@@ -74,7 +74,7 @@
             fi
 
             if [[ $(grep -c "native.cgroupdriver=systemd" "$docker_service" 2>/dev/null) == 0 ]]; then
-              if ! sudo sed -r -i 's#^(ExecStart=/usr/bin/dockerd)#\1 --exec-opt native.cgroupdriver=systemd --exec-opt MountFlags=private#' \
+              if ! sudo sed -r -i 's#^(ExecStart=/usr/bin/dockerd)#\1 --exec-opt native.cgroupdriver=systemd --exec-opt runtime-cgroups=/systemd/system.slice --exec-opt kubelet-cgroups=/systemd/system.slice --exec-opt MountFlags=private#' \
                    "$docker_service"; then
                 echo >&2 "Unable to update '$docker_service' with proper cgroupdriver."
                 return 19
@@ -191,15 +191,6 @@
               sudo sed -r -i 's#^\ +##g' /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
           }
 
-          get_k8s_bin_version()
-          {
-            if [[ -n $1 ]]; then
-              $1 version 2>/dev/null | grep -Po 'GitVersion:"v\d+\.\d+\.\d+"' | awk -F '"' '{print $2}'
-            else
-              return 99
-            fi
-          }
-
           # handles initial install, upgrades, and downgrades.
           # TODO: needs to handle all systemd stuff properly
           install_k8s_w_curl()
@@ -272,22 +263,69 @@
             fi
           }
 
+          get_k8s_bin_version()
+          {
+            if [[ -n $1 ]]; then
+              $1 version 2>/dev/null | grep -Po 'GitVersion:"v\d+\.\d+\.\d+"' | awk -F '"' '{print $2}'
+            else
+              return 99
+            fi
+          }
+
+          get_kubectl_semver()
+          {
+            sudo kubectl version "$1" 2>/dev/null | grep -Po 'GitVersion:"v\d+\.\d+\.\d+"' | awk -F '"' '{print $2}'
+          }
+
+          get_kubeadm_semver()
+          {
+            sudo kubeadm version 2>/dev/null | grep -Po 'GitVersion:"v\d+\.\d+\.\d+"' | awk -F '"' '{print $2}'
+          }
+
+          get_kubelet_semver()
+          {
+            sudo kubelet --version | grep -Po 'v\d+\.\d+\.\d+'
+          }
+
           yum_upgrade_master()
           {
-            if ! sudo yum install -y {kubelet,kubeadm,kubectl}-"${KUBELET_VERSION}" conntrack --disableexcludes=kubernetes; then
-              return 73
+            config="--kubeconfig /etc/kubernetes/admin.conf"
+
+            # Make sure "install" is used here. Using "install" vs "upgrade" makes sure the version
+            # desiring to be installed is what is actually installed irrespective of what is currently
+            # installed.
+            if ! sudo yum install -y kubeadm-"${KUBELET_VERSION}" --disableexcludes=kubernetes; then
+              return 72
             fi
 
-            if ! sudo kubeadm upgrade plan; then
-              return 74
+            sudo kubeadm upgrade plan $config
+
+            if ! sudo kubectl drain $(hostname) --ignore-daemonsets $config; then
+              return 71
             fi
 
-            if ! sudo kubeadm upgrade apply --force v$KUBELET_VERSION; then
+            if ! sudo kubeadm upgrade apply --force v$KUBELET_VERSION --feature-gates=CoreDNS=false $config; then
               return 75
             fi
 
-            if ! sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2) --kubeconfig /etc/kubernetes/admin.conf; then
-              return 76
+            if ! sudo yum upgrade -y {kubelet,kubectl}-"${KUBELET_VERSION}" --disableexcludes=kubernetes; then
+              return 73
+            fi
+
+            if [[ $(get_kubectl_semver) != $KUBELET_VERSION ]]; then
+              return 86
+            fi
+
+            if [[ $(get_kubeadm_semver) != $KUBELET_VERSION ]]; then
+              return 87
+            fi
+
+            if [[ $(get_kubelet_semver) != $KUBELET_VERSION ]]; then
+              return 88
+            fi
+
+            if ! sudo kubectl uncordon $(hostname) $config; then
+              return 79
             fi
 
             if ! sudo systemctl daemon-reload; then
@@ -309,9 +347,9 @@
               return 75
             fi
 
-            if ! sudo systemctl daemon-reload; then
-            return 76
-            fi
+            #if ! sudo systemctl daemon-reload; then
+            #return 76
+            #fi
 
             if ! sudo systemctl restart kubelet.service; then
               return 77
