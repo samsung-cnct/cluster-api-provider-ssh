@@ -290,70 +290,15 @@
           yum_upgrade_master()
           {
             config="--kubeconfig /etc/kubernetes/admin.conf"
-
-            # Make sure "install" is used here. Using "install" vs "upgrade" makes sure the version
-            # desiring to be installed is what is actually installed irrespective of what is currently
-            # installed.
-            if ! sudo yum install -y kubeadm-"${KUBELET_VERSION}" --disableexcludes=kubernetes; then
-              return 72
-            fi
-
-            sudo kubeadm upgrade plan $config
-
-            if ! sudo kubectl drain $(hostname) --ignore-daemonsets $config; then
-              return 71
-            fi
-
-            if ! sudo kubeadm upgrade apply --force v$KUBELET_VERSION --feature-gates=CoreDNS=false $config; then
-              return 75
-            fi
-
-            if ! sudo yum upgrade -y {kubelet,kubectl}-"${KUBELET_VERSION}" --disableexcludes=kubernetes; then
-              return 73
-            fi
-
-            if [[ $(get_kubectl_semver) != $KUBELET_VERSION ]]; then
-              return 86
-            fi
-
-            if [[ $(get_kubeadm_semver) != $KUBELET_VERSION ]]; then
-              return 87
-            fi
-
-            if [[ $(get_kubelet_semver) != $KUBELET_VERSION ]]; then
-              return 88
-            fi
-
-            if ! sudo kubectl uncordon $(hostname) $config; then
-              return 79
-            fi
-
-            if ! sudo systemctl daemon-reload; then
-            return 77
-            fi
-
-            if ! sudo systemctl restart kubelet.service; then
-              return 78
-            fi
+            sudo yum upgrade -y {kubelet,kubeadm,kubectl}-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            sudo systemctl restart kubelet
           }
 
           yum_upgrade_node()
           {
-            if ! sudo yum install -y {kubelet,kubeadm,kubectl}-"${KUBELET_VERSION}" conntrack --disableexcludes=kubernetes; then
-              return 74
-            fi
-
-            if ! sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2); then
-              return 75
-            fi
-
-            #if ! sudo systemctl daemon-reload; then
-            #return 76
-            #fi
-
-            if ! sudo systemctl restart kubelet.service; then
-              return 77
-            fi
+            sudo yum upgrade -y {kubelet,kubeadm,kubectl}-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
+            sudo systemctl restart kubelet
           }
 
           curl_upgrade_master()
