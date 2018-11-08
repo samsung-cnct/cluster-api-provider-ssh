@@ -20,15 +20,28 @@
             sudo yum -y install epel-release && sudo yum -y install jq curl
           }
 
+          # for now, latest version of CE is not compat with kubeadm
+          is_docker_ce()
+          {
+            docker version 2>/dev/null | grep -Poc  'Version: .*ce'
+          }
+
           install_docker()
           {
             local docker_service
+
+            if [[ $(is_docker_ce) == 1 ]]; then
+              sudo yum remove -y docker-ce
+            fi
 
             docker_service='/usr/lib/systemd/system/docker.service'
 
             # install and configure docker
             if ! which docker 2>/dev/null; then
               sudo yum install -y docker
+              # if docker isn't running, it will give the version but exit 1
+              # causing the next check to fail. This should fix that.
+              sudo systemctl daemon-reload && sudo systemctl start docker.service
 
               if ! docker version >/dev/null 2>&1; then
                 return 50
@@ -61,7 +74,7 @@
             fi
 
             if [[ $(grep -c "native.cgroupdriver=systemd" "$docker_service" 2>/dev/null) == 0 ]]; then
-              if ! sudo sed -r -i 's#^(ExecStart=/usr/bin/dockerd)#\1 --exec-opt native.cgroupdriver=systemd#' \
+              if ! sudo sed -r -i 's#^(ExecStart=/usr/bin/dockerd)#\1 --exec-opt native.cgroupdriver=systemd --exec-opt MountFlags=private#' \
                    "$docker_service"; then
                 echo >&2 "Unable to update '$docker_service' with proper cgroupdriver."
                 return 19
