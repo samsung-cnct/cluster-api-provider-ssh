@@ -26,9 +26,10 @@ export CLUSTER_PRIVATE_KEY=$(cat id_ecdsa.b64)
 
 - Run the generate-yaml.sh script:
 
-For ubuntu (default):
+For ubuntu:
 
 ```bash
+export OS_TYPE=ubuntu
 ./generate-yaml.sh
 ```
 
