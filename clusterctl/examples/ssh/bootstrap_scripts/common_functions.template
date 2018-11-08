@@ -287,12 +287,49 @@
             sudo kubelet --version | grep -Po 'v\d+\.\d+\.\d+'
           }
 
-          yum_upgrade()
+          fix_kubelet_config()
+          {
+            config="/var/lib/kubelet/config.yaml"
+            sudo sed -r -i 's#cgroupDriver: cgroupfs#cgroupDriver: systemd#' $config
+          }
+
+          yum_upgrade_master()
           {
             # order matters.
             sudo yum upgrade -y kubectl-"${KUBELET_VERSION}" --disableexcludes=kubernetes
             sudo yum upgrade -y kubeadm-"${KUBELET_VERSION}" --disableexcludes=kubernetes
             sudo yum upgrade -y kubelet-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+
+            if ! fix_kubelet_config; then
+              return 105
+            fi
+
+            sudo systemctl daemon-reload
+            sudo systemctl restart kubelet
+          }
+
+          yum_upgrade_node()
+          {
+            # order matters.
+            sudo yum upgrade -y kubectl-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            sudo yum upgrade -y kubeadm-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            sudo yum upgrade -y kubelet-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+
+            sudo curl -sL -o /usr/bin/kubeadm https://dl.k8s.io/release/v${CONTROL_PLANE_VERSION}/bin/linux/amd64/kubeadm && \
+            chmod 755 /usr/bin/kubeadm
+
+            # https://github.com/kubernetes/kubernetes/issues/65863
+            # Issue exists where when upgrading to >= 1.11.x, the /var/lib/kubelet/config.yaml
+            # missing causes kubelet not to restart, which causes the node to not start/join
+            # after an upgrade. One other fun-fact to note is that the config.yaml changes the
+            # the cgroupfs driver back to cgroupfs when we use systemd.
+
+            sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
+
+            if ! fix_kubelet_config; then
+              return 105
+            fi
+
             sudo systemctl daemon-reload
             sudo systemctl restart kubelet
           }
