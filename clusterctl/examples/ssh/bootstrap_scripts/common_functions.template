@@ -43,7 +43,7 @@
               # causing the next check to fail. This should fix that.
               sudo systemctl daemon-reload && sudo systemctl start docker.service
 
-              if ! docker version >/dev/null 2>&1; then
+              if ! sudo docker version >/dev/null 2>&1; then
                 return 50
               fi
             else
@@ -305,6 +305,7 @@
           {
             if install_k8s_w_curl; then
               sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2) --kubeconfig /etc/kubernetes/admin.conf
+              sudo systemctl daemon-reload
               sudo systemctl restart kubelet
             fi
           }
@@ -313,6 +314,7 @@
           {
             if install_k8s_w_curl; then
               sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
+              sudo systemctl daemon-reload
               sudo systemctl restart kubelet
             fi
           }
