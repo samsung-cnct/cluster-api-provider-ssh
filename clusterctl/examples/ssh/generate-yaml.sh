@@ -119,7 +119,7 @@ generate_yaml()
 main()
 {
   SCRIPT=$(basename "$0")
-  OS_TYPE=${OS_TYPE:-centos}
+  OS_TYPE=${OS_TYPE:-ubuntu}
   BASEDIR="$(runpath)"
   OUTPUT_DIR="$BASEDIR/out"
   KUBELET_VERSION=${KUBELET_VERSION:-1.10.6}
