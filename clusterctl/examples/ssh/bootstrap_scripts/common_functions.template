@@ -13,15 +13,35 @@
             sudo sed -r -i 's#(KUBELET_KUBEADM_ARGS="?.*)'"${what_to_prune}"'(.*"?)#\1\2#' /var/lib/kubelet/kubeadm-flags.env
           }
 
+          # Used by install_by_curl
+          install_reqs()
+          {
+            # need curl and jq
+            sudo yum -y install epel-release && sudo yum -y install jq curl
+          }
+
+          # for now, latest version of CE is not compat with kubeadm
+          is_docker_ce()
+          {
+            docker version 2>/dev/null | grep -Poc  'Version: .*ce'
+          }
+
           install_docker()
           {
             local docker_service
+
+            if [[ $(is_docker_ce) == 1 ]]; then
+              sudo yum remove -y docker-ce
+            fi
 
             docker_service='/usr/lib/systemd/system/docker.service'
 
             # install and configure docker
             if ! which docker 2>/dev/null; then
               sudo yum install -y docker
+              # if docker isn't running, it will give the version but exit 1
+              # causing the next check to fail. This should fix that.
+              sudo systemctl daemon-reload && sudo systemctl start docker.service
 
               if ! docker version >/dev/null 2>&1; then
                 return 50
@@ -31,6 +51,7 @@
             fi
 
             # enable insecure image registry
+            sudo mkdir -p /etc/docker
             sudo cp /dev/stdin /etc/docker/daemon.json  <<< '
             {
                 "insecure-registries": [
@@ -45,8 +66,7 @@
                     "182.195.81.113:9403",
                     "182.195.81.113:9404"
                 ]
-            }
-            '
+            }'
 
             if [[ ! -f "$docker_service" ]]; then
               echo >&2 'Cannot update docker.service file. "$docker_service" does not exist.'
@@ -54,7 +74,7 @@
             fi
 
             if [[ $(grep -c "native.cgroupdriver=systemd" "$docker_service" 2>/dev/null) == 0 ]]; then
-              if ! sudo sed -r -i 's#^(ExecStart=/usr/bin/dockerd)#\1 --exec-opt native.cgroupdriver=systemd#' \
+              if ! sudo sed -r -i 's#^(ExecStart=/usr/bin/dockerd)#\1 --exec-opt native.cgroupdriver=systemd --exec-opt runtime-cgroups=/systemd/system.slice --exec-opt kubelet-cgroups=/systemd/system.slice --exec-opt MountFlags=private#' \
                    "$docker_service"; then
                 echo >&2 "Unable to update '$docker_service' with proper cgroupdriver."
                 return 19
@@ -64,34 +84,40 @@
             fi
 
             if sudo cp /dev/stdin /etc/sysconfig/docker <<< 'DOCKER_OPTS="--iptables=false --ip-masq=false"'; then
-
               [[ -z ${USER+x} ]] && USER=$(whoami)
               sudo usermod -a -G docker $USER
               sudo chmod 640 /etc/sysconfig/docker
-              newgrp
+            else
+              echo >&2 "Unable to update /etc/sysconfig/docker."
+              return 52
+            fi
 
-              if sudo systemctl enable --now docker;then
-                if ! sudo systemctl daemon-reload; then
-                  echo >&2 "Unable to reload systemctl daemon."
-                  return 51
-                else
-                  sudo systemctl restart docker.service
-                fi
-              else
+            if newgrp; then
+              if ! sudo systemctl enable --now docker;then
+                echo >&2 "Unable to 'systemctl enable docker'. Quitting."
                 return 51
               fi
+
+              if ! sudo systemctl daemon-reload; then
+                echo >&2 "Unable to reload systemctl daemon."
+                return 52
+              fi
+
+              if sudo systemctl restart docker.service; then
+                echo "docker is installed successfully."
+              fi
             else
-              return 52
+              echo >&2 "Hmm, could not newgrp. Strange. Cannot continue."
+              return 54
             fi
           }
 
-          install_k8s()
+          install_k8s_w_yum()
           {
-            [[ -z ${KUBELET_VERSION} ]] && \
-              {
-                echo >&2 'Usage: install_k8s(): caller must pass $KUBELET_VERSION.'
-                return 60
-              }
+            if [[ -z $KUBELET_VERSION ]]; then
+              echo >&2 "FATAL: \$KUBELET_VERSION is nil! Cannot continue."
+              return 31
+            fi
 
             sudo cp /dev/stdin /etc/yum.repos.d/kubernetes.repo <<< '
             [kubernetes]
@@ -100,8 +126,7 @@
             enabled=1
             gpgcheck=1
             repo_gpgcheck=1
-            gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
-            exclude=kube*' && \
+            gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg' && \
 
             sudo sed -r -i 's#^\ +##g' /etc/yum.repos.d/kubernetes.repo
 
@@ -120,13 +145,176 @@
               source /var/lib/kubelet/kubeadm-flags.env
 
               # prune arg we want to change
-              [[ -n "${KUBELET_KUBEADM_ARGS}" ]] && prune_kubeadm_env "--cgroup-driver"
+              #[[ -n "${KUBELET_KUBEADM_ARGS}" ]] && prune_kubeadm_env "--cgroup-driver"
 
               # change the one we want to change
-              echo "KUBELET_KUBEADM_ARGS=$KUBELET_KUBEADM_ARGS --cgroup-driver=systemd" >> /var/lib/kubelet/kubeadm-flags.env
+              sudo echo "KUBELET_KUBEADM_ARGS=--cgroup-driver=systemd" >> /var/lib/kubelet/kubeadm-flags.env
+            else
+              sudo cp /dev/stdin /var/lib/kubelet/kubeadm-flags.env <<< \
+              "KUBELET_KUBEADM_ARGS=--cgroup-driver=systemd"
             fi
 
             sudo systemctl enable kubelet && sudo systemctl start kubelet
+          }
+
+          # This function should only be used by install_k8s_w_curl(). Yum already
+          # handles all this stuff.
+          bootstrap_k8s_systemd()
+          {
+            sudo cp /dev/stdin /etc/systemd/system/kubelet.service <<< '[Unit]
+              Description=kubelet: The Kubernetes Node Agent
+              Documentation=https://kubernetes.io/docs/
+
+              [Service]
+              ExecStart=/usr/bin/kubelet
+              Restart=always
+              StartLimitInterval=0
+              RestartSec=10
+
+              [Install]
+              WantedBy=multi-user.target' | \
+
+              sudo sed -r -i 's#^\ +##g' /etc/systemd/system/kubelet.service
+
+            sudo mkdir -p /etc/systemd/system/kubelet.service.d
+            sudo cp /dev/stdin /etc/systemd/system/kubelet.service.d/10-kubeadm.conf <<< '[Service]
+              Environment="KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf"
+              Environment="KUBELET_CONFIG_ARGS=--config=/var/lib/kubelet/config.yaml"
+              # This is a file that "kubeadm init" and "kubeadm join" generates at runtime, populating the KUBELET_KUBEADM_ARGS variable dynamically
+              EnvironmentFile=-/var/lib/kubelet/kubeadm-flags.env
+              # This is a file that the user can use for overrides of the kubelet args as a last resort. Preferably, the user should use
+              # the .NodeRegistration.KubeletExtraArgs object in the configuration files instead. KUBELET_EXTRA_ARGS should be sourced from this file.
+              EnvironmentFile=-/etc/sysconfig/kubelet
+              ExecStart=
+              ExecStart=/usr/bin/kubelet $KUBELET_KUBECONFIG_ARGS $KUBELET_CONFIG_ARGS $KUBELET_KUBEADM_ARGS $KUBELET_EXTRA_ARGS' | \
+
+              sudo sed -r -i 's#^\ +##g' /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+          }
+
+          # handles initial install, upgrades, and downgrades.
+          # TODO: needs to handle all systemd stuff properly
+          install_k8s_w_curl()
+          {
+            local fail app_url suf p ptmp
+            fail=0
+
+            # not here. but somewhere...just good security practice
+            # yum update -y
+            install_reqs
+
+            # Set SELinux in permissive mode (effectively disabling it)
+            sudo setenforce 0
+            sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+
+            if [[ -z $KUBELET_VERSION ]]; then
+              echo >&2 "FATAL: \$KUBELET_VERSION is nil! Cannot continue."
+              return 31
+            fi
+
+            [[ ! -d /usr/local/bin ]] && sudo mkdir -p /usr/local/bin
+
+            echo "KUBELET_VERSION to get to: $KUBELET_VERSION"
+
+            for suf in ctl adm let; do
+              app_url="https://storage.googleapis.com/kubernetes-release/release/v${KUBELET_VERSION}/bin/linux/amd64/kube$suf"
+              p="/usr/local/bin/kube$suf"
+              ptmp="$p-downloaded"
+
+              if which kube$suf >/dev/null 2>&1; then
+                echo "kube$suf is currently installed with version $(get_k8_sbin_version "kube$suf" || "unknown")"
+              fi
+
+              echo "Attempting to installing kube$suf v$KUBELET_VERSION as $p (using temporary file $ptmp first)..."
+
+              if status=$(sudo curl -sL "$app_url" -o $ptmp -w '{"status":"%{http_code}"}'); then
+                if [[ "$(echo "$status" | jq -M -r '.status')" == 200 ]]; then
+
+                  echo "  $status"
+
+                  if ! sudo chmod 755 $ptmp; then
+                    echo >&2 "Unable to chmod 755 $ptmp."
+                    return 101
+                  fi
+
+                  if ! get_k8s_bin_version $ptmp >/dev/null 2>&1; then
+                    echo >&2 "The downloaded file is not a proper k8s binary. Please investigate..."
+                    return 102
+                  fi
+
+                  if sudo mv $ptmp $p; then
+                    echo "  done."
+                    bootstrap_k8s_systemd
+                  else
+                    echo >&2 "Unable to mv $ptmp to $p. Return code for chmod was $?"
+                    return 103
+                  fi
+                else
+                  echo >&2 "FATAL: download of '$p' failed with $status"
+                  ((fail++))
+                fi
+              else
+                echo >&2 "Unable to download kube$suf using curl. HTTP status code was $(echo "$status" | jq -r -M '.status')."
+                return 28
+              fi
+            done
+
+            if [[ $fail -gt 0 ]]; then
+              return 34
+            fi
+          }
+
+          get_k8s_bin_version()
+          {
+            if [[ -n $1 ]]; then
+              $1 version 2>/dev/null | grep -Po 'GitVersion:"v\d+\.\d+\.\d+"' | awk -F '"' '{print $2}'
+            else
+              return 99
+            fi
+          }
+
+          get_kubectl_semver()
+          {
+            sudo kubectl version "$1" 2>/dev/null | grep -Po 'GitVersion:"v\d+\.\d+\.\d+"' | awk -F '"' '{print $2}'
+          }
+
+          get_kubeadm_semver()
+          {
+            sudo kubeadm version 2>/dev/null | grep -Po 'GitVersion:"v\d+\.\d+\.\d+"' | awk -F '"' '{print $2}'
+          }
+
+          get_kubelet_semver()
+          {
+            sudo kubelet --version | grep -Po 'v\d+\.\d+\.\d+'
+          }
+
+          yum_upgrade_master()
+          {
+            config="--kubeconfig /etc/kubernetes/admin.conf"
+            sudo yum upgrade -y {kubelet,kubeadm,kubectl}-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            sudo systemctl restart kubelet
+          }
+
+          yum_upgrade_node()
+          {
+            sudo yum upgrade -y {kubelet,kubeadm,kubectl}-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
+            sudo systemctl restart kubelet
+          }
+
+          curl_upgrade_master()
+          {
+            if install_k8s_w_curl; then
+              sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2) --kubeconfig /etc/kubernetes/admin.conf
+              sudo systemctl restart kubelet
+            fi
+          }
+
+          curl_upgrade_node()
+          {
+            if install_k8s_w_curl; then
+              sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
+              sudo systemctl restart kubelet
+            fi
           }
 
           prips()
@@ -147,12 +335,12 @@
             eval "echo {$a..$e}.{$b..$f}.{$c..$g}.{$d..$h}" | awk '{print $11}'
           }
 
-          configure_kubelet()
+          configure_kubelet_systemd()
           {
             # configure kubelet
             sudo cp /dev/stdin /etc/systemd/system/kubelet.service.d/20-kubelet.conf <<< "[Service]
-          Environment='KUBELET_DNS_ARGS=--cluster-dns=${CLUSTER_DNS_SERVER} --cluster-domain=${CLUSTER_DNS_DOMAIN}'
-            "
+          Environment='KUBELET_DNS_ARGS=--cluster-dns=${CLUSTER_DNS_SERVER} --cluster-domain=${CLUSTER_DNS_DOMAIN}'"
+            sudo chmod 644 /etc/systemd/system/kubelet.service.d/20-kubelet.conf
             sudo systemctl enable --now kubelet
           }
 
@@ -218,3 +406,51 @@
             # By default, use flannel for container network plugin, should make this configurable.
             sudo kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/coreos/flannel/v0.10.0/Documentation/kube-flannel.yml
           }
+
+          run_kubeadm_join()
+          {
+            sudo kubeadm join --token "${TOKEN}" "${MASTER}" --ignore-preflight-errors=all --discovery-token-unsafe-skip-ca-verification
+            for (( i = 0; i < 60; i++ )); do
+                sudo kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node $(hostname) machine=${MACHINE} && break
+                sleep 1
+            done
+          }
+
+          drain()
+          {
+            sudo kubectl --kubeconfig=/etc/kubernetes/admin.conf drain $(hostname) --delete-local-data --ignore-daemonsets && \
+            sudo kubectl --kubeconfig=/etc/kubernetes/admin.conf delete node $(hostname)
+          }
+
+          teardown()
+          {
+            if ! sudo kubeadm reset --force; then
+              echo >&2 "kubeadm version doesn't have 'reset --force' yet probably...trying without."
+              if ! sudo kubeadm reset; then
+                echo >&2 "Hmm, can't kubeadm reset..."
+                return 80
+              fi
+            fi
+
+            sudo yum remove -y kubeadm kubectl kubelet kubernetes-cni docker
+
+            RM_RF_DIRS="/etc/cni \
+                        /etc/docker \
+                        /etc/sysconfig/docker \
+                        /etc/ethertypes \
+                        /etc/kubernetes \
+                        /etc/systemd/system/kubelet.service.d \
+                        /var/lib/cni \
+                        /var/lib/docker \
+                        /var/lib/dockershim \
+                        /var/lib/etcd \
+                        /var/lib/etcd2 \
+                        /var/lib/kubelet"
+
+            for d in ${RM_RF_DIRS}; do
+              # Note that an attempt to remove /var/lib/docker may fail
+              # with some AMIs as /var/lib/docker is a mounted EBS.
+              sudo rm -rf $d
+            done
+          }
+
