@@ -441,7 +441,13 @@
 
           teardown()
           {
-            sudo kubeadm reset --force
+            if ! sudo kubeadm reset --force; then
+              echo >&2 "kubeadm version doesn't have 'reset --force' yet probably...trying without."
+              if ! sudo kubeadm reset; then
+                echo >&2 "Hmm, can't kubeadm reset..."
+                return 80
+              fi
+            fi
 
             sudo yum remove -y kubeadm kubectl kubelet kubernetes-cni docker
 
