@@ -290,7 +290,11 @@
           yum_upgrade_master()
           {
             config="--kubeconfig /etc/kubernetes/admin.conf"
-            sudo yum upgrade -y {kubelet,kubeadm,kubectl}-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+
+            # order matters.
+            sudo yum upgrade -y kubectl-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            sudo yum upgrade -y kubeadm-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            sudo yum upgrade -y kubelet-"${KUBELET_VERSION}" --disableexcludes=kubernetes
             sudo systemctl daemon-reload
             sudo systemctl restart kubelet
           }
@@ -298,7 +302,9 @@
           yum_upgrade_node()
           {
             sudo yum upgrade -y {kubelet,kubeadm,kubectl}-"${KUBELET_VERSION}" --disableexcludes=kubernetes
-            sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
+            sudo yum upgrade -y kubectl-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            sudo yum upgrade -y kubeadm-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            sudo yum upgrade -y kubelet-"${KUBELET_VERSION}" --disableexcludes=kubernetes
             sudo systemctl daemon-reload
             sudo systemctl restart kubelet
           }
