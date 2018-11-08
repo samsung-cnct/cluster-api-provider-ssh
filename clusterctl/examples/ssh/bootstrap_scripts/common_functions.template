@@ -296,9 +296,9 @@
           yum_upgrade_master()
           {
             # order matters.
-            sudo yum upgrade -y kubectl-"${KUBELET_VERSION}" --disableexcludes=kubernetes
-            sudo yum upgrade -y kubeadm-"${KUBELET_VERSION}" --disableexcludes=kubernetes
-            sudo yum upgrade -y kubelet-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            sudo yum install -y kubectl-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            sudo yum install -y kubeadm-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            sudo yum install -y kubelet-"${KUBELET_VERSION}" --disableexcludes=kubernetes
 
             if ! fix_kubelet_config; then
               return 105
@@ -311,9 +311,9 @@
           yum_upgrade_node()
           {
             # order matters.
-            sudo yum upgrade -y kubectl-"${KUBELET_VERSION}" --disableexcludes=kubernetes
-            sudo yum upgrade -y kubeadm-"${KUBELET_VERSION}" --disableexcludes=kubernetes
-            sudo yum upgrade -y kubelet-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            sudo yum install -y kubectl-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            sudo yum install -y kubeadm-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            sudo yum install -y kubelet-"${KUBELET_VERSION}" --disableexcludes=kubernetes
 
             sudo curl -sL -o /usr/bin/kubeadm https://dl.k8s.io/release/v${CONTROL_PLANE_VERSION}/bin/linux/amd64/kubeadm && \
             chmod 755 /usr/bin/kubeadm
@@ -326,6 +326,7 @@
 
             sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
 
+            # if this fails, it might be because the upgrade ^^^ failed.
             if ! fix_kubelet_config; then
               return 105
             fi
