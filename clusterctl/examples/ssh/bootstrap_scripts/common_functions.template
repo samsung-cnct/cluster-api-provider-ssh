@@ -291,6 +291,7 @@
           {
             config="--kubeconfig /etc/kubernetes/admin.conf"
             sudo yum upgrade -y {kubelet,kubeadm,kubectl}-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            sudo systemctl daemon-reload
             sudo systemctl restart kubelet
           }
 
@@ -298,6 +299,7 @@
           {
             sudo yum upgrade -y {kubelet,kubeadm,kubectl}-"${KUBELET_VERSION}" --disableexcludes=kubernetes
             sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
+            sudo systemctl daemon-reload
             sudo systemctl restart kubelet
           }
 
