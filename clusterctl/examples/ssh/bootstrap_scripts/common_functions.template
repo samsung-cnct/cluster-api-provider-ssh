@@ -29,25 +29,19 @@
           install_docker()
           {
             local docker_service
-
-            if [[ $(is_docker_ce) == 1 ]]; then
-              sudo yum remove -y docker-ce
-            fi
-
             docker_service='/usr/lib/systemd/system/docker.service'
 
-            # install and configure docker
-            if ! which docker 2>/dev/null; then
-              sudo yum install -y docker
-              # if docker isn't running, it will give the version but exit 1
-              # causing the next check to fail. This should fix that.
-              sudo systemctl daemon-reload && sudo systemctl start docker.service
+            # Our current kubeadm doesn't work right with docker-ce 18.3 provided
+            # by our currently used AMI. Also, we want to know we're getting the
+            # stock provided docker for the system on the pod everytime. So we'll just
+            # remove and reinstall docker every time we install.
+            sudo yum remove -y $(rpm -qa 'docker*')
+            sudo yum install -y docker
+            sudo systemctl daemon-reload && sudo systemctl start docker.service
 
-              if ! sudo docker version >/dev/null 2>&1; then
-                return 50
-              fi
-            else
-              echo >&2 "Skipping installation of docker. Already installed."
+            # If this version check fails then docker did not install correctly.
+            if ! sudo $(which docker) version >/dev/null 2>&1; then
+              return 19
             fi
 
             # enable insecure image registry
@@ -287,17 +281,65 @@
             sudo kubelet --version | grep -Po 'v\d+\.\d+\.\d+'
           }
 
+          fix_kubelet_config()
+          {
+            config="/var/lib/kubelet/config.yaml"
+            sudo sed -r -i 's#cgroupDriver: cgroupfs#cgroupDriver: systemd#' $config
+          }
+
           yum_upgrade_master()
           {
-            config="--kubeconfig /etc/kubernetes/admin.conf"
-            sudo yum upgrade -y {kubelet,kubeadm,kubectl}-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            # order matters.
+            sudo yum install -y kubectl-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            sudo yum install -y kubeadm-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            sudo yum install -y kubelet-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+
+            if ! fix_kubelet_config; then
+              return 105
+            fi
+
+            sudo systemctl daemon-reload
             sudo systemctl restart kubelet
           }
 
           yum_upgrade_node()
           {
-            sudo yum upgrade -y {kubelet,kubeadm,kubectl}-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            p="/usr/bin/kubeadm"
+            CONTROL_PLANE_VERSION=${CONTROL_PLANE_VERSION:-$KUBELET_VERSION}
+            app_url="https://storage.googleapis.com/kubernetes-release/release/v${CONTROL_PLANE_VERSION}/bin/linux/amd64/kubeadm"
+
+            # order matters.
+            sudo yum install -y kubectl-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            sudo yum install -y kubeadm-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            sudo yum install -y kubelet-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+
+            # The purpose of this is that for some reason, ytbd, it seems the CMC pushes
+            # or causes a download of the most recent version of kubeadm. This forces
+            # getting the correct binary until we figure out what's going on.
+            if status=$(sudo curl -sL "$app_url" -o $p -w '{"status":"%{http_code}"}'); then
+              if [[ "$status" =~ 200 ]]; then
+                sudo chmod 755 /usr/bin/kubeadm
+              else
+                return 102
+              fi
+            else
+              return 103
+            fi
+
+            # https://github.com/kubernetes/kubernetes/issues/65863
+            # Issue exists where when upgrading to >= 1.11.x, the /var/lib/kubelet/config.yaml
+            # missing causes kubelet not to restart, which causes the node to not start/join
+            # after an upgrade. One other fun-fact to note is that the config.yaml changes the
+            # the cgroupfs driver back to cgroupfs when we use systemd.
+
             sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
+
+            # if this fails, it might be because the upgrade ^^^ failed.
+            if ! fix_kubelet_config; then
+              return 105
+            fi
+
+            sudo systemctl daemon-reload
             sudo systemctl restart kubelet
           }
 
@@ -434,7 +476,8 @@
               fi
             fi
 
-            sudo yum remove -y kubeadm kubectl kubelet kubernetes-cni docker
+            all_dockers=($(rpm -qa 'docker*'))
+            sudo yum remove -y kubeadm kubectl kubelet kubernetes-cni "${all_dockers[@]}"
 
             RM_RF_DIRS="/etc/cni \
                         /etc/docker \
@@ -452,6 +495,11 @@
             for d in ${RM_RF_DIRS}; do
               # Note that an attempt to remove /var/lib/docker may fail
               # with some AMIs as /var/lib/docker is a mounted EBS.
+              # As a result of the above, let's just try and remove everything in the
+              # directory before removing the directory so that for those
+              # directories that can't be force removed, at least we know
+              # the stuff in them will be.
+              sudo rm -rf $d/**
               sudo rm -rf $d
             done
           }
