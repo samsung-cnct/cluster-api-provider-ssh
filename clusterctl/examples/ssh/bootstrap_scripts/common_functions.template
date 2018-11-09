@@ -479,7 +479,8 @@
               fi
             fi
 
-            sudo yum remove -y kubeadm kubectl kubelet kubernetes-cni docker
+            all_dockers=($(rpm -qa 'docker*'))
+            sudo yum remove -y kubeadm kubectl kubelet kubernetes-cni "${all_dockers[@]}"
 
             RM_RF_DIRS="/etc/cni \
                         /etc/docker \
