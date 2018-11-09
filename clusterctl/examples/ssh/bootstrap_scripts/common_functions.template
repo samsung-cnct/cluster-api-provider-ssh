@@ -310,13 +310,24 @@
 
           yum_upgrade_node()
           {
+            p="/usr/bin/kubeadm"
+            CONTROL_PLANE_VERSION=${CONTROL_PLANE_VERSION:-$KUBELET_VERSION}
+            app_url="https://storage.googleapis.com/kubernetes-release/release/v${CONTROL_PLANE_VERSION}/bin/linux/amd64/kubeadm"
+
             # order matters.
             sudo yum install -y kubectl-"${KUBELET_VERSION}" --disableexcludes=kubernetes
             sudo yum install -y kubeadm-"${KUBELET_VERSION}" --disableexcludes=kubernetes
             sudo yum install -y kubelet-"${KUBELET_VERSION}" --disableexcludes=kubernetes
 
-            sudo curl -sL -o /usr/bin/kubeadm https://dl.k8s.io/release/v${CONTROL_PLANE_VERSION}/bin/linux/amd64/kubeadm && \
-            chmod 755 /usr/bin/kubeadm
+            if status=$(sudo curl -sL "$app_url" -o $p -w '{"status":"%{http_code}"}'); then
+              if [[ "$status" =~ 200 ]]; then
+                sudo chmod 755 /usr/bin/kubeadm
+              else
+                return 102
+              fi
+            else
+              return 103
+            fi
 
             # https://github.com/kubernetes/kubernetes/issues/65863
             # Issue exists where when upgrading to >= 1.11.x, the /var/lib/kubelet/config.yaml
