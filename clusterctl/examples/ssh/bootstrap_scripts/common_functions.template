@@ -29,25 +29,19 @@
           install_docker()
           {
             local docker_service
-
-            if [[ $(is_docker_ce) == 1 ]]; then
-              sudo yum remove -y docker-ce
-            fi
-
             docker_service='/usr/lib/systemd/system/docker.service'
 
-            # install and configure docker
-            if ! which docker 2>/dev/null; then
-              sudo yum install -y docker
-              # if docker isn't running, it will give the version but exit 1
-              # causing the next check to fail. This should fix that.
-              sudo systemctl daemon-reload && sudo systemctl start docker.service
+            # Our current kubeadm doesn't work right with docker-ce 18.3 provided
+            # by our currently used AMI. Also, we want to know we're getting the
+            # stock provided docker for the system on the pod everytime. So we'll just
+            # remove and reinstall docker every time we install.
+            sudo yum remove -y $(rpm -qa 'docker*')
+            sudo yum install -y docker
+            sudo systemctl daemon-reload && sudo systemctl start docker.service
 
-              if ! sudo docker version >/dev/null 2>&1; then
-                return 50
-              fi
-            else
-              echo >&2 "Skipping installation of docker. Already installed."
+            # If this version check fails then docker did not install correctly.
+            if ! sudo $(which docker) version >/dev/null 2>&1; then
+              return 19
             fi
 
             # enable insecure image registry
