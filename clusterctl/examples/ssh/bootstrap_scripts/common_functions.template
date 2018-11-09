@@ -319,6 +319,9 @@
             sudo yum install -y kubeadm-"${KUBELET_VERSION}" --disableexcludes=kubernetes
             sudo yum install -y kubelet-"${KUBELET_VERSION}" --disableexcludes=kubernetes
 
+            # The purpose of this is that for some reason, ytbd, it seems the CMC pushes
+            # or causes a download of the most recent version of kubeadm. This forces
+            # getting the correct binary until we figure out what's going on.
             if status=$(sudo curl -sL "$app_url" -o $p -w '{"status":"%{http_code}"}'); then
               if [[ "$status" =~ 200 ]]; then
                 sudo chmod 755 /usr/bin/kubeadm
@@ -498,6 +501,11 @@
             for d in ${RM_RF_DIRS}; do
               # Note that an attempt to remove /var/lib/docker may fail
               # with some AMIs as /var/lib/docker is a mounted EBS.
+              # As a result of the above, let's just try and remove everything in the
+              # directory before removing the directory so that for those
+              # directories that can't be force removed, at least we know
+              # the stuff in them will be.
+              sudo rm -rf $d/**
               sudo rm -rf $d
             done
           }
