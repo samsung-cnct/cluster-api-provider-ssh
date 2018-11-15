@@ -436,7 +436,7 @@
           {
             hosts=(quay.io gcr.io k8s.gcr.io registry-1.docker.io docker.io packages.cloud.google.com)
             nexus_host="182.195.81.113"
-            current_entry=$(grep -Po $nexus_host /etc/hosts)
+            current_entry=$(grep -Po "$nexus_host.*" /etc/hosts)
             budate="$(date +%Y%m%dT%H%M%S)"
             bu_etc_hosts_file="/etc/hosts-$budate"
 
