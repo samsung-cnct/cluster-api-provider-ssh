@@ -84,7 +84,22 @@ FROM centos:7.4.1708
 
 WORKDIR /resources
 
+RUN yum update -y \
+  && yum install -y yum-utils createrepo wget
+
 COPY --from=builder /var/tmp/${K8S_VERSION_OLD} rpms/${K8S_VERSION_OLD}
 COPY --from=builder /var/tmp/${K8S_VERSION_NEW} rpms/${K8S_VERSION_NEW}
-
 COPY --from=builder /usr/scripts ./scripts
+
+RUN mkdir -p /resources/yaml \
+  && wget --directory-prefix=/resources/yaml https://raw.githubusercontent.com/coreos/flannel/v0.10.0/Documentation/kube-flannel.yml 
+
+RUN createrepo /resources/rpms/${K8S_VERSION_OLD}
+
+RUN echo -e "[local]\n\
+name=Local\n\
+baseurl=file:///resources/rpms/${K8S_VERSION_OLD}\n\
+enabled=1\n\
+gpgcheck=0\n\
+repo_gpgcheck=0"\
+>> /etc/yum.repos.d/local.repo
