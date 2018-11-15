@@ -1,0 +1,61 @@
+
+          set -e
+          set -x
+          (
+          ARCH=amd64
+
+          drain()
+          {
+            sudo kubectl --kubeconfig=/etc/kubernetes/admin.conf drain $(hostname) --delete-local-data --ignore-daemonsets && \
+            sudo kubectl --kubeconfig=/etc/kubernetes/admin.conf delete node $(hostname)
+          }
+
+          teardown()
+          {
+            if ! sudo kubeadm reset --force; then
+              echo >&2 "kubeadm version doesn't have 'reset --force' yet probably...trying without."
+
+              if ! sudo kubeadm reset; then
+                echo >&2 "Hmm, can't kubeadm reset..."
+                return 1
+              fi
+            fi
+
+            all_dockers=($(rpm -qa 'docker*'))
+            sudo yum remove -y kubeadm kubectl kubelet kubernetes-cni "${all_dockers[@]}"
+
+            RM_RF_DIRS="/etc/cni \
+                        /etc/docker \
+                        /etc/sysconfig/docker \
+                        /etc/ethertypes \
+                        /etc/kubernetes \
+                        /etc/systemd/system/kubelet.service.d \
+                        /var/lib/cni \
+                        /var/lib/docker \
+                        /var/lib/dockershim \
+                        /var/lib/etcd \
+                        /var/lib/etcd2 \
+                        /var/lib/kubelet"
+
+            for d in ${RM_RF_DIRS}; do
+              # Note that an attempt to remove /var/lib/docker may fail
+              # with some AMIs as /var/lib/docker is a mounted EBS.
+              # As a result of the above, let's just try and remove everything in the
+              # directory before removing the directory so that for those
+              # directories that can't be force removed, at least we know
+              # the stuff in them will be.
+              sudo rm -rf $d/**
+              sudo rm -rf $d
+            done
+          }
+
+          if ! drain; then
+            echo >&2 "Unable to drain and/or delete on $(hostname)..."
+            exit 69
+          fi
+
+          if ! teardown; then
+            echo >&2 "Teardown unsuccessful."
+            exit 68
+          fi
+          ) 2>&1 | sudo tee /var/log/teardown.log

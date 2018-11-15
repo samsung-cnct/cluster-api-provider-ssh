@@ -1,0 +1,530 @@
+
+          set -e
+          set -x
+          (
+          ARCH=amd64
+
+          prune_kubeadm_env()
+          {
+            [[ -z "$1" ]] && \
+              {
+                echo >&2 "prune_kubeadm_env(): caller failed to pass required argument"
+                return 1
+              }
+
+            local what_to_prune=$1
+
+            # remove this from the current env file.
+            sudo sed -r -i 's#(KUBELET_KUBEADM_ARGS="?.*)'"${what_to_prune}"'(.*"?)#\1\2#' /var/lib/kubelet/kubeadm-flags.env
+          }
+
+          install_docker()
+          {
+            local docker_service
+            docker_service='/usr/lib/systemd/system/docker.service'
+
+            # Our current kubeadm doesn't work right with docker-ce 18.3 provided
+            # by our currently used AMI. Also, we want to know we're getting the
+            # stock provided docker for the system on the pod everytime. So we'll just
+            # remove and reinstall docker every time we install.
+            sudo yum remove -y $(rpm -qa 'docker*') >/dev/null 2>&1
+            sudo yum install -y docker
+            sudo systemctl daemon-reload && sudo systemctl start docker.service
+
+            # If this version check fails then docker did not install correctly.
+            if ! sudo $(which docker) version >/dev/null 2>&1; then
+              echo >&2 "INFO: docker is installed."
+              return 1
+            fi
+
+            # enable insecure image registry
+            sudo mkdir -p /etc/docker
+            sudo cp /dev/stdin /etc/docker/daemon.json  <<< '
+            {
+                "insecure-registries": [
+                    "docker",
+                    "docker.io",
+                    "registry-1.docker.io",
+                    "gcr.io",
+                    "k8s.gcr.io",
+                    "quay.io",
+                    "182.195.81.113:9401",
+                    "182.195.81.113:9402",
+                    "182.195.81.113:9403",
+                    "182.195.81.113:9404"
+                ]
+            }'
+
+            if [[ ! -f "$docker_service" ]]; then
+              echo >&2 'Cannot update docker.service file. "$docker_service" does not exist.'
+              return 1
+            fi
+
+            if [[ $(grep -c "native.cgroupdriver=systemd" "$docker_service" 2>/dev/null) == 0 ]]; then
+              if ! sudo sed -r -i 's#^(ExecStart=/usr/bin/dockerd)#\1 --exec-opt native.cgroupdriver=systemd --exec-opt runtime-cgroups=/systemd/system.slice --exec-opt kubelet-cgroups=/systemd/system.slice --exec-opt MountFlags=private#' \
+                   "$docker_service"; then
+                echo >&2 "Unable to update '$docker_service' with proper cgroupdriver."
+                return 1
+              fi
+            else
+              echo >&2 "WARNING: Looks like '$docker_service' was already updated. Skipping."
+            fi
+
+            if sudo cp /dev/stdin /etc/sysconfig/docker <<< 'DOCKER_OPTS="--iptables=false --ip-masq=false"'; then
+              [[ -z ${USER+x} ]] && USER=$(whoami)
+              sudo usermod -a -G docker $USER
+              sudo chmod 640 /etc/sysconfig/docker
+            else
+              echo >&2 "Unable to update /etc/sysconfig/docker."
+              return 1
+            fi
+
+            if ! sudo systemctl enable --now docker;then
+              echo >&2 "Unable to 'systemctl enable docker'. Quitting."
+              return 1
+            fi
+
+            if ! sudo systemctl daemon-reload; then
+              echo >&2 "Unable to reload systemctl daemon."
+              return 1
+            fi
+
+            if sudo systemctl restart docker.service; then
+              echo "docker is installed successfully."
+            fi
+          }
+
+          install_k8s_w_yum()
+          {
+            if [[ -z $KUBELET_VERSION ]]; then
+              echo >&2 "FATAL: \$KUBELET_VERSION is nil! Cannot continue."
+              return 1
+            fi
+
+            if ping -c 1 8.8.4.4 >/dev/null 2>&1; then
+              sudo cp /dev/stdin /etc/yum.repos.d/kubernetes.repo <<< '
+              [kubernetes]
+              name=Kubernetes
+              baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+              enabled=1
+              gpgcheck=1
+              repo_gpgcheck=1
+              gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg'
+            else
+              sudo cp /dev/stdin /etc/yum.repos.d/kubernetes.repo <<< '
+              [kubernetes]
+              name=Kubernetes
+              baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+              enabled=1
+              gpgcheck=1
+              repo_gpgcheck=1'
+            fi
+
+            sudo sed -r -i 's#^\ +##g' /etc/yum.repos.d/kubernetes.repo
+
+            # Set SELinux in permissive mode (effectively disabling it)
+            sudo setenforce 0
+            sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+
+            sudo yum install -y "kubelet-${KUBELET_VERSION}" \
+                                "kubeadm-${KUBELET_VERSION}" \
+                                "kubectl-${KUBELET_VERSION}" \
+                                conntrack --disableexcludes=kubernetes
+
+            # See https://samsung-cnct.atlassian.net/browse/CMS-391
+            # If the file exists, grok it first (preserving current settings)
+            if [[ -f /var/lib/kubelet/kubeadm-flags.env ]]; then
+              source /var/lib/kubelet/kubeadm-flags.env
+
+              # prune arg we want to change
+              #[[ -n "${KUBELET_KUBEADM_ARGS}" ]] && prune_kubeadm_env "--cgroup-driver"
+
+              # change the one we want to change
+              sudo echo "KUBELET_KUBEADM_ARGS=--cgroup-driver=systemd" >> /var/lib/kubelet/kubeadm-flags.env
+            else
+              sudo cp /dev/stdin /var/lib/kubelet/kubeadm-flags.env <<< \
+              "KUBELET_KUBEADM_ARGS=--cgroup-driver=systemd"
+            fi
+
+            sudo systemctl enable kubelet && sudo systemctl start kubelet
+          }
+
+          prips()
+          {
+            cidr=$1
+
+            # range is bounded by network (-n) & broadcast (-b) addresses.
+            # the following uses `read` with a here-statement to assign the output of
+            # ipcalc -bn into two variables; $hi and $lo the output of which is cut and then
+            # delimited by a ":". Read uses $IFS to automatically split on that delimiter.
+            IFS=':' read -r hi lo <<< "$(ipcalc -bn "$cidr" | cut -f 2 -d = | sed -r 'N;s/\n/:/')"
+
+            # similar to above only this is splitting on '.'.
+            IFS='.' read -r a b c d <<< "$lo"
+            IFS='.' read -r e f g h <<< "$hi"
+
+            # kubeadm uses 10th IP as DNS server
+            eval "echo {$a..$e}.{$b..$f}.{$c..$g}.{$d..$h}" | awk '{print $11}'
+          }
+
+          configure_kubelet_systemd()
+          {
+            # configure kubelet
+            sudo cp /dev/stdin /etc/systemd/system/kubelet.service.d/20-kubelet.conf <<< "[Service]
+          Environment='KUBELET_DNS_ARGS=--cluster-dns=${CLUSTER_DNS_SERVER} --cluster-domain=${CLUSTER_DNS_DOMAIN}'"
+            sudo chmod 644 /etc/systemd/system/kubelet.service.d/20-kubelet.conf
+            sudo systemctl enable --now kubelet
+          }
+
+          configure_kubeadm()
+          {
+            sudo sysctl -w net.bridge.bridge-nf-call-iptables=1
+            sudo sysctl -w net.bridge.bridge-nf-call-ip6tables=1
+            sudo sysctl -p
+
+            if [[ $(systemctl is-active firewalld.service) == "active" ]]; then
+               sudo systemctl disable --now firewalld
+            fi
+
+            # configure kubeadm
+            sudo cp /dev/stdin /etc/kubernetes/kubeadm_config.yaml <<< "---
+            apiVersion: kubeadm.k8s.io/v1alpha1
+            kind: MasterConfiguration
+            api:
+              advertiseAddress: ${MASTER_IP}
+              bindPort: 443
+            etcd:
+              local:
+                dataDir: /var/lib/etcd
+                image:
+            kubernetesVersion: v${CONTROL_PLANE_VERSION}
+            token: ${TOKEN}
+            kubeProxy:
+              config:
+                clusterCIDR: ${POD_CIDR}
+            networking:
+              dnsDomain: ${CLUSTER_DNS_DOMAIN}
+              podSubnet: ${POD_CIDR}
+              serviceSubnet: ${SERVICE_CIDR}
+            "
+
+            # YAML is whitespace picky. So, need to fix kubeadm_config
+            sudo sed -r -i 's#^[[:blank:]]{2}##' /etc/kubernetes/kubeadm_config.yaml
+
+            # Create and set bridge-nf-call-iptables to 1 to pass the kubeadm preflight check.
+            # Workaround was found here:
+            # http://zeeshanali.com/sysadmin/fixed-sysctl-cannot-stat-procsysnetbridgebridge-nf-call-iptables/
+            if [[ $(sudo lsmod | grep br_netfilter -c) == 0 ]];then
+              sudo modprobe br_netfilter
+            fi
+
+            # Allowing swap may not be reliable:
+            # https://github.com/kubernetes/kubernetes/issues/53533
+            sudo swapoff -a
+          }
+
+          run_kubeadm_master()
+          {
+            if ! sudo kubeadm init --config /etc/kubernetes/kubeadm_config.yaml; then
+              echo >&2 "Unable to start kubeadm."
+              return 1
+            fi
+
+            for (( i = 0; i < 60; i++ )); do
+              sudo kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node "$(hostname)" machine="${MACHINE}" && break
+              sleep 1
+            done
+
+            # By default, use flannel for container network plugin, should make this configurable.
+            if ping -c 1 raw.githubusercontent.com >/dev/null 2>&1; then
+              sudo kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/coreos/flannel/v0.10.0/Documentation/kube-flannel.yml
+            else
+              sudo cp /dev/stdin /tmp/kube-flannel-v0.10.0.yaml <<< '
+              ---
+              kind: ClusterRole
+              apiVersion: rbac.authorization.k8s.io/v1beta1
+              metadata:
+                name: flannel
+              rules:
+                - apiGroups:
+                    - ""
+                  resources:
+                    - pods
+                  verbs:
+                    - get
+                - apiGroups:
+                    - ""
+                  resources:
+                    - nodes
+                  verbs:
+                    - list
+                    - watch
+                - apiGroups:
+                    - ""
+                  resources:
+                    - nodes/status
+                  verbs:
+                    - patch
+              ---
+              kind: ClusterRoleBinding
+              apiVersion: rbac.authorization.k8s.io/v1beta1
+              metadata:
+                name: flannel
+              roleRef:
+                apiGroup: rbac.authorization.k8s.io
+                kind: ClusterRole
+                name: flannel
+              subjects:
+              - kind: ServiceAccount
+                name: flannel
+                namespace: kube-system
+              ---
+              apiVersion: v1
+              kind: ServiceAccount
+              metadata:
+                name: flannel
+                namespace: kube-system
+              ---
+              kind: ConfigMap
+              apiVersion: v1
+              metadata:
+                name: kube-flannel-cfg
+                namespace: kube-system
+                labels:
+                  tier: node
+                  app: flannel
+              data:
+                cni-conf.json: |
+                  {
+                    "name": "cbr0",
+                    "plugins": [
+                      {
+                        "type": "flannel",
+                        "delegate": {
+                          "hairpinMode": true,
+                          "isDefaultGateway": true
+                        }
+                      },
+                      {
+                        "type": "portmap",
+                        "capabilities": {
+                          "portMappings": true
+                        }
+                      }
+                    ]
+                  }
+                net-conf.json: |
+                  {
+                    "Network": "10.244.0.0/16",
+                    "Backend": {
+                      "Type": "vxlan"
+                    }
+                  }
+              ---
+              apiVersion: extensions/v1beta1
+              kind: DaemonSet
+              metadata:
+                name: kube-flannel-ds
+                namespace: kube-system
+                labels:
+                  tier: node
+                  app: flannel
+              spec:
+                template:
+                  metadata:
+                    labels:
+                      tier: node
+                      app: flannel
+                  spec:
+                    hostNetwork: true
+                    nodeSelector:
+                      beta.kubernetes.io/arch: amd64
+                    tolerations:
+                    - key: node-role.kubernetes.io/master
+                      operator: Exists
+                      effect: NoSchedule
+                    serviceAccountName: flannel
+                    initContainers:
+                    - name: install-cni
+                      image: quay.io/coreos/flannel:v0.10.0-amd64
+                      command:
+                      - cp
+                      args:
+                      - -f
+                      - /etc/kube-flannel/cni-conf.json
+                      - /etc/cni/net.d/10-flannel.conflist
+                      volumeMounts:
+                      - name: cni
+                        mountPath: /etc/cni/net.d
+                      - name: flannel-cfg
+                        mountPath: /etc/kube-flannel/
+                    containers:
+                    - name: kube-flannel
+                      image: quay.io/coreos/flannel:v0.10.0-amd64
+                      command:
+                      - /opt/bin/flanneld
+                      args:
+                      - --ip-masq
+                      - --kube-subnet-mgr
+                      resources:
+                        requests:
+                          cpu: "100m"
+                          memory: "50Mi"
+                        limits:
+                          cpu: "100m"
+                          memory: "50Mi"
+                      securityContext:
+                        privileged: true
+                      env:
+                      - name: POD_NAME
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.name
+                      - name: POD_NAMESPACE
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.namespace
+                      volumeMounts:
+                      - name: run
+                        mountPath: /run
+                      - name: flannel-cfg
+                        mountPath: /etc/kube-flannel/
+                    volumes:
+                      - name: run
+                        hostPath:
+                          path: /run
+                      - name: cni
+                        hostPath:
+                          path: /etc/cni/net.d
+                      - name: flannel-cfg
+                        configMap:
+                          name: kube-flannel-cfg
+              '
+
+              sudo kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f /tmp/kube-flannel-v0.10.0.yaml
+            fi
+
+            echo done.
+          }
+
+          fix_etc_hosts()
+          {
+            local add new_entry
+
+            new_entry="$current_entry"
+            add=0
+
+            for h in ${hosts[@]}; do
+              if ! $(echo "$entry | grep -q "$h"); then
+                ((add++))
+                new_entry+=" $h"
+              fi
+            done
+
+            if [[ $add ]]; then
+              if ! sed -r -i "s/^($current_entry)/#\1/' /etc/hosts; then
+                # put the original back
+                mv $bu_etc_hosts_file /etc/hosts
+                return 1
+              fi
+
+              echo "$new_entry" >> /etc/hosts
+            fi
+          }
+
+          chk_etc_hosts()
+          {
+            hosts=(quay.io gcr.io k8s.gcr.io registry-1.docker.io docker.io packages.cloud.google.com)
+            nexus_host="182.195.81.113"
+            current_entry=$(grep -Po $nexus_host /etc/hosts)
+            budate="$(date +%Y%m%dT%H%M%S)"
+            bu_etc_hosts_file="/etc/hosts-$budate"
+
+            # if we can ping google then we're probably not in the lab
+            # and this fixup is not necessary.
+            if ping -c 1 8.8.4.4 >/dev/null 2>&1; then
+              return 0
+            fi
+
+            if grep -q $nexus_host /etc/hosts; then
+              if cp /etc/hosts $bu_etc_hosts_file; then
+                if ! fix_etc_hosts; then
+                  echo >&2 "Unable to edit-in-place /etc/hosts."
+                fi
+              else
+                return 1
+              fi
+            else
+              if fix_etc_hosts; then
+                echo >&2 "Unable to edit-in-place /etc/hosts."
+              fi
+            fi
+          }
+
+          # Need to have common_functions sourced first!
+          if [[ -z "${MASTER_IP}" ]];then
+            echo >&2 "Cannot continue. \$MASTER_IP is not set."
+            exit 50
+          fi
+
+          if [[ -z "${CONTROL_PLANE_VERSION}" ]];then
+            echo >&2 "Cannot continue. \$CONTROL_PLANE_VERSION is not set."
+            exit 51
+          fi
+
+          if [[ -z "${TOKEN}" ]];then
+            echo >&2 "Cannot continue. \$TOKEN is not set."
+            exit 52
+          fi
+
+          if [[ -z "${POD_CIDR}" ]];then
+            echo >&2 "Cannot continue. \$POD_CIDR is not set."
+            exit 53
+          fi
+
+          if [[ -z "${CLUSTER_DNS_DOMAIN}" ]];then
+            echo >&2 "Cannot continue. \$CLUSTER_DNS_DOMAIN is not set."
+            exit 54
+          fi
+
+          if [[ -z "${SERVICE_CIDR}" ]];then
+            echo >&2 "Cannot continue. \$SERVICE_CIDR is not set."
+            exit 55
+          fi
+
+          CLUSTER_DNS_SERVER="$(prips "${SERVICE_CIDR}")"
+          export CLUSTER_DNS_SERVER
+
+          if ! chk_etc_hosts; then
+            echo >&2 "Error fixing up /etc/hosts."
+            exit 79
+          fi
+
+          if ! install_docker; then
+            echo >&2 "Error installing docker components..."
+            exit 80
+          fi
+
+          if ! install_k8s_w_yum; then
+            echo >&2 "Error installing Kubernetes components..."
+            exit 81
+          fi
+
+          if ! configure_kubelet_systemd; then
+            echo >&2 "Error configuring Kubernetes components..."
+            exit 82
+          fi
+
+          if ! configure_kubeadm; then
+            echo >&2 "Error configuring kubeadm componenets..."
+            exit 83
+          fi
+
+          if run_kubeadm_master; then
+            echo "Done..."
+          else
+            echo >&2 "Error occurred during Kubeadm for master k8s runtime."
+            exit 84
+          fi
+
+          ) 2>&1 | sudo tee /var/log/startup.log

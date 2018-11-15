@@ -1,0 +1,33 @@
+
+          set -e
+          set -x
+          (
+          ARCH=amd64
+
+          fix_kubelet_config()
+          {
+            config="/var/lib/kubelet/config.yaml"
+            sudo sed -r -i 's#cgroupDriver: cgroupfs#cgroupDriver: systemd#' $config
+          }
+
+          yum_upgrade_master()
+          {
+            # order matters.
+            sudo yum install -y kubectl-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            sudo yum install -y kubeadm-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            sudo yum install -y kubelet-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+
+            if ! fix_kubelet_config; then
+              echo >&2 "Unable to fix kubelet config with proper cgroupfs driver."
+              return 1
+            fi
+
+            sudo systemctl daemon-reload
+            sudo systemctl restart kubelet
+          }
+
+          if ! yum_upgrade_master; then
+            echo >&2 "FATAL: upgrade failed. Quitting."
+            exit 117
+          fi
+          ) 2>&1 | sudo tee /var/log/upgrade.log

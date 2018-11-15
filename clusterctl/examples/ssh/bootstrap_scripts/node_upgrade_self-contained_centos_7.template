@@ -1,0 +1,62 @@
+
+          set -e
+          set -x
+          (
+          ARCH=amd64
+
+          fix_kubelet_config()
+          {
+            config="/var/lib/kubelet/config.yaml"
+            sudo sed -r -i 's#cgroupDriver: cgroupfs#cgroupDriver: systemd#' $config
+          }
+
+          yum_upgrade_node()
+          {
+            p="/usr/bin/kubeadm"
+            CONTROL_PLANE_VERSION=${CONTROL_PLANE_VERSION:-$KUBELET_VERSION}
+            app_url="https://storage.googleapis.com/kubernetes-release/release/v${CONTROL_PLANE_VERSION}/bin/linux/amd64/kubeadm"
+
+            # order matters.
+            sudo yum install -y kubectl-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            sudo yum install -y kubeadm-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            sudo yum install -y kubelet-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+
+            # The purpose of this is that for some reason, ytbd, it seems the CMC pushes
+            # or causes a download of the most recent version of kubeadm. This forces
+            # getting the correct binary until we figure out what's going on.
+            if status=$(sudo curl -sL "$app_url" -o $p -w '{"status":"%{http_code}"}'); then
+              if [[ "$status" =~ 200 ]]; then
+                sudo chmod 755 /usr/bin/kubeadm
+              else
+                echo >&2 "The attempt to ensure kubeadm was downloaded from upstream failed with status $status"
+                return 1
+              fi
+            else
+              echo >&2 "cURL returned a non-zero exit code while attempting to download kubeadm from upstream: $?"
+              return 1
+            fi
+
+            # https://github.com/kubernetes/kubernetes/issues/65863
+            # Issue exists where when upgrading to >= 1.11.x, the /var/lib/kubelet/config.yaml
+            # missing causes kubelet not to restart, which causes the node to not start/join
+            # after an upgrade. One other fun-fact to note is that the config.yaml changes the
+            # the cgroupfs driver back to cgroupfs when we use systemd.
+
+            sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
+
+            # if this fails, it might be because the upgrade ^^^ failed.
+            if ! fix_kubelet_config; then
+              echo >&2 "Unable to fix kubelet config. The sed command failed."
+              return 1
+            fi
+
+            sudo systemctl daemon-reload
+            sudo systemctl restart kubelet
+          }
+
+
+          if ! yum_upgrade_node; then
+            echo >&2 "FATAL: upgrade failed. Quitting."
+            exit 80
+          fi
+          ) 2>&1 | sudo tee /var/log/upgrade.log
