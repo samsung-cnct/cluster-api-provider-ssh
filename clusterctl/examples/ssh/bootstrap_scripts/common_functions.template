@@ -4,7 +4,7 @@
             [[ -z "$1" ]] && \
               {
                 echo >&2 "prune_kubeadm_env(): caller failed to pass required argument"
-                return 10
+                return 1
               }
 
             local what_to_prune=$1
@@ -41,7 +41,7 @@
 
             # If this version check fails then docker did not install correctly.
             if ! sudo $(which docker) version >/dev/null 2>&1; then
-              return 19
+              return 1
             fi
 
             # enable insecure image registry
@@ -64,14 +64,14 @@
 
             if [[ ! -f "$docker_service" ]]; then
               echo >&2 'Cannot update docker.service file. "$docker_service" does not exist.'
-              return 16
+              return 1
             fi
 
             if [[ $(grep -c "native.cgroupdriver=systemd" "$docker_service" 2>/dev/null) == 0 ]]; then
               if ! sudo sed -r -i 's#^(ExecStart=/usr/bin/dockerd)#\1 --exec-opt native.cgroupdriver=systemd --exec-opt runtime-cgroups=/systemd/system.slice --exec-opt kubelet-cgroups=/systemd/system.slice --exec-opt MountFlags=private#' \
                    "$docker_service"; then
                 echo >&2 "Unable to update '$docker_service' with proper cgroupdriver."
-                return 19
+                return 1
               fi
             else
               echo >&2 "WARNING: Looks like '$docker_service' was already updated. Skipping."
@@ -83,18 +83,18 @@
               sudo chmod 640 /etc/sysconfig/docker
             else
               echo >&2 "Unable to update /etc/sysconfig/docker."
-              return 52
+              return 1
             fi
 
             if newgrp; then
               if ! sudo systemctl enable --now docker;then
                 echo >&2 "Unable to 'systemctl enable docker'. Quitting."
-                return 51
+                return 1
               fi
 
               if ! sudo systemctl daemon-reload; then
                 echo >&2 "Unable to reload systemctl daemon."
-                return 52
+                return 1
               fi
 
               if sudo systemctl restart docker.service; then
@@ -102,7 +102,7 @@
               fi
             else
               echo >&2 "Hmm, could not newgrp. Strange. Cannot continue."
-              return 54
+              return 1
             fi
           }
 
@@ -110,7 +110,7 @@
           {
             if [[ -z $KUBELET_VERSION ]]; then
               echo >&2 "FATAL: \$KUBELET_VERSION is nil! Cannot continue."
-              return 31
+              return 1
             fi
 
             sudo cp /dev/stdin /etc/yum.repos.d/kubernetes.repo <<< '
@@ -202,7 +202,7 @@
 
             if [[ -z $KUBELET_VERSION ]]; then
               echo >&2 "FATAL: \$KUBELET_VERSION is nil! Cannot continue."
-              return 31
+              return 1
             fi
 
             [[ ! -d /usr/local/bin ]] && sudo mkdir -p /usr/local/bin
@@ -227,12 +227,12 @@
 
                   if ! sudo chmod 755 $ptmp; then
                     echo >&2 "Unable to chmod 755 $ptmp."
-                    return 101
+                    return 1
                   fi
 
                   if ! get_k8s_bin_version $ptmp >/dev/null 2>&1; then
                     echo >&2 "The downloaded file is not a proper k8s binary. Please investigate..."
-                    return 102
+                    return 1
                   fi
 
                   if sudo mv $ptmp $p; then
@@ -240,7 +240,7 @@
                     bootstrap_k8s_systemd
                   else
                     echo >&2 "Unable to mv $ptmp to $p. Return code for chmod was $?"
-                    return 103
+                    return 1
                   fi
                 else
                   echo >&2 "FATAL: download of '$p' failed with $status"
@@ -248,12 +248,12 @@
                 fi
               else
                 echo >&2 "Unable to download kube$suf using curl. HTTP status code was $(echo "$status" | jq -r -M '.status')."
-                return 28
+                return 1
               fi
             done
 
             if [[ $fail -gt 0 ]]; then
-              return 34
+              return 1
             fi
           }
 
@@ -262,7 +262,7 @@
             if [[ -n $1 ]]; then
               $1 version 2>/dev/null | grep -Po 'GitVersion:"v\d+\.\d+\.\d+"' | awk -F '"' '{print $2}'
             else
-              return 99
+              return 1
             fi
           }
 
@@ -295,7 +295,7 @@
             sudo yum install -y kubelet-"${KUBELET_VERSION}" --disableexcludes=kubernetes
 
             if ! fix_kubelet_config; then
-              return 105
+              return 1
             fi
 
             sudo systemctl daemon-reload
@@ -320,10 +320,10 @@
               if [[ "$status" =~ 200 ]]; then
                 sudo chmod 755 /usr/bin/kubeadm
               else
-                return 102
+                return 1
               fi
             else
-              return 103
+              return 1
             fi
 
             # https://github.com/kubernetes/kubernetes/issues/65863
@@ -336,7 +336,7 @@
 
             # if this fails, it might be because the upgrade ^^^ failed.
             if ! fix_kubelet_config; then
-              return 105
+              return 1
             fi
 
             sudo systemctl daemon-reload
@@ -439,7 +439,7 @@
           {
             if ! sudo kubeadm init --config /etc/kubernetes/kubeadm_config.yaml; then
               echo >&2 "Unable to start kubeadm."
-              return 95
+              return 1
             fi
 
             for (( i = 0; i < 60; i++ )); do
@@ -472,7 +472,7 @@
               echo >&2 "kubeadm version doesn't have 'reset --force' yet probably...trying without."
               if ! sudo kubeadm reset; then
                 echo >&2 "Hmm, can't kubeadm reset..."
-                return 80
+                return 1
               fi
             fi
 

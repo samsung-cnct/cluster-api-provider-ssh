@@ -79,13 +79,23 @@ generate_yaml()
     NODE_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/node_teardown_ubuntu_16.04.template)"
     NODE_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/node_upgrade_ubuntu_16.04.template)"
   else
-    MASTER_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/master_bootstrap_centos_7.template)"
-    MASTER_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/master_teardown_centos_7.template)"
-    MASTER_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/master_upgrade_centos_7.template)"
+#    if [[ "$IS_AWS" ]]; then
+#      MASTER_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/master_bootstrap_centos_7.template)"
+#      MASTER_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/master_teardown_centos_7.template)"
+#      MASTER_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/master_upgrade_centos_7.template)"
+#
+#      NODE_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/node_bootstrap_centos_7.template)"
+#      NODE_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/node_teardown_centos_7.template)"
+#      NODE_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/node_upgrade_centos_7.template)"
+#    else
+      MASTER_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/master_bootstrap_self-contained_centos_7.template)"
+      MASTER_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/master_teardown_self-contained_centos_7.template)"
+      MASTER_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/master_upgrade_self-contained_centos_7.template)"
 
-    NODE_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/node_bootstrap_centos_7.template)"
-    NODE_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/node_teardown_centos_7.template)"
-    NODE_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/node_upgrade_centos_7.template)"
+      NODE_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/node_bootstrap_self-contained_centos_7.template)"
+      NODE_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/node_teardown_self-contained_centos_7.template)"
+      NODE_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/node_upgrade_self-contained_centos_7.template)"
+#   fi
   fi
 
   # prepend common functions to template script
@@ -137,6 +147,8 @@ main()
         OS_TYPE               : One of "ubuntu" or "centos" -- defaults to "centos"
         CLUSTER_PASSPHRASE    : Only used if CLUSTER_PRIVATE_KEY was generated using a passphrase.
         KUBELET_VERSION       : e.g. 1.10.6 -- do not prepend a 'v' in front of it -- currently defaults to 1.10.6
+        IS_AWS                : 0 or 1. No default. Is 0, then scripts for SDS will be generated. If 1, scripts for
+                                AWS will be generated.
 
   $SCRIPT [options]
 
@@ -177,6 +189,11 @@ main()
     echo >&2 "Invalid parameter for \$OS_TYPE: '$OS_TYPE'. Must be either 'ubuntu' or 'centos'"
     exit 15
   fi
+
+#  if [[ -z "${IS_AWS+x}" ]]; then
+#    echo >&2 "Please set \$IS_AWS to 0 (not AWS) or 1 (AWS) for then environment you wish to generate scripts."
+#    exit 20
+#  fi
 
   if ! generate_yaml; then
     exit $?
