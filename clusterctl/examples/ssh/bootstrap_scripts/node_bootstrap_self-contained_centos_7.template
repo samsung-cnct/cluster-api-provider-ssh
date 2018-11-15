@@ -77,7 +77,7 @@
               done
 
               if [[ $add ]]; then
-                if ! sed -r -i "s/^($current_entry)/#\1/' /etc/hosts; then
+                if ! sed -r -i "s/^($current_entry)/#\1/" /etc/hosts; then
                   # put the original back
                   mv $bu_etc_hosts_file /etc/hosts
                   exit 21
