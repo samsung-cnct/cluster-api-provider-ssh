@@ -113,25 +113,39 @@
               return 31
             fi
 
-            sudo cp /dev/stdin /etc/yum.repos.d/kubernetes.repo <<< '
-            [kubernetes]
-            name=Kubernetes
-            baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
-            enabled=1
-            gpgcheck=1
-            repo_gpgcheck=1
-            gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg' && \
-
-            sudo sed -r -i 's#^\ +##g' /etc/yum.repos.d/kubernetes.repo
-
             # Set SELinux in permissive mode (effectively disabling it)
             sudo setenforce 0
-            sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+            sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config]
 
-            sudo yum install -y "kubelet-${KUBELET_VERSION}" \
-                                "kubeadm-${KUBELET_VERSION}" \
-                                "kubectl-${KUBELET_VERSION}" \
-                                conntrack --disableexcludes=kubernetes
+            # copy rpms from tools container
+            toolsImage=$(sudo docker create quay.io/samsung_cnct/cm-vmware-bootstrap)
+            sudo docker cp ${toolsImage}:/resources/rpms/ /var/log/rpms
+            sudo docker cp ${toolsImage}:/resources/yaml/kube-flannel.yml /var/log/kube-flannel.yml
+
+            # setup yum repositories
+            sudo createrepo /var/log/rpms/1.10.6 
+            sudo createrepo /var/log/rpms/1.11.2
+
+            sudo cp /dev/stdin /etc/systemd/system/kubelet.service <<< "[kubernetes-old]
+              name=Kubernetes-old
+              baseurl=file:///var/log/rpms/1.10.6
+              enabled=1
+              gpgcheck=0
+              repo_gpgcheck=0"
+
+            sudo cp /dev/stdin /etc/systemd/system/kubelet.service <<< "[kubernetes-new]
+              name=Kubernetes-new
+              baseurl=file:///var/log/rpms/1.11.2
+              enabled=1
+              gpgcheck=0
+              repo_gpgcheck=0"
+ 
+
+            # TODO: kubernetes-new is hardcoded with 1.11.2
+            # TODO: kubernetes-old is hardcoded with 1.10.6 
+            yum --disablerepo='*' --enablerepo=kubernetes-old -y install kubelet
+            yum --disablerepo='*' --enablerepo=kubernetes-old -y install kubectl
+            yum --disablerepo='*' --enablerepo=kubernetes-old -y install kubeadm
 
             # See https://samsung-cnct.atlassian.net/browse/CMS-391
             # If the file exists, grok it first (preserving current settings)
@@ -289,10 +303,11 @@
 
           yum_upgrade_master()
           {
-            # order matters.
-            sudo yum install -y kubectl-"${KUBELET_VERSION}" --disableexcludes=kubernetes
-            sudo yum install -y kubeadm-"${KUBELET_VERSION}" --disableexcludes=kubernetes
-            sudo yum install -y kubelet-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+
+            # TODO: kubernetes-new is hardcoded with 1.11.2
+            yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubelet
+            yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubectl
+            yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubeadm
 
             if ! fix_kubelet_config; then
               return 105
@@ -308,10 +323,10 @@
             CONTROL_PLANE_VERSION=${CONTROL_PLANE_VERSION:-$KUBELET_VERSION}
             app_url="https://storage.googleapis.com/kubernetes-release/release/v${CONTROL_PLANE_VERSION}/bin/linux/amd64/kubeadm"
 
-            # order matters.
-            sudo yum install -y kubectl-"${KUBELET_VERSION}" --disableexcludes=kubernetes
-            sudo yum install -y kubeadm-"${KUBELET_VERSION}" --disableexcludes=kubernetes
-            sudo yum install -y kubelet-"${KUBELET_VERSION}" --disableexcludes=kubernetes
+            # TODO: kubernetes-new is hardcoded with 1.11.2
+            yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubelet
+            yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubectl
+            yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubeadm
 
             # The purpose of this is that for some reason, ytbd, it seems the CMC pushes
             # or causes a download of the most recent version of kubeadm. This forces
@@ -448,7 +463,7 @@
             done
 
             # By default, use flannel for container network plugin, should make this configurable.
-            sudo kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/coreos/flannel/v0.10.0/Documentation/kube-flannel.yml
+            sudo kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f /var/log/kube-flannel.yml
           }
 
           run_kubeadm_join()
