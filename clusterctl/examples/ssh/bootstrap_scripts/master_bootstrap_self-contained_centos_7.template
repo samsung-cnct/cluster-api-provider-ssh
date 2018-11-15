@@ -4,27 +4,6 @@
           (
           ARCH=amd64
 
-          # Need to have common_functions sourced first!
-          if [[ -z "${MASTER_IP}" ]];then
-            echo >&2 "Cannot continue. \$MASTER_IP is not set."
-            exit 50
-          fi
-
-          if [[ -z "${CONTROL_PLANE_VERSION}" ]];then
-            echo >&2 "Cannot continue. \$CONTROL_PLANE_VERSION is not set."
-            exit 51
-          fi
-
-          if [[ -z "${POD_CIDR}" ]];then
-            echo >&2 "Cannot continue. \$POD_CIDR is not set."
-            exit 53
-          fi
-
-          if [[ -z "${SERVICE_CIDR}" ]];then
-            echo >&2 "Cannot continue. \$SERVICE_CIDR is not set."
-            exit 55
-          fi
-
           # range is bounded by network (-n) & broadcast (-b) addresses.
           # the following uses `read` with a here-statement to assign the output of
           # ipcalc -bn into two variables; $hi and $lo the output of which is cut and then
@@ -191,10 +170,20 @@
           # If the file exists, grok it first (preserving current settings)
           if [[ -d /var/lib/kubelet ]]; then
             if [[ -f /var/lib/kubelet/kubeadm-flags.env ]]; then
+              sudo chmod 644 /var/lib/kubelet/kubeadm-flags.env
               source /var/lib/kubelet/kubeadm-flags.env
 
               # change the one we want to change
-              sudo echo "KUBELET_KUBEADM_ARGS=--cgroup-driver=systemd" >> /var/lib/kubelet/kubeadm-flags.env
+              if [[ -n $KUBELET_KUBEADM ]]; then
+                if [[ $(echo "$KUBELET_KUBEADM_ARGS" | grep -c "--cgroup-driver=systemd") == 0 ]]; then
+                  if ! sudo sed -r -i.$(date +%Y%m%dT%H%M%s) 's/"(.*)"/"\1 --cgroup-driver-systemd"/' /var/lib/kubelet/kubeadm.env; then
+                    echo >&2 "FATAL: Unable to fix cgroupfs driver in /var/lib/kubelet/kubeadm.env"
+                    exit 46
+                  fi
+                else
+                  sudo echo "KUBELET_KUBEADM_ARGS=--cgroup-driver=systemd" >> /var/lib/kubelet/kubeadm-flags.env
+                fi
+              fi
             else
                 sudo cp /dev/stdin /var/lib/kubelet/kubeadm-flags.env <<< \
                 "KUBELET_KUBEADM_ARGS=--cgroup-driver=systemd"
@@ -439,4 +428,5 @@
           fi
 
           echo done.
+          exit 0
           ) 2>&1 | sudo tee /var/log/startup.log
