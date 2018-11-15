@@ -24,11 +24,6 @@
             exit 53
           fi
 
-          if [[ -z "${CLUSTER_DNS_DOMAIN}" ]];then
-            echo >&2 "Cannot continue. \$CLUSTER_DNS_DOMAIN is not set."
-            exit 54
-          fi
-
           if [[ -z "${SERVICE_CIDR}" ]];then
             echo >&2 "Cannot continue. \$SERVICE_CIDR is not set."
             exit 55
@@ -51,13 +46,14 @@
           # chk and fix /etc/hosts
           hosts=(quay.io gcr.io k8s.gcr.io registry-1.docker.io docker.io packages.cloud.google.com)
           nexus_host="182.195.81.113"
-          current_entry=$(grep -Po "$nexus_host.*" /etc/hosts)
           budate="$(date +%Y%m%dT%H%M%S)"
           bu_etc_hosts_file="/etc/hosts-$budate"
 
           # if we can ping google then we're probably not in the lab
           # and this fixup is not necessary.
           if ! ping -c 1 8.8.4.4 >/dev/null 2>&1; then
+            current_entry=$(grep -Po "$nexus_host.*" /etc/hosts)
+
             if grep -q $nexus_host /etc/hosts; then
               if cp /etc/hosts $bu_etc_hosts_file; then
                 if ! fix_etc_hosts; then
@@ -74,7 +70,7 @@
               add=0
 
               for h in ${hosts[@]}; do
-                if ! $(echo "$entry | grep -q "$h"); then
+                if ! $(echo "$entry" | grep -q "$h"); then
                   ((add++))
                   new_entry+=" $h"
                 fi
