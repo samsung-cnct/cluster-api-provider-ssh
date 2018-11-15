@@ -38,9 +38,13 @@
           sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
 
           # if this fails, it might be because the upgrade ^^^ failed.
-          if ! sudo sed -r -i 's#cgroupDriver: cgroupfs#cgroupDriver: systemd#' $config; then
-            echo >&2 "Unable to fix kubelet config. The sed command failed."
-            exit 62
+          if [[ -f $config ]]; then
+            if ! sudo sed -r -i 's#cgroupDriver: cgroupfs#cgroupDriver: systemd#' $config; then
+              echo >&2 "Unable to fix kubelet config. The sed command failed."
+              exit 62
+            fi
+          else
+            echo >&2 "WARN: skipping change to $config. It does not exist."
           fi
 
           sudo systemctl daemon-reload

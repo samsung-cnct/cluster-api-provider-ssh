@@ -187,14 +187,16 @@
 
           # See https://samsung-cnct.atlassian.net/browse/CMS-391
           # If the file exists, grok it first (preserving current settings)
-          if [[ -f /var/lib/kubelet/kubeadm-flags.env ]]; then
-            source /var/lib/kubelet/kubeadm-flags.env
+          if [[ -d /var/lib/kubelet ]]; then
+            if [[ -f /var/lib/kubelet/kubeadm-flags.env ]]; then
+              source /var/lib/kubelet/kubeadm-flags.env
 
-            # change the one we want to change
-            sudo echo "KUBELET_KUBEADM_ARGS=--cgroup-driver=systemd" >> /var/lib/kubelet/kubeadm-flags.env
-          else
-            sudo cp /dev/stdin /var/lib/kubelet/kubeadm-flags.env <<< \
-            "KUBELET_KUBEADM_ARGS=--cgroup-driver=systemd"
+              # change the one we want to change
+              sudo echo "KUBELET_KUBEADM_ARGS=--cgroup-driver=systemd" >> /var/lib/kubelet/kubeadm-flags.env
+            else
+              sudo cp /dev/stdin /var/lib/kubelet/kubeadm-flags.env <<< \
+              "KUBELET_KUBEADM_ARGS=--cgroup-driver=systemd"
+            fi
           fi
 
           sudo systemctl enable kubelet && sudo systemctl start kubelet
