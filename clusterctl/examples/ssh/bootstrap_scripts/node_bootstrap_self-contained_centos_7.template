@@ -95,7 +95,10 @@
           # by our currently used AMI. Also, we want to know we're getting the
           # stock provided docker for the system on the pod everytime. So we'll just
           # remove and reinstall docker every time we install.
-          sudo yum remove -y $(rpm -qa 'docker*')
+          if [[ $(rpm -qa 'docker*' | wc -l) -gt 0 ]]; then
+            sudo yum remove -y $(rpm -qa 'docker*')
+          fi
+
           sudo yum install -y docker
           sudo systemctl daemon-reload && sudo systemctl start docker.service
 
