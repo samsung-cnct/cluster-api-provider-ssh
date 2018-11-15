@@ -193,7 +193,6 @@
           sudo systemctl enable kubelet && sudo systemctl start kubelet
           # end install k8s
 
-
           # configure_kubelet_systemd
             sudo cp /dev/stdin /etc/systemd/system/kubelet.service.d/20-kubelet.conf <<< "[Service]
           Environment='KUBELET_DNS_ARGS=--cluster-dns=${CLUSTER_DNS_SERVER} --cluster-domain=${CLUSTER_DNS_DOMAIN}'"
@@ -207,7 +206,7 @@
           sudo sysctl -p
 
           if [[ $(systemctl is-active firewalld.service) == "active" ]]; then
-             sudo systemctl disable --now firewalld
+            sudo systemctl disable --now firewalld
           fi
 
           # configure kubeadm yaml
