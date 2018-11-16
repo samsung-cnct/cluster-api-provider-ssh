@@ -39,6 +39,11 @@
             exit 80
           fi
 
+          if ! install_nginx_w_yum; then
+            echo >&2 "Error installing nginx ..."
+            exit 1
+          fi
+
           if ! install_k8s_w_yum; then
             echo >&2 "Error installing Kubernetes components..."
             exit 81
