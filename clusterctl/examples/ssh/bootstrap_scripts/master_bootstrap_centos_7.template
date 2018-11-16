@@ -15,10 +15,6 @@
             echo >&2 "Cannot continue. \$CONTROL_PLANE_VERSION is not set."
           fi
 
-          if [[ -z "${TOKEN}" ]];then
-            echo >&2 "Cannot continue. \$TOKEN is not set."
-          fi
-
           if [[ -z "${POD_CIDR}" ]];then
             echo >&2 "Cannot continue. \$POD_CIDR is not set."
           fi
