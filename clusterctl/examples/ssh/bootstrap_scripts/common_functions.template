@@ -106,6 +106,141 @@
             fi
           }
 
+          install_nginx_w_yum() 
+          {
+            cp /dev/stdin /etc/yum.repos.d/centos7.repo <<< "[centos-7-server-rpms]
+              name=centos-7-server-rpms
+              baseurl=http://182.195.81.113:19468/repo/CentOS/7/os/x86_64/
+              enabled=1
+              gpgcheck=0
+
+              [centos-7-server-extras-rpms]
+              name=centos-7-server-extras-rpms
+              baseurl=http://182.195.81.113:19468/repo/CentOS/7/extras/x86_64/
+              enabled=1
+              gpgcheck=0
+
+              [centos-7-server-atomic-rpms]
+              name=centos-7-server-atomic-rpms
+              baseurl=http://182.195.81.113:19468//repo/CentOS/7/atomic/x86_64/
+              enabled=1
+              gpgcheck=0
+
+              [application-rpms]
+              name=application-rpms
+              baseurl=http://182.195.81.113:19468/repo/APP/
+              enabled=1
+              gpgcheck=0"
+            
+            # install nginx
+            yum install nginx -y
+
+            # add proxy config
+            cp /dev/stdin /etc/nginx/nginx.conf <<< "user  nginx;
+              worker_processes  3;
+
+              daemon off;
+
+              error_log  /var/log/nginx/error.log warn;
+              pid        /var/run/nginx.pid;
+
+              events {
+                worker_connections  1024;
+              }
+
+              http {
+                server {
+                  server_name registry-1.docker.io;
+                  listen 80;
+                  location / {
+                    proxy_pass http://182.195.81.113:9401;
+                    proxy_redirect off;
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    client_max_body_size 10G;
+                    client_body_buffer_size 128k;
+                    proxy_connect_timeout 90;
+                    proxy_send_timeout 90;
+                    proxy_read_timeout 90;
+                    proxy_buffer_size 4k;
+                    proxy_buffers 4 32k;
+                    proxy_busy_buffers_size 64k;
+
+
+                    proxy_temp_file_write_size 64k;
+                  }
+                }
+                server {
+                  server_name gcr.io;
+                  listen 80;
+                  location / {
+                    proxy_pass http://182.195.81.113:9402;
+                    proxy_redirect off;
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    client_max_body_size 10G;
+                    client_body_buffer_size 128k;
+                    proxy_connect_timeout 90;
+                    proxy_send_timeout 90;
+                    proxy_read_timeout 90;
+                    proxy_buffer_size 4k;
+                    proxy_buffers 4 32k;
+                    proxy_busy_buffers_size 64k;
+                    proxy_temp_file_write_size 64k;
+                  }
+                }
+                server {
+                  server_name k8s.grc.io;
+                  listen 80;
+                  location / {
+                    proxy_pass http://182.195.81.113:9403;
+                    proxy_redirect off;
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    client_max_body_size 10G;
+                    client_body_buffer_size 128k;
+                    proxy_connect_timeout 90;
+                    proxy_send_timeout 90;
+                    proxy_read_timeout 90;
+                    proxy_buffer_size 4k;
+                    proxy_buffers 4 32k;
+                    proxy_busy_buffers_size 64k;
+                    proxy_temp_file_write_size 64k;
+                  }
+                }
+                server {
+                  server_name quay.io;
+                  listen 80;
+                  location / {
+                    proxy_pass http://182.195.81.113:9404;
+                    proxy_redirect off;
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    client_max_body_size 10G;
+                    client_body_buffer_size 128k;
+                    proxy_connect_timeout 90;
+                    proxy_send_timeout 90;
+                    proxy_read_timeout 90;
+                    proxy_buffer_size 4k;
+                    proxy_buffers 4 32k;
+                    proxy_busy_buffers_size 64k;
+                    proxy_temp_file_write_size 64k;
+                  }
+                }
+              }"
+
+            # restart nginx
+            systemctl restart nginx
+
+            # append to etc/hosts
+
+            echo "\n127.0.0.1   registry-1.docker.io gcr.io k8s.gcr.io quay.io\n" >> /etc/hosts
+          }
+
           install_k8s_w_yum()
           {
             if [[ -z $KUBELET_VERSION ]]; then
