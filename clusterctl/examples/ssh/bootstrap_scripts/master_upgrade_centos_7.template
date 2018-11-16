@@ -9,4 +9,4 @@
             echo >&2 "FATAL: upgrade failed. Quitting."
             exit 117
           fi
-          ) 2>&1 | sudo tee /var/log/upgrade.log
+          ) 2>&1 | tee /var/log/upgrade.log
