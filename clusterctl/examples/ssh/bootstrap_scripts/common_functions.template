@@ -268,7 +268,7 @@
 
             # append to etc/hosts
 
-            echo "\n127.0.0.1   registry-1.docker.io gcr.io k8s.gcr.io quay.io\n" >> /etc/hosts
+            echo -e "\n127.0.0.1   registry-1.docker.io gcr.io k8s.gcr.io quay.io\n" >> /etc/hosts
           }
 
           install_k8s_w_yum()
