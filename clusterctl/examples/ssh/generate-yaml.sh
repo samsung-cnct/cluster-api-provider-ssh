@@ -80,21 +80,21 @@ generate_yaml()
     NODE_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/node_upgrade_ubuntu_16.04.template)"
   else
 #    if [[ "$IS_AWS" ]]; then
-#      MASTER_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/master_bootstrap_centos_7.template)"
-#      MASTER_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/master_teardown_centos_7.template)"
-#      MASTER_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/master_upgrade_centos_7.template)"
-#
-#      NODE_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/node_bootstrap_centos_7.template)"
-#      NODE_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/node_teardown_centos_7.template)"
-#      NODE_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/node_upgrade_centos_7.template)"
-#    else
-      MASTER_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/master_bootstrap_self-contained_centos_7.template)"
-      MASTER_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/master_teardown_self-contained_centos_7.template)"
-      MASTER_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/master_upgrade_self-contained_centos_7.template)"
+      MASTER_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/master_bootstrap_centos_7.template)"
+      MASTER_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/master_teardown_centos_7.template)"
+      MASTER_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/master_upgrade_centos_7.template)"
 
-      NODE_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/node_bootstrap_self-contained_centos_7.template)"
-      NODE_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/node_teardown_self-contained_centos_7.template)"
-      NODE_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/node_upgrade_self-contained_centos_7.template)"
+      NODE_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/node_bootstrap_centos_7.template)"
+      NODE_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/node_teardown_centos_7.template)"
+      NODE_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/node_upgrade_centos_7.template)"
+#    else
+#      MASTER_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/master_bootstrap_self-contained_centos_7.template)"
+#      MASTER_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/master_teardown_self-contained_centos_7.template)"
+#      MASTER_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/master_upgrade_self-contained_centos_7.template)"
+#
+#      NODE_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/node_bootstrap_self-contained_centos_7.template)"
+#      NODE_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/node_teardown_self-contained_centos_7.template)"
+#      NODE_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/node_upgrade_self-contained_centos_7.template)"
 #   fi
   fi
 

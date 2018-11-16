@@ -426,6 +426,6 @@
             sudo kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f /tmp/kube-flannel-v0.10.0.yaml
           fi
 
-          echo done.
+          echo "done."
           exit 0
           ) 2>&1 | sudo tee /var/log/startup.log

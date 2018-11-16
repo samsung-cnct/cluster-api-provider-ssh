@@ -12,7 +12,7 @@
 
             if ! sudo kubeadm reset; then
               echo >&2 "Hmm, can't kubeadm reset..."
-              return 1
+              exit 61
             fi
           fi
 

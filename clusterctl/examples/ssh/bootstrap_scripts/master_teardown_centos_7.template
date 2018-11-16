@@ -7,11 +7,13 @@
 
           if ! drain; then
             echo >&2 "Unable to drain and/or delete on $(hostname)..."
-            exit 69
+            exit 68
           fi
 
           if ! teardown; then
             echo >&2 "Teardown unsuccessful."
-            exit 68
+            exit 69
           fi
+
+          echo "Done..."
           ) 2>&1 | sudo tee /var/log/teardown.log

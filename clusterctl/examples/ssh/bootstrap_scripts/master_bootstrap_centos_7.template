@@ -2,36 +2,16 @@
           set -e
           set -x
           (
+          # myfunc() { echo "I am $USER"; }
+          # sudo su -c "$(declare -f myfunc); myfunc"
+
           ARCH=amd64
 
           ${FUNCTIONS}
 
-          # Need to have common_functions sourced first!
-          if [[ -z "${MASTER_IP}" ]];then
-            echo >&2 "Cannot continue. \$MASTER_IP is not set."
-          fi
-
-          if [[ -z "${CONTROL_PLANE_VERSION}" ]];then
-            echo >&2 "Cannot continue. \$CONTROL_PLANE_VERSION is not set."
-          fi
-
-          if [[ -z "${TOKEN}" ]];then
-            echo >&2 "Cannot continue. \$TOKEN is not set."
-          fi
-
-          if [[ -z "${POD_CIDR}" ]];then
-            echo >&2 "Cannot continue. \$POD_CIDR is not set."
-          fi
-
-          if [[ -z "${CLUSTER_DNS_DOMAIN}" ]];then
-            echo >&2 "Cannot continue. \$CLUSTER_DNS_DOMAIN is not set."
-          fi
-
-          if [[ -z "${SERVICE_CIDR}" ]];then
-            echo >&2 "Cannot continue. \$SERVICE_CIDR is not set."
-          fi
-
-          CLUSTER_DNS_SERVER="$(prips "${SERVICE_CIDR}")"
+          set +x
+            CLUSTER_DNS_SERVER="$(prips "${SERVICE_CIDR}")"
+          set -x
           export CLUSTER_DNS_SERVER
 
           if ! install_docker; then
