@@ -61,4 +61,4 @@
             exit 84
           fi
 
-          ) 2>&1 | sudo tee /var/log/startup.log
+          ) 2>&1 | tee /var/log/startup.log
