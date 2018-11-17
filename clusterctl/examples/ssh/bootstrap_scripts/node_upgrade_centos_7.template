@@ -1,12 +1,14 @@
-
+          exec >> /var/log/upgrade.log 2>&1
           set -e
           set -x
-          (
+
           ARCH=amd64
           ${FUNCTIONS}
 
           if ! yum_upgrade_node; then
             echo >&2 "FATAL: upgrade failed. Quitting."
-            exit 80
+            exit 1
           fi
-          ) 2>&1 | tee -a /var/log/upgrade.log
+
+          echo "Done..."
+          exit 0

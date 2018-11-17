@@ -1,11 +1,13 @@
-
+          exec >> /var/log/teardown.log 2>&1
           set -e
           set -x
-          (
+
           ${FUNCTIONS}
 
           if ! teardown; then
             echo >&2 "Teardown unsuccessful."
-            exit 68
+            exit 1
           fi
-          ) 2>&1 | tee -a /var/log/teardown.log
+
+          echo "Done"
+          exit 0

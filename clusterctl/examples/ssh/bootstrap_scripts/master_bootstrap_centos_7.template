@@ -1,8 +1,12 @@
-
+          exec >> /var/log/startup.log 2>&1
           set -e
           set -x
-          (
+
           ${FUNCTIONS}
+
+          echo "--------------------------------------"
+          echo "$(date)"
+          echo "--------------------------------------"
 
           # Need to have common_functions sourced first!
           if [[ -z "${MASTER_IP}" ]];then
@@ -52,11 +56,10 @@
             exit 1
           fi
 
-          if run_kubeadm_master; then
-            echo "Done..."
-          else
+          if ! run_kubeadm_master; then
             echo >&2 "Error occurred during Kubeadm for master k8s runtime."
             exit 1
           fi
 
-          ) 2>&1 | tee -a /var/log/startup.log
+          echo "Done..."
+          exit 0
