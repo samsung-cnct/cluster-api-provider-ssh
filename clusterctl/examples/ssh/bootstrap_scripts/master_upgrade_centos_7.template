@@ -2,11 +2,10 @@
           set -e
           set -x
           (
-          ARCH=amd64
           ${FUNCTIONS}
 
           if ! yum_upgrade_master; then
             echo >&2 "FATAL: upgrade failed. Quitting."
             exit 117
           fi
-          ) 2>&1 | tee /var/log/upgrade.log
+          ) 2>&1 | tee -a /var/log/upgrade.log

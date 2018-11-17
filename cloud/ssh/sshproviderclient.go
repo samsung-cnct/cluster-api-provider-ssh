@@ -17,7 +17,7 @@ const (
 	// implement a connection pool instead.
 	SshTimeoutSeconds    = 600
 	SshTimeout           = time.Duration(SshTimeoutSeconds) * time.Second
-	GetKubeconfigCommand = "sudo cat /etc/kubernetes/admin.conf"
+	GetKubeconfigCommand = "cat /etc/kubernetes/admin.conf"
 )
 
 type SSHProviderClientInterface interface {

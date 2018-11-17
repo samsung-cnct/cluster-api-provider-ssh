@@ -2,8 +2,6 @@
           set -e
           set -x
           (
-          ARCH=amd64
-
           ${FUNCTIONS}
 
           # Need to have common_functions sourced first!
@@ -31,39 +29,30 @@
             echo >&2 "Cannot continue. \$SERVICE_CIDR is not set."
           fi
 
-          CLUSTER_DNS_SERVER="$(prips "${SERVICE_CIDR}")"
-          export CLUSTER_DNS_SERVER
+          export CLUSTER_DNS_SERVER="10.96.0.10"
 
-          if ! install_docker; then
-            echo >&2 "Error installing docker components..."
-            exit 80
-          fi
+          cleanup_repos
 
           if ! install_nginx_w_yum; then
             echo >&2 "Error installing nginx ..."
             exit 1
           fi
 
+          if ! install_docker; then
+            echo >&2 "Error installing docker components..."
+            exit 1
+          fi
+
           if ! install_k8s_w_yum; then
             echo >&2 "Error installing Kubernetes components..."
-            exit 81
-          fi
-
-          if ! configure_kubelet_systemd; then
-            echo >&2 "Error configuring Kubernetes components..."
-            exit 82
-          fi
-
-          if ! configure_kubeadm; then
-            echo >&2 "Error configuring kubeadm componenets..."
-            exit 83
+            exit 1
           fi
 
           if run_kubeadm_join; then
             echo "Done..."
           else
             echo >&2 "Error occurred during Kubeadm join for client node."
-            exit 84
+            exit 1
           fi
 
-          ) 2>&1 | tee /var/log/startup.log
+          ) 2>&1 | tee -a /var/log/startup.log

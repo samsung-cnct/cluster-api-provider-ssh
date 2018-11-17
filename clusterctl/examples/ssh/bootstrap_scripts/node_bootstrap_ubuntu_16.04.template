@@ -72,7 +72,7 @@
           sudo kubeadm join --token "${TOKEN}" "${MASTER}" --ignore-preflight-errors=all --discovery-token-unsafe-skip-ca-verification
           for tries in $(seq 1 60); do
               sudo kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node $(hostname) machine=${MACHINE} && break
-              sleep 1
+              sleep 5
           done
           echo done.
           ) 2>&1 | sudo tee /var/log/startup.log
