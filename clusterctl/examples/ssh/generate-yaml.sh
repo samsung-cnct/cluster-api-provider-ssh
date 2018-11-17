@@ -91,12 +91,12 @@ generate_yaml()
   # prepend common functions to template script
   FUNCTIONS=$(< "$bootstrap_dir/common_functions.template")
 
-  export CLUSTER_PRIVATE_KEY CLUSTER_PASSPHRASE MASTER_BOOTSTRAP_SCRIPT \
+  export MASTER_BOOTSTRAP_SCRIPT \
          NODE_BOOTSTRAP_SCRIPT MASTER_TEARDOWN_SCRIPT NODE_TEARDOWN_SCRIPT MASTER_UPGRADE_SCRIPT \
          NODE_UPGRADE_SCRIPT FUNCTIONS OS_TYPE KUBELET_VERSION
 
   # shellcheck disable=SC2016
-  envsubst '$CLUSTER_PRIVATE_KEY $CLUSTER_PASSPHRASE $MASTER_BOOTSTRAP_SCRIPT
+  envsubst '$MASTER_BOOTSTRAP_SCRIPT
             $NODE_BOOTSTRAP_SCRIPT  $MASTER_TEARDOWN_SCRIPT $NODE_TEARDOWN_SCRIPT
             $MASTER_UPGRADE_SCRIPT $NODE_UPGRADE_SCRIPT $KUBELET_VERSION $OS_TYPE' \
            < "$providercomponent_template_file" > "$providercomponent_generated_file-tmp"
@@ -133,9 +133,7 @@ main()
   $SCRIPT - generates input yaml files for Cluster API on openstack. Some environment
         variables are needed set for $SCRIPT to properly function:
 
-        CLUSTER_PRIVATE_KEY   : base64 encoded private key used when make_cluster was run.
         OS_TYPE               : One of "ubuntu" or "centos" -- defaults to "centos"
-        CLUSTER_PASSPHRASE    : Only used if CLUSTER_PRIVATE_KEY was generated using a passphrase.
         KUBELET_VERSION       : e.g. 1.10.6 -- do not prepend a 'v' in front of it -- currently defaults to 1.10.6
 
   $SCRIPT [options]
@@ -160,16 +158,6 @@ main()
   done
 
   # TODO Fill out the generation pieces as we need them.
-
-  if [[ -z ${CLUSTER_PRIVATE_KEY+x} ]]; then
-      echo "Please generate a valid base64 encoded cluster private key and export the key file contents to CLUSTER_PRIVATE_KEY."
-      exit 1
-  fi
-
-  if [[ -z "${CLUSTER_PASSPHRASE+x}" ]]; then
-      echo "Using empty cluster pass phrase to private key"
-      CLUSTER_PASSPHRASE='""'
-  fi
 
   if [[ "${OS_TYPE}" =~ (centos|ubuntu) ]]; then
     echo "OS Type set for valid type: $OS_TYPE."

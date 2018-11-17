@@ -112,16 +112,6 @@ spec:
             name: machine-setup
 ---
 apiVersion: v1
-kind: Secret
-type: Opaque
-metadata:
-  name: cluster-private-key
-  namespace: default
-data:
-  private-key: $CLUSTER_PRIVATE_KEY
-  pass-phrase: $CLUSTER_PASSPHRASE
----
-apiVersion: v1
 kind: ConfigMap
 metadata:
   name: machine-setup
