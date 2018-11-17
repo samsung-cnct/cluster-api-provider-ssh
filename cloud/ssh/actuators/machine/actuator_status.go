@@ -76,8 +76,10 @@ func (a *Actuator) updateStatus(machine *clusterv1.Machine) error {
 
 	m, err := a.setMachineStatus(currentMachine, status)
 	if err != nil {
+		glog.Infof("updateStatus: failed to set instance-status for machine %s", m.ObjectMeta.Name)
 		return err
 	}
+	glog.Infof("setMachineStatus: successfully set instance-status for machine %s", m.ObjectMeta.Name)
 
 	_, err = a.v1Alpha1Client.Machines(machine.Namespace).Update(m)
 	return err
@@ -100,6 +102,9 @@ func (a *Actuator) setMachineStatus(machine *clusterv1.Machine, status MachineSt
 		machine.ObjectMeta.Annotations = make(map[string]string)
 	}
 	machine.ObjectMeta.Annotations[string(InstanceStatus)] = buff.String()
+
+	glog.Infof("setMachineStatus: encoded instance-status %s.", buff.String())
+
 	return machine, nil
 }
 
