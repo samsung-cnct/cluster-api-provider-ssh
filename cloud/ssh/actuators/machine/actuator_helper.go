@@ -22,13 +22,13 @@ const (
 	noEventAction     = ""
 	// TODO should this move to the cluster controller?
 	apiServerPort          = 443
-	upgradeControlPlaneCmd = "sudo curl -o /usr/bin/kubeadm -sSL https://dl.k8s.io/release/v%[1]s/bin/linux/amd64/kubeadm && " +
-		"sudo chmod a+rx /usr/bin/kubeadm && " +
-		"sudo kubeadm upgrade apply v%[1]s -y"
-	getNodeCmd     = "sudo kubectl get no -o go-template='{{range .items}}{{.metadata.name}}:{{.status.nodeInfo.kubeletVersion}}:{{.metadata.annotations.machine}}{{\"\\n\"}}{{end}}' --kubeconfig /etc/kubernetes/admin.conf"
-	drainWorkerCmd = "sudo kubectl drain %[1]s --ignore-daemonsets --delete-local-data --force --kubeconfig /etc/kubernetes/admin.conf"
-	uncordonCmd    = "sudo kubectl uncordon %[1]s --kubeconfig /etc/kubernetes/admin.conf"
-	drainMasterCmd = "sudo kubectl drain %[1]s --ignore-daemonsets --kubeconfig /etc/kubernetes/admin.conf"
+	upgradeControlPlaneCmd = "curl -o /usr/bin/kubeadm -sSL https://dl.k8s.io/release/v%[1]s/bin/linux/amd64/kubeadm && " +
+		"chmod a+rx /usr/bin/kubeadm && " +
+		"kubeadm upgrade apply v%[1]s -y"
+	getNodeCmd     = "kubectl get no -o go-template='{{range .items}}{{.metadata.name}}:{{.status.nodeInfo.kubeletVersion}}:{{.metadata.annotations.machine}}{{\"\\n\"}}{{end}}' --kubeconfig /etc/kubernetes/admin.conf"
+	drainWorkerCmd = "kubectl drain %[1]s --ignore-daemonsets --delete-local-data --force --kubeconfig /etc/kubernetes/admin.conf"
+	uncordonCmd    = "kubectl uncordon %[1]s --kubeconfig /etc/kubernetes/admin.conf"
+	drainMasterCmd = "kubectl drain %[1]s --ignore-daemonsets --kubeconfig /etc/kubernetes/admin.conf"
 )
 
 func (a *Actuator) machineProviderConfig(providerConfig clusterv1.ProviderConfig) (*v1alpha1.SSHMachineProviderConfig, error) {
@@ -231,7 +231,7 @@ func (a *Actuator) getKubeadmTokenOnMaster(c *clusterv1.Cluster, m *clusterv1.Ma
 	}
 	glog.Infof("Creating token on master, machine %s cluster %s", m.Name, c.Name)
 	// TODO use kubeadm ttl option and try without full path
-	output, err := masterSSHClient.ProcessCMDWithOutput("sudo /usr/bin/kubeadm token create")
+	output, err := masterSSHClient.ProcessCMDWithOutput("/usr/bin/kubeadm token create")
 	if err != nil {
 		glog.Errorf("Error creating token on master for machine %s cluster %s error: %v", m.Name, c.Name, err)
 		return "", err

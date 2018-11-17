@@ -1,8 +1,6 @@
 FROM centos:7 as builder
 
 # setup sudo and other tools (for testing only)
-ENV SUDO_USER=docker
-ENV SUDO_USER_PASS=password
 RUN yum update -y \
     && yum install epel-release -y \
     && yum install gettext python-pip jq yum-utils -y \
