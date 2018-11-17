@@ -21,7 +21,7 @@ const (
 	deleteEventAction = "Delete"
 	noEventAction     = ""
 	// TODO should this move to the cluster controller?
-	apiServerPort          = 443
+	apiServerPort          = 6443
 	upgradeControlPlaneCmd = "curl -o /usr/bin/kubeadm -sSL https://dl.k8s.io/release/v%[1]s/bin/linux/amd64/kubeadm && " +
 		"chmod a+rx /usr/bin/kubeadm && " +
 		"kubeadm upgrade apply v%[1]s -y"
