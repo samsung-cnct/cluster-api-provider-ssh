@@ -1,9 +1,9 @@
 package machine
 
 import (
-	"fmt"
-
 	"bytes"
+	"fmt"
+	"github.com/golang/glog"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
@@ -45,6 +45,7 @@ func (a *Actuator) machineStatus(m *clusterv1.Machine) (MachineStatus, error) {
 
 	annot := m.ObjectMeta.Annotations[string(InstanceStatus)]
 	if annot == "" {
+		glog.Infof("machineStatus: instance-status was empty %s", m.ObjectMeta.Name)
 		return nil, nil
 	}
 
@@ -54,6 +55,8 @@ func (a *Actuator) machineStatus(m *clusterv1.Machine) (MachineStatus, error) {
 	if err != nil {
 		return nil, fmt.Errorf("decoding failure: %v", err)
 	}
+
+	glog.Infof("machineStatus: instance-status was decoded successfully %s", m.ObjectMeta.Name)
 
 	return MachineStatus(&status), nil
 }
