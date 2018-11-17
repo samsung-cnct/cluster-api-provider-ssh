@@ -74,36 +74,38 @@ func (s *sshProviderClient) GetKubeConfigBytes() ([]byte, error) {
 }
 
 func (s *sshProviderClient) ProcessCMD(cmd string) error {
-	session, err := GetBasicSession(s)
+	session, connection, err := GetBasicSession(s)
 	if err != nil {
 		return fmt.Errorf("failed to create a session: %v", err)
 	}
 
 	defer session.Close()
+	defer connection.Close()
 
 	return session.Run(cmd)
 }
 
 func (s *sshProviderClient) ProcessCMDWithOutput(cmd string) ([]byte, error) {
-	session, err := GetBasicSession(s)
+	session, connection, err := GetBasicSession(s)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session: %v", err)
 	}
 	defer session.Close()
+	defer connection.Close()
 
 	outputBytes, err := session.Output(cmd)
 
 	return outputBytes, err
 }
 
-func GetBasicSession(s *sshProviderClient) (*ssh.Session, error) {
+func GetBasicSession(s *sshProviderClient) (*ssh.Session, *ssh.Client, error) {
 	var sshConfig *ssh.ClientConfig
 	sshAuthMethods := make([]ssh.AuthMethod, 0)
 
 	if s.privateKey != "" {
 		publicKeyMethod, err := PublicKeyFile(s.privateKey, s.passPhrase)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		sshAuthMethods = append(sshAuthMethods, publicKeyMethod)
 	}
@@ -127,16 +129,16 @@ func GetBasicSession(s *sshProviderClient) (*ssh.Session, error) {
 	connection, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", s.address, s.port), sshConfig)
 	if err != nil {
 		emsg := fmt.Sprintf("failed to dial to %s:%d:", s.address, s.port)
-		return nil, fmt.Errorf(emsg, err)
+		return nil, nil, fmt.Errorf(emsg, err)
 	}
 
 	session, err := connection.NewSession()
 	if err != nil {
 		glog.Errorf("failed to create sesssion", err)
-		return nil, fmt.Errorf("failed to create session: %v", err)
+		return nil, nil,fmt.Errorf("failed to create session: %v", err)
 	}
 
-	return session, nil
+	return session, connection, nil
 }
 
 func PublicKeyFile(privateKey string, passPhrase string) (ssh.AuthMethod, error) {

@@ -1,11 +1,13 @@
-
+          exec >> /var/log/upgrade.log 2>&1
           set -e
           set -x
-          (
+
           ${FUNCTIONS}
 
           if ! yum_upgrade_master; then
             echo >&2 "FATAL: upgrade failed. Quitting."
-            exit 117
+            exit 1
           fi
-          ) 2>&1 | tee -a /var/log/upgrade.log
+          
+          echo "Done..."
+          exit 0
