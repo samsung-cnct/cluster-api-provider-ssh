@@ -232,7 +232,7 @@
             setenforce 0
             sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config]
 
-            toolsImage=$(docker create quay.io/samsung_cnct/cm-vmware-bootstrap:0.1.17)
+            toolsImage=$(docker create quay.io/samsung_cnct/cm-vmware-bootstrap:0.1.18)
             echo >&2 "Using boostrap image ${toolsImage}"
 
             if ! docker cp ${toolsImage}:/resources/rpms/ /var/log/rpms;then
@@ -351,7 +351,7 @@
           {
             kubeadm join --token "${TOKEN}" "${MASTER}" --ignore-preflight-errors=all --discovery-token-unsafe-skip-ca-verification
             for (( i = 0; i < 60; i++ )); do
-                kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node "$(echo $(hostname) | tr '[:upper:]' '[:lower:]')" machine=${MACHINE} && break
+                kubectl --kubeconfig /etc/kubernetes/bootstrap-kubelet.conf annotate --overwrite node "$(echo $(hostname) | tr '[:upper:]' '[:lower:]')" machine=${MACHINE} && break
                 sleep 5
             done
           }
