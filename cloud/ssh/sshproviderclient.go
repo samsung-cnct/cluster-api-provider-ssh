@@ -110,7 +110,7 @@ func (s *sshProviderClient) WriteFile(scriptLines string, remotePath string) err
 	defer connection.Close()
 
 	// create temporary file
-	tempFile, err := ioutil.TempFile(os.TempDir(), "bootstrap-")
+	tempFile, err := ioutil.TempFile(os.TempDir(), "*")
 	if err != nil {
 		return err
 	}
