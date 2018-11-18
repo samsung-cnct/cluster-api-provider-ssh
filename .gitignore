@@ -17,4 +17,4 @@ bin
 # pivoted kubeconfig
 kubeconfig
 minikube.kubeconfig
-
+.idea/
