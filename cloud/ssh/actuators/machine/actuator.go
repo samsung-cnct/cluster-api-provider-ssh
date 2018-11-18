@@ -224,8 +224,14 @@ func (a *Actuator) Delete(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 	glog.Infof("Running shutdown script: machine %s for cluster %s...", m.Name, c.Name)
 
 	sshClient := ssh.NewSSHProviderClient(privateKey, passPhrase, machineConfig.SSHConfig)
-	if err = sshClient.ProcessCMD(metadata.ShutdownScript); err != nil {
-		glog.Errorf("running shutdown script failed: %v", err)
+
+	if err = sshClient.WriteFile(metadata.ShutdownScript, "/var/log/shutdownscript.sh"); err != nil {
+		glog.Errorf("Error copying shutdown script: %v", err)
+		return err
+	}
+
+	if err = sshClient.ProcessCMD("chmod +x /var/log/shutdownscript.sh && bash /var/log/shutdownscript.sh"); err != nil {
+		glog.Errorf("running shutdown script error: %v", err)
 		return err
 	}
 
