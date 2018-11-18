@@ -149,7 +149,7 @@ func (a *Actuator) Create(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 		return err
 	}
 
-	if err = sshClient.ProcessCMD("bash -s /var/log/startupscript.sh"); err != nil {
+	if err = sshClient.ProcessCMD("chmod +x /var/log/startupscript.sh && bash /var/log/startupscript.sh"); err != nil {
 		glog.Errorf("running startup script error: %v", err)
 		return err
 	}

@@ -1,7 +1,8 @@
-exec >> /var/log/startup.log 2>&1
+
           set -e
           set -x
-
+          set -o pipefail
+          (
           ${FUNCTIONS}
 
           echo "--------------------------------------"
@@ -9,10 +10,6 @@ exec >> /var/log/startup.log 2>&1
           echo "--------------------------------------"
 
           # Need to have common_functions sourced first!
-          if [[ -z "${CONTROL_PLANE_VERSION}" ]];then
-            echo >&2 "Cannot continue. \$CONTROL_PLANE_VERSION is not set."
-            exit 1
-          fi
 
           if [[ -z "${TOKEN}" ]];then
             echo >&2 "Cannot continue. \$TOKEN is not set."
@@ -60,3 +57,4 @@ exec >> /var/log/startup.log 2>&1
 
           echo "Done..."
           exit 0
+          ) 2>&1 | tee -a /var/log/startup.log

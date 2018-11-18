@@ -1,7 +1,8 @@
-exec >> /var/log/startup.log 2>&1
+
           set -e
           set -x
-
+          set -o pipefail
+          (
           ${FUNCTIONS}
 
           echo "--------------------------------------"
@@ -63,3 +64,4 @@ exec >> /var/log/startup.log 2>&1
 
           echo "Done..."
           exit 0
+          ) 2>&1 | tee -a /var/log/startup.log
