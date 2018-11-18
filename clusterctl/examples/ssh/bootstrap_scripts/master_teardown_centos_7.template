@@ -1,7 +1,8 @@
-exec >> /var/log/teardown.log 2>&1
+
           set -e
           set -x
-
+          set -o pipefail
+          (
           ${FUNCTIONS}
 
           if ! drain; then
@@ -16,3 +17,4 @@ exec >> /var/log/teardown.log 2>&1
 
           echo "Done..."
           exit 0
+          ) 2>&1 | tee -a /var/log/teardown.log
