@@ -2,11 +2,13 @@ package ssh
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
 
 	"github.com/golang/glog"
 	"github.com/samsung-cnct/cluster-api-provider-ssh/cloud/ssh/providerconfig/v1alpha1"
+	"github.com/tmc/scp"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	"time"
@@ -96,6 +98,36 @@ func (s *sshProviderClient) ProcessCMDWithOutput(cmd string) ([]byte, error) {
 	outputBytes, err := session.Output(cmd)
 
 	return outputBytes, err
+}
+
+func (s *sshProviderClient) WriteFile(scriptLines string, remotePath string) error {
+	session, connection, err := GetBasicSession(s)
+	if err != nil {
+		return fmt.Errorf("failed to create a session: %v", err)
+	}
+
+	defer session.Close()
+	defer connection.Close()
+
+	// create temporary file
+	tempFile, err := ioutil.TempFile(os.TempDir(), "bootstrap-")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tempFile.Name())
+
+	// copy script lines into file
+	if _, err = tempFile.Write([]byte(scriptLines)); err != nil {
+		return err
+	}
+
+	// scp over to host
+	err = scp.CopyPath(tempFile.Name(), remotePath, session)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func GetBasicSession(s *sshProviderClient) (*ssh.Session, *ssh.Client, error) {

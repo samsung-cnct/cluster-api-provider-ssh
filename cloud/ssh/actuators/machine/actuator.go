@@ -144,13 +144,12 @@ func (a *Actuator) Create(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 
 	sshClient := ssh.NewSSHProviderClient(privateKey, passPhrase, machineConfig.SSHConfig)
 
-	toFileCmd := "echo " + metadata.StartupScript + " > /var/log/startupscript.out"
-	err = sshClient.ProcessCMD(toFileCmd)
-	if err != nil {
-		glog.Errorf("running startup script error: %v", err)
+	if err = sshClient.WriteFile(metadata.StartupScript, "/var/log/startupscript.sh"); err != nil {
+		glog.Errorf("Error copying startup script: %v", err)
+		return err
 	}
 
-	if err = sshClient.ProcessCMD(metadata.StartupScript); err != nil {
+	if err = sshClient.ProcessCMD("bash -s /var/log/startupscript.sh"); err != nil {
 		glog.Errorf("running startup script error: %v", err)
 		return err
 	}
