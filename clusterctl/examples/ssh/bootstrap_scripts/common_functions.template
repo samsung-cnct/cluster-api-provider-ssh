@@ -232,7 +232,7 @@
             setenforce 0
             sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config]
 
-            toolsImage=$(docker create quay.io/samsung_cnct/cm-vmware-bootstrap:0.1.15)
+            toolsImage=$(docker create quay.io/samsung_cnct/cm-vmware-bootstrap:0.1.16)
             echo >&2 "Using boostrap image ${toolsImage}"
 
             if ! docker cp ${toolsImage}:/resources/rpms/ /var/log/rpms;then
@@ -331,7 +331,7 @@
 
           run_kubeadm_master()
           {
-            if ! kubeadm init --kubernetes-version=${KUBELET_VERSION}; then
+            if ! kubeadm init --pod-network-cidr=10.244.0.0/16 --kubernetes-version=${KUBELET_VERSION}; then
               echo >&2 "Unable to start kubeadm."
               return 1
             fi
