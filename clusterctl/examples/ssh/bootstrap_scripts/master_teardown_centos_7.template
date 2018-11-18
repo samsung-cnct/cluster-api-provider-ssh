@@ -1,4 +1,4 @@
-          exec >> /var/log/teardown.log 2>&1
+exec >> /var/log/teardown.log 2>&1
           set -e
           set -x
 
