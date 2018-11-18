@@ -140,8 +140,6 @@ func (a *Actuator) Create(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 
 	glog.Infof("Running startup script: machine %s for cluster %s...", m.Name, c.Name)
 
-	glog.Infof("StartupScript = %s ", metadata.StartupScript)
-
 	sshClient := ssh.NewSSHProviderClient(privateKey, passPhrase, machineConfig.SSHConfig)
 
 	if err = sshClient.WriteFile(metadata.StartupScript, "/var/log/startupscript.sh"); err != nil {
