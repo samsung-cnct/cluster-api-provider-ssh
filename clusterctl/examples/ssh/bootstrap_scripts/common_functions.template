@@ -10,17 +10,10 @@
 
             dockerRpms=$(rpm -qa 'docker*')
             if [[ -z "${dockerRpms// }" ]];then
-              echo >&2 "Docker is not installed." 
-            else 
-              if ! yum remove -y ${dockerRpms};then
-                echo >&2 "Unable to remove docker"
+              if ! yum install docker -y;then 
+                echo >&2 "Unable to install docker"
                 exit 1
               fi
-            fi
-
-            if ! yum install docker -y;then 
-              echo >&2 "Unable to install docker"
-              exit 1
             fi
 
             mkdir -p /etc/docker
@@ -111,10 +104,12 @@
           gpgcheck=0
           #gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
           EOF
-            
-            if ! yum install nginx -y;then
-              echo >&2 "Unable to yum install nginx"
-              return 1
+
+            if ! which nginx > /dev/null 2>&1; then
+              if ! yum install nginx -y;then
+                echo >&2 "Unable to yum install nginx"
+                return 1
+              fi
             fi
 
             cat << 'EOF' > /etc/nginx/nginx.conf
@@ -232,7 +227,7 @@
             setenforce 0
             sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config]
 
-            toolsImage=$(docker create quay.io/samsung_cnct/cm-vmware-bootstrap:0.1.20)
+            toolsImage=$(docker create quay.io/samsung_cnct/cm-vmware-bootstrap:0.1.21)
             echo >&2 "Using boostrap image ${toolsImage}"
 
             if ! docker cp ${toolsImage}:/resources/rpms/ /var/log/rpms;then
@@ -331,6 +326,11 @@
 
           run_kubeadm_master()
           {
+            if [ -f /etc/kubernetes/admin.conf ]; then
+              echo >&2 "Kubeadm has already been initialized."
+              return 0
+            fi
+
             if ! kubeadm init --pod-network-cidr=10.244.0.0/16 --kubernetes-version=${KUBELET_VERSION}; then
               echo >&2 "Unable to start kubeadm."
               return 1
@@ -341,7 +341,7 @@
               sleep 5
             done
 
-            if ! kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f /var/log/kube-flannel.yml;then
+            if ! kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f /var/log/kube-flannel.yml --force=true;then
               echo >&2 "Unable apply flannel config."
               return 1
             fi
@@ -349,6 +349,11 @@
 
           run_kubeadm_join()
           {
+            if [ -f /etc/kubernetes/bootstrap-kubelet.conf ]; then
+              echo >&2 "Kubeadm has already been joined."
+              return 0
+            fi
+
             kubeadm join --token "${TOKEN}" "${MASTER}" --ignore-preflight-errors=all --discovery-token-unsafe-skip-ca-verification
             for (( i = 0; i < 60; i++ )); do
                 kubectl --kubeconfig /etc/kubernetes/bootstrap-kubelet.conf annotate --overwrite node "$(echo $(hostname) | tr '[:upper:]' '[:lower:]')" machine=${MACHINE} && break
