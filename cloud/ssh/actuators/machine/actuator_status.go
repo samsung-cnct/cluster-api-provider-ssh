@@ -1,9 +1,9 @@
 package machine
 
 import (
-	"fmt"
-
 	"bytes"
+	"fmt"
+	"github.com/golang/glog"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
@@ -45,6 +45,7 @@ func (a *Actuator) machineStatus(m *clusterv1.Machine) (MachineStatus, error) {
 
 	annot := m.ObjectMeta.Annotations[string(InstanceStatus)]
 	if annot == "" {
+		glog.Infof("machineStatus: instance-status was empty %s", m.ObjectMeta.Name)
 		return nil, nil
 	}
 
@@ -54,6 +55,8 @@ func (a *Actuator) machineStatus(m *clusterv1.Machine) (MachineStatus, error) {
 	if err != nil {
 		return nil, fmt.Errorf("decoding failure: %v", err)
 	}
+
+	glog.Infof("machineStatus: instance-status was decoded successfully %s", m.ObjectMeta.Name)
 
 	return MachineStatus(&status), nil
 }
@@ -76,8 +79,10 @@ func (a *Actuator) updateStatus(machine *clusterv1.Machine) error {
 
 	m, err := a.setMachineStatus(currentMachine, status)
 	if err != nil {
+		glog.Infof("updateStatus: failed to set instance-status for machine %s", m.ObjectMeta.Name)
 		return err
 	}
+	glog.Infof("setMachineStatus: successfully set instance-status for machine %s", m.ObjectMeta.Name)
 
 	_, err = a.v1Alpha1Client.Machines(machine.Namespace).Update(m)
 	return err
@@ -100,6 +105,9 @@ func (a *Actuator) setMachineStatus(machine *clusterv1.Machine, status MachineSt
 		machine.ObjectMeta.Annotations = make(map[string]string)
 	}
 	machine.ObjectMeta.Annotations[string(InstanceStatus)] = buff.String()
+
+	glog.Infof("setMachineStatus: encoded instance-status %s.", buff.String())
+
 	return machine, nil
 }
 
