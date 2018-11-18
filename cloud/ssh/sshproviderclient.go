@@ -84,8 +84,12 @@ func (s *sshProviderClient) ProcessCMD(cmd string) error {
 	defer connection.Close()
 
 	outputBytes, err := session.CombinedOutput(cmd)
+	if err != nil {
+		return err
+	}
 
 	glog.Infof("Command output = %s ", string(outputBytes[:]))
+	return nil
 }
 
 func (s *sshProviderClient) ProcessCMDWithOutput(cmd string) ([]byte, error) {
