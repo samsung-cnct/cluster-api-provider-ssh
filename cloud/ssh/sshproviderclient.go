@@ -85,7 +85,7 @@ func (s *sshProviderClient) ProcessCMD(cmd string) error {
 
 	outputBytes, err := session.CombinedOutput(cmd)
 	glog.Infof("Command output = %s ", string(outputBytes[:]))
-	
+
 	if err != nil {
 		return err
 	}
