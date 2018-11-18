@@ -118,9 +118,5 @@ func (a *Actuator) updateAnnotations(cluster *clusterv1.Cluster, machine *cluste
 	annotations[string(Name)] = name
 	machine.ObjectMeta.Annotations = annotations
 
-	_, err := a.v1Alpha1Client.Machines(machine.Namespace).Update(machine)
-	if err != nil {
-		return err
-	}
 	return a.updateStatus(machine)
 }
