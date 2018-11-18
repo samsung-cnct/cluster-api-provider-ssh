@@ -1,8 +1,6 @@
-
           set -e
           set -x
-          set -o pipefail
-          (
+
           ${FUNCTIONS}
 
           if ! yum_upgrade_master; then
@@ -12,4 +10,3 @@
           
           echo "Done..."
           exit 0
-          ) 2>&1 | tee -a /var/log/upgrade.log

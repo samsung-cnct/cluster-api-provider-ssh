@@ -80,11 +80,12 @@ func (s *sshProviderClient) ProcessCMD(cmd string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create a session: %v", err)
 	}
-
 	defer session.Close()
 	defer connection.Close()
 
-	return session.Run(cmd)
+	outputBytes, err := session.CombinedOutput(cmd)
+
+	glog.Infof("Command output = %s ", string(outputBytes[:]))
 }
 
 func (s *sshProviderClient) ProcessCMDWithOutput(cmd string) ([]byte, error) {
