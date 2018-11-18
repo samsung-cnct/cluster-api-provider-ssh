@@ -77,6 +77,7 @@ func (a *Actuator) updateStatus(machine *clusterv1.Machine) error {
 		return fmt.Errorf("Machine has already been deleted. Cannot update current instance status for machine %v", machine.ObjectMeta.Name)
 	}
 
+	currentMachine.ObjectMeta.Annotations = machine.ObjectMeta.Annotations
 	m, err := a.setMachineStatus(currentMachine, status)
 	if err != nil {
 		glog.Infof("updateStatus: failed to set instance-status for machine %s", m.ObjectMeta.Name)
@@ -84,7 +85,7 @@ func (a *Actuator) updateStatus(machine *clusterv1.Machine) error {
 	}
 	glog.Infof("setMachineStatus: successfully set instance-status for machine %s", m.ObjectMeta.Name)
 
-	_, err = a.v1Alpha1Client.Machines(machine.Namespace).Update(m)
+	_, err = a.v1Alpha1Client.Machines(m.Namespace).Update(m)
 	return err
 }
 
