@@ -45,11 +45,6 @@ generate_yaml()
   local MASTER_UPGRADE_SCRIPT MASTER_TEARDOWN_SCRIPT NODE_UPGRADE_SCRIPT NODE_TEARDOWN_SCRIPT
   local MASTER_BOOTSTRAP_SCRIPT NODE_BOOTSTRAP_SCRIPT
 
-  if ! mkdir -p "${OUTPUT_DIR}" 2>/dev/null; then
-    echo >&2 "Unable to mkdir $OUTPUT_DIR"
-    return 12
-  fi
-
   bootstrap_dir=bootstrap_scripts/"${OS_TYPE}"/"${WORK_ENV}"
 
   # --- MACHINES ---
@@ -64,30 +59,32 @@ generate_yaml()
   providercomponent_template_file="$BASEDIR/templates/provider-components.yaml.template"
   providercomponent_generated_file=${OUTPUT_DIR}/provider-components.yaml
 
-
+  if ! mkdir -p "${OUTPUT_DIR}" 2>/dev/null; then
+    echo >&2 "Unable to mkdir $OUTPUT_DIR"
+    return 12
+  fi
 
   if [[ $OVERWRITE -ne 1 ]] && [[ -f $providercomponent_generated_file ]]; then
     echo >&1 "File $providercomponent_generated_file already exists. Delete it manually before running this script."
     return 25
   fi
 
-  # This sorely needs optimization. The file naming convention and usage here is not scalable.
   if [[ "${OS_TYPE}" == "ubuntu" ]]; then
-    MASTER_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/master_bootstrap_16.04.template)"
-    MASTER_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/master_teardown_16.04.template)"
-    MASTER_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/master_upgrade_16.04.template)"
+    MASTER_BOOTSTRAP_SCRIPT="$(< "${bootstrap_dir}"/master_bootstrap_16.04.template)"
+    MASTER_TEARDOWN_SCRIPT="$(< "${bootstrap_dir}"/master_teardown_16.04.template)"
+    MASTER_UPGRADE_SCRIPT="$(< "${bootstrap_dir}"/master_upgrade_16.04.template)"
 
-    NODE_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/node_bootstrap_16.04.template)"
-    NODE_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/node_teardown_16.04.template)"
-    NODE_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/node_upgrade_16.04.template)"
+    NODE_BOOTSTRAP_SCRIPT="$(< "${bootstrap_dir}"/node_bootstrap_16.04.template)"
+    NODE_TEARDOWN_SCRIPT="$(< "${bootstrap_dir}"/node_teardown_16.04.template)"
+    NODE_UPGRADE_SCRIPT="$(< "${bootstrap_dir}"/node_upgrade_16.04.template)"
   else
-    MASTER_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/master_bootstrap_7.x.template)"
-    MASTER_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/master_teardown_7.x.template)"
-    MASTER_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/master_upgrade_7.x.template)"
+    MASTER_BOOTSTRAP_SCRIPT="$(< "${bootstrap_dir}"/master_bootstrap_7.x.template)"
+    MASTER_TEARDOWN_SCRIPT="$(< "${bootstrap_dir}"/master_teardown_7.x.template)"
+    MASTER_UPGRADE_SCRIPT="$(< "${bootstrap_dir}"/master_upgrade_7.x.template)"
 
-    NODE_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/node_bootstrap_7.x.template)"
-    NODE_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/node_teardown_7.x.template)"
-    NODE_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/node_upgrade_7.x.template)"
+    NODE_BOOTSTRAP_SCRIPT="$(< "${bootstrap_dir}"/node_bootstrap_7.x.template)"
+    NODE_TEARDOWN_SCRIPT="$(< "${bootstrap_dir}"/node_teardown_7.x.template)"
+    NODE_UPGRADE_SCRIPT="$(< "${bootstrap_dir}"/node_upgrade_7.x.template)"
   fi
 
   # prepend common functions to template script
@@ -125,7 +122,7 @@ main()
   BASEDIR="$(runpath)"
   OUTPUT_DIR="$BASEDIR/out"
   KUBELET_VERSION=${KUBELET_VERSION:-1.10.6}
-  SDS_ENV="${SDS_ENV:-1}"
+  SDS_ENV="${SDS_ENV:-true}"
   OVERWRITE=0
 
   while test $# -gt 0; do
@@ -162,7 +159,6 @@ main()
   done
 
   # TODO Fill out the generation pieces as we need them.
-
   if [[ "${OS_TYPE}" =~ (centos|ubuntu) ]]; then
     echo "OS Type set for valid type: $OS_TYPE."
   else
@@ -170,12 +166,17 @@ main()
     exit 15
   fi
 
-  if [[ "${SDS_ENV}" == 1 ]]; then
-    echo "Setting environment for SDS!!!"
-    WORK_ENV="sds"
+  if [[ "${SDS_ENV}" =~ true|false ]]; then
+    if [[ "${SDS_ENV}" == true ]]; then
+      echo "Setting environment for SDS!!!"
+      WORK_ENV="sds"
+    else
+      echo "Setting environment for AWS!!!"
+      WORK_ENV="aws"
+    fi
   else
-    echo "Setting environment for AWS!!!"
-    WORK_ENV="aws"
+    echo >&2 "Invalid parameter for \$SDS_ENV: '$SDS_ENV'. Must be either 'true' or 'false'"
+    exit 15
   fi
 
   if ! generate_yaml; then
