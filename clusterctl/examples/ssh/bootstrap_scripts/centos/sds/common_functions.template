@@ -1,5 +1,5 @@
 
-          cleanup_repos() 
+          cleanup_repos()
           {
             rm -rf /etc/yum.repos.d
             mkdir -p /etc/yum.repos.d
@@ -10,7 +10,7 @@
 
             dockerRpms=$(rpm -qa 'docker*')
             if [[ -z "${dockerRpms// }" ]];then
-              if ! yum install docker -y;then 
+              if ! yum install docker -y;then
                 echo >&2 "Unable to install docker"
                 exit 1
               fi
@@ -40,14 +40,14 @@
               echo >&2 "Unable to 'systemctl daemon-reload after configuring docker'. Quitting."
               return 1
             fi
-            
+
             if ! systemctl restart docker;then
               echo >&2 "Unable to 'systemctl restart docker'. Quitting."
               return 1
             fi
           }
 
-          install_nginx_w_yum() 
+          install_nginx_w_yum()
           {
             cat << 'EOF' > /etc/yum.repos.d/centos7.repo
           [epel]
@@ -209,7 +209,7 @@
           }
           EOF
 
-            if ! systemctl restart nginx; then 
+            if ! systemctl restart nginx; then
               echo >&2 "Unable to restart nginx"
               return 1
             fi
@@ -265,7 +265,7 @@
           gpgcheck=0
           repo_gpgcheck=0
           EOF
- 
+
             if ! yum --disablerepo='*' --enablerepo=kubernetes-old -y install kubelet;then
               echo >&2 "Unable install kubelet"
               return 1

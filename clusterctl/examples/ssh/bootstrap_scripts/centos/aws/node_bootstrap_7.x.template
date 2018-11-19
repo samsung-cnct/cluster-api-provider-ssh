@@ -1,0 +1,41 @@
+
+          set -e
+          set -x
+          (
+          ARCH=amd64
+
+          ${FUNCTIONS}
+
+          set -x
+            CLUSTER_DNS_SERVER="$(prips "${SERVICE_CIDR}")"
+            export CLUSTER_DNS_SERVER
+          set +x
+
+          if ! install_docker; then
+            echo >&2 "Error installing docker components..."
+            exit 80
+          fi
+
+          if ! install_k8s_w_yum; then
+            echo >&2 "Error installing Kubernetes components..."
+            exit 81
+          fi
+
+          if ! configure_kubelet_systemd; then
+            echo >&2 "Error configuring Kubernetes components..."
+            exit 82
+          fi
+
+          if ! configure_kubeadm; then
+            echo >&2 "Error configuring kubeadm componenets..."
+            exit 83
+          fi
+
+          if run_kubeadm_join; then
+            echo "Done..."
+          else
+            echo >&2 "Error occurred during Kubeadm join for client node."
+            exit 84
+          fi
+
+          ) 2>&1 | sudo tee /var/log/startup.log
