@@ -50,7 +50,7 @@ generate_yaml()
     return 12
   fi
 
-  bootstrap_dir=bootstrap_scripts
+  bootstrap_dir=bootstrap_scripts/"${OS_TYPE}"/"${WORK_ENV}"
 
   # --- MACHINES ---
   machine_template_file="$BASEDIR/templates/machines.yaml.template"
@@ -64,6 +64,8 @@ generate_yaml()
   providercomponent_template_file="$BASEDIR/templates/provider-components.yaml.template"
   providercomponent_generated_file=${OUTPUT_DIR}/provider-components.yaml
 
+
+
   if [[ $OVERWRITE -ne 1 ]] && [[ -f $providercomponent_generated_file ]]; then
     echo >&1 "File $providercomponent_generated_file already exists. Delete it manually before running this script."
     return 25
@@ -71,21 +73,21 @@ generate_yaml()
 
   # This sorely needs optimization. The file naming convention and usage here is not scalable.
   if [[ "${OS_TYPE}" == "ubuntu" ]]; then
-    MASTER_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/master_bootstrap_ubuntu_16.04.template)"
-    MASTER_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/master_teardown_ubuntu_16.04.template)"
-    MASTER_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/master_upgrade_ubuntu_16.04.template)"
+    MASTER_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/master_bootstrap_16.04.template)"
+    MASTER_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/master_teardown_16.04.template)"
+    MASTER_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/master_upgrade_16.04.template)"
 
-    NODE_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/node_bootstrap_ubuntu_16.04.template)"
-    NODE_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/node_teardown_ubuntu_16.04.template)"
-    NODE_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/node_upgrade_ubuntu_16.04.template)"
+    NODE_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/node_bootstrap_16.04.template)"
+    NODE_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/node_teardown_16.04.template)"
+    NODE_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/node_upgrade_16.04.template)"
   else
-    MASTER_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/master_bootstrap_centos_7.template)"
-    MASTER_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/master_teardown_centos_7.template)"
-    MASTER_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/master_upgrade_centos_7.template)"
+    MASTER_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/master_bootstrap_7.x.template)"
+    MASTER_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/master_teardown_7.x.template)"
+    MASTER_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/master_upgrade_7.x.template)"
 
-    NODE_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/node_bootstrap_centos_7.template)"
-    NODE_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/node_teardown_centos_7.template)"
-    NODE_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/node_upgrade_centos_7.template)"
+    NODE_BOOTSTRAP_SCRIPT="$(< ${bootstrap_dir}/node_bootstrap_7.x.template)"
+    NODE_TEARDOWN_SCRIPT="$(< ${bootstrap_dir}/node_teardown_7.x.template)"
+    NODE_UPGRADE_SCRIPT="$(< ${bootstrap_dir}/node_upgrade_7.x.template)"
   fi
 
   # prepend common functions to template script
@@ -123,6 +125,7 @@ main()
   BASEDIR="$(runpath)"
   OUTPUT_DIR="$BASEDIR/out"
   KUBELET_VERSION=${KUBELET_VERSION:-1.10.6}
+  SDS_ENV="${SDS_ENV:-1}"
   OVERWRITE=0
 
   while test $# -gt 0; do
@@ -135,6 +138,7 @@ main()
 
         OS_TYPE               : One of "ubuntu" or "centos" -- defaults to "centos"
         KUBELET_VERSION       : e.g. 1.10.6 -- do not prepend a 'v' in front of it -- currently defaults to 1.10.6
+        SDS_ENV               : Create provider-components.yaml for SDS or not? e.g. 0 (non-SDS) or 1 (SDS) -- defaults to 1
 
   $SCRIPT [options]
 
@@ -164,6 +168,14 @@ main()
   else
     echo >&2 "Invalid parameter for \$OS_TYPE: '$OS_TYPE'. Must be either 'ubuntu' or 'centos'"
     exit 15
+  fi
+
+  if [[ "${SDS_ENV}" == 1 ]]; then
+    echo "Setting environment for SDS!!!"
+    WORK_ENV="sds"
+  else
+    echo "Setting environment for AWS!!!"
+    WORK_ENV="aws"
   fi
 
   if ! generate_yaml; then
