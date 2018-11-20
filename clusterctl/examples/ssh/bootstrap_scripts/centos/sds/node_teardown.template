@@ -1,0 +1,13 @@
+
+          set -e
+          set -x
+          ${FUNCTIONS}
+
+          if ! teardown; then
+            echo >&2 "Teardown unsuccessful."
+            exit 1
+          fi
+
+          echo "Done"
+          exit 0
+

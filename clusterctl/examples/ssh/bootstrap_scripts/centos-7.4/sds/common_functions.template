@@ -1,0 +1,400 @@
+
+          cleanup_repos()
+          {
+            rm -rf /etc/yum.repos.d
+            mkdir -p /etc/yum.repos.d
+          }
+
+          install_docker()
+          {
+
+            dockerRpms=$(rpm -qa 'docker*')
+            if [[ -z "${dockerRpms// }" ]];then
+              if ! yum install docker -y;then
+                echo >&2 "Unable to install docker"
+                exit 1
+              fi
+            fi
+
+            mkdir -p /etc/docker
+            cat << EOF > /etc/docker/daemon.json
+          {
+            "insecure-registries": [
+                "docker",
+                "docker.io",
+                "registry-1.docker.io",
+                "gcr.io",
+                "k8s.gcr.io",
+                "quay.io",
+                "182.195.81.113:9401",
+                "182.195.81.113:9402",
+                "182.195.81.113:9403",
+                "182.195.81.113:9404"
+            ]
+          }
+          EOF
+
+            mkdir -p /etc/systemd/system/docker.service.d
+
+            if ! systemctl daemon-reload;then
+              echo >&2 "Unable to 'systemctl daemon-reload after configuring docker'. Quitting."
+              return 1
+            fi
+
+            if ! systemctl restart docker;then
+              echo >&2 "Unable to 'systemctl restart docker'. Quitting."
+              return 1
+            fi
+          }
+
+          install_nginx_w_yum()
+          {
+            cat << 'EOF' > /etc/yum.repos.d/centos7.repo
+          [epel]
+          name=Extra Packages for Enterprise Linux 7 - $basearch
+          baseurl=http://182.195.81.113:9468/repository/cmp-yum-epel/$releasever/$basearch
+          failovermethod=priority
+          enabled=1
+          gpgcheck=0
+          #gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7
+
+          [epel-debuginfo]
+          name=Extra Packages for Enterprise Linux 7 - $basearch - Debug
+          baseurl=http://182.195.81.113:9468/repository/cmp-yum-epel/$releasever/$basearch/debug
+          failovermethod=priority
+          enabled=0
+          gpgcheck=0
+          #gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7
+
+          [epel-source]
+          name=Extra Packages for Enterprise Linux 7 - $basearch - Source
+          baseurl=http://182.195.81.113:9468/repository/cmp-yum-epel/$releasever/SRPMS
+          failovermethod=priority
+          enabled=0
+          gpgcheck=0
+          #gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7
+
+          [base]
+          name=Nexus Repository
+          baseurl=http://182.195.81.113:9468/repository/cmp-yum-centos/$releasever/os/$basearch/
+          enabled=1
+          gpgcheck=0
+          #gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+          priority=1
+
+          #released updates
+          [updates]
+          name=CentOS-$releasever - Updates
+          baseurl=http://182.195.81.113:9468/repository/cmp-yum-centos/$releasever/updates/$basearch/
+          gpgcheck=0
+          #gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+
+          #additional packages that may be useful
+          [extras]
+          name=CentOS-$releasever - Extras
+          baseurl=http://182.195.81.113:9468/repository/cmp-yum-centos/$releasever/extras/$basearch/
+          gpgcheck=0
+          #gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+
+          #additional packages that extend functionality of existing packages
+          [centosplus]
+          name=CentOS-$releasever - Plus
+          baseurl=http://182.195.81.113:9468/repository/cmp-yum-centos/$releasever/centosplus/$basearch/
+          enabled=0
+          gpgcheck=0
+          #gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+          EOF
+
+            if ! which nginx > /dev/null 2>&1; then
+              if ! yum install nginx -y;then
+                echo >&2 "Unable to yum install nginx"
+                return 1
+              fi
+            fi
+
+            cat << 'EOF' > /etc/nginx/nginx.conf
+          user  nginx;
+          worker_processes  auto;
+
+          error_log  /var/log/nginx/error.log warn;
+          pid        /var/run/nginx.pid;
+
+          events {
+            worker_connections  1024;
+          }
+
+          http {
+            server {
+              server_name registry-1.docker.io;
+              listen 80;
+              location / {
+                proxy_pass http://182.195.81.113:9401;
+                proxy_redirect off;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                client_max_body_size 10G;
+                client_body_buffer_size 128k;
+                proxy_connect_timeout 90;
+                proxy_send_timeout 90;
+                proxy_read_timeout 90;
+                proxy_buffer_size 4k;
+                proxy_buffers 4 32k;
+                proxy_busy_buffers_size 64k;
+
+
+                proxy_temp_file_write_size 64k;
+              }
+            }
+            server {
+              server_name gcr.io;
+              listen 80;
+              location / {
+                proxy_pass http://182.195.81.113:9402;
+                proxy_redirect off;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                client_max_body_size 10G;
+                client_body_buffer_size 128k;
+                proxy_connect_timeout 90;
+                proxy_send_timeout 90;
+                proxy_read_timeout 90;
+                proxy_buffer_size 4k;
+                proxy_buffers 4 32k;
+                proxy_busy_buffers_size 64k;
+                proxy_temp_file_write_size 64k;
+              }
+            }
+            server {
+              server_name k8s.gcr.io;
+              listen 80;
+              location / {
+                proxy_pass http://182.195.81.113:9403;
+                proxy_redirect off;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                client_max_body_size 10G;
+                client_body_buffer_size 128k;
+                proxy_connect_timeout 90;
+                proxy_send_timeout 90;
+                proxy_read_timeout 90;
+                proxy_buffer_size 4k;
+                proxy_buffers 4 32k;
+                proxy_busy_buffers_size 64k;
+                proxy_temp_file_write_size 64k;
+              }
+            }
+            server {
+              server_name quay.io;
+              listen 80;
+              location / {
+                proxy_pass http://182.195.81.113:9404;
+                proxy_redirect off;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                client_max_body_size 10G;
+                client_body_buffer_size 128k;
+                proxy_connect_timeout 90;
+                proxy_send_timeout 90;
+                proxy_read_timeout 90;
+                proxy_buffer_size 4k;
+                proxy_buffers 4 32k;
+                proxy_busy_buffers_size 64k;
+                proxy_temp_file_write_size 64k;
+              }
+            }
+          }
+          EOF
+
+            if ! systemctl restart nginx; then
+              echo >&2 "Unable to restart nginx"
+              return 1
+            fi
+
+            echo -e '\n127.0.0.1   registry-1.docker.io gcr.io k8s.gcr.io quay.io\n' >> /etc/hosts
+          }
+
+          install_k8s_w_yum()
+          {
+            if [[ -z $KUBELET_VERSION ]]; then
+              echo >&2 "FATAL: \$KUBELET_VERSION is nil! Cannot continue."
+              return 1
+            fi
+
+            setenforce 0
+            sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config]
+
+            toolsImage=$(docker create quay.io/samsung_cnct/cm-vmware-bootstrap:0.1.21)
+            echo >&2 "Using boostrap image ${toolsImage}"
+
+            if ! docker cp ${toolsImage}:/resources/rpms/ /var/log/rpms;then
+              echo >&2 "Unable to copy kubernetes rpms from image ${toolsImage}"
+              return 1
+            fi
+            if ! docker cp ${toolsImage}:/resources/yaml/kube-flannel.yml /var/log/kube-flannel.yml;then
+              echo >&2 "Unable to copy flannel config from image ${toolsImage}"
+              return 1
+            fi
+
+            if ! createrepo /var/log/rpms/1.10.6;then
+              echo >&2 "Unable to create yum repo at /var/log/rpms/1.10.6"
+              return 1
+            fi
+            if ! createrepo /var/log/rpms/1.11.2;then
+              echo >&2 "Unable to create yum repo at /var/log/rpms/1.11.2"
+              return 1
+            fi
+
+            cat << EOF > /etc/yum.repos.d/kubernetes-old.repo
+          [kubernetes-old]
+          name=Kubernetes-old
+          baseurl=file:///var/log/rpms/1.10.6
+          enabled=1
+          gpgcheck=0
+          repo_gpgcheck=0
+          EOF
+
+            cat << EOF > /etc/yum.repos.d/kubernetes-new.repo
+          [kubernetes-new]
+          name=Kubernetes-new
+          baseurl=file:///var/log/rpms/1.11.2
+          enabled=1
+          gpgcheck=0
+          repo_gpgcheck=0
+          EOF
+
+            if ! yum --disablerepo='*' --enablerepo=kubernetes-old -y install kubelet;then
+              echo >&2 "Unable install kubelet"
+              return 1
+            fi
+            if ! yum --disablerepo='*' --enablerepo=kubernetes-old -y install kubectl;then
+              echo >&2 "Unable to install kubectl"
+              return 1
+            fi
+            if ! yum --disablerepo='*' --enablerepo=kubernetes-old -y install kubeadm;then
+              echo >&2 "Unable to install kubeadm"
+              return 1
+            fi
+
+            if ! swapoff -a;then
+              echo >&2 "Unable to turn off swapping"
+              return 1
+            fi
+
+            if ! systemctl enable kubelet && systemctl start kubelet;then
+              echo >&2 "Unable to start kubelet"
+              return 1
+            fi
+
+            cat <<EOF >  /etc/sysctl.d/k8s.conf
+          net.bridge.bridge-nf-call-ip6tables = 1
+          net.bridge.bridge-nf-call-iptables = 1
+          EOF
+
+            if ! sysctl --system;then
+              echo >&2 "Unable to set net.bridge.bridge-nf-call-iptables sysctl settings"
+              return 1
+            fi
+          }
+
+          yum_upgrade_master()
+          {
+
+            yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubelet
+            yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubectl
+            yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubeadm
+
+            systemctl daemon-reload
+            systemctl restart kubelet
+          }
+
+          yum_upgrade_node()
+          {
+            # TODO: kubernetes-new is hardcoded with 1.11.2
+            yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubelet
+            yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubectl
+            yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubeadm
+
+            kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
+
+            systemctl daemon-reload
+            systemctl restart kubelet
+          }
+
+          run_kubeadm_master()
+          {
+            if [ -f /etc/kubernetes/admin.conf ]; then
+              echo >&2 "Kubeadm has already been initialized."
+              return 0
+            fi
+
+            if ! kubeadm init --pod-network-cidr=10.244.0.0/16 --kubernetes-version=${KUBELET_VERSION}; then
+              echo >&2 "Unable to start kubeadm."
+              return 1
+            fi
+
+            for (( i = 0; i < 60; i++ )); do
+              kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node "$(echo $(hostname) | tr '[:upper:]' '[:lower:]')" machine="${MACHINE}" && break
+              sleep 5
+            done
+
+            if ! kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f /var/log/kube-flannel.yml --force=true;then
+              echo >&2 "Unable apply flannel config."
+              return 1
+            fi
+          }
+
+          run_kubeadm_join()
+          {
+            if [ -f /etc/kubernetes/bootstrap-kubelet.conf ]; then
+              echo >&2 "Kubeadm has already been joined."
+              return 0
+            fi
+
+            kubeadm join --token "${TOKEN}" "${MASTER}" --ignore-preflight-errors=all --discovery-token-unsafe-skip-ca-verification
+            for (( i = 0; i < 60; i++ )); do
+                kubectl --kubeconfig /etc/kubernetes/bootstrap-kubelet.conf annotate --overwrite node "$(echo $(hostname) | tr '[:upper:]' '[:lower:]')" machine=${MACHINE} && break
+                sleep 5
+            done
+          }
+
+          drain()
+          {
+            kubectl --kubeconfig=/etc/kubernetes/admin.conf drain $(hostname) --delete-local-data --ignore-daemonsets && \
+            kubectl --kubeconfig=/etc/kubernetes/admin.conf delete node $(hostname)
+          }
+
+          teardown()
+          {
+            if ! kubeadm reset --force; then
+              echo >&2 "kubeadm version doesn't have 'reset --force' yet probably...trying without."
+              if ! kubeadm reset; then
+                echo >&2 "Failed to kubeadm reset."
+                return 1
+              fi
+            fi
+
+            all_dockers=($(rpm -qa 'docker*'))
+            yum remove -y kubeadm kubectl kubelet kubernetes-cni "${all_dockers[@]}"
+
+            RM_RF_DIRS="/etc/cni \
+                        /etc/docker \
+                        /etc/sysconfig/docker \
+                        /etc/ethertypes \
+                        /etc/kubernetes \
+                        /etc/systemd/system/kubelet.service.d \
+                        /var/lib/cni \
+                        /var/lib/docker \
+                        /var/lib/dockershim \
+                        /var/lib/etcd \
+                        /var/lib/etcd2 \
+                        /var/lib/kubelet"
+
+            for d in ${RM_RF_DIRS}; do
+              rm -rf $d/**
+              rm -rf $d
+            done
+          }

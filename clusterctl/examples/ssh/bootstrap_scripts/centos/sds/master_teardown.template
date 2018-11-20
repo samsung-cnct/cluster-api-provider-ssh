@@ -1,0 +1,19 @@
+
+          set -e
+          set -x
+
+          ${FUNCTIONS}
+
+          if ! drain; then
+            echo >&2 "Unable to drain and/or delete on $(hostname)..."
+            exit 1
+          fi
+
+          if ! teardown; then
+            echo >&2 "Teardown unsuccessful."
+            exit 1
+          fi
+
+          echo "Done..."
+          exit 0
+
