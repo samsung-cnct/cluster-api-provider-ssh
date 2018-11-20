@@ -83,7 +83,8 @@ func (s *sshProviderClient) ProcessCMD(cmd string) error {
 	defer session.Close()
 	defer connection.Close()
 
-	outputBytes, err := session.CombinedOutput(cmd)
+	//outputBytes, err := session.CombinedOutput(cmd)
+	outputBytes, _ := session.CombinedOutput(cmd)
 	glog.Infof("Command output = %s ", string(outputBytes[:]))
 
 	// Commented out to test theory that stdin, stdout, or stderr copy errors
@@ -104,7 +105,8 @@ func (s *sshProviderClient) ProcessCMDWithOutput(cmd string) ([]byte, error) {
 	defer session.Close()
 	defer connection.Close()
 
-	outputBytes, err := session.Output(cmd)
+	//outputBytes, err := session.Output(cmd)
+	outputBytes, _ := session.Output(cmd)
 
 	// Commented out to test theory that stdin, stdout, or stderr copy errors
 	// are preventing the annotation from being set. This then results in
