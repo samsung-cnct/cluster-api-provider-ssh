@@ -156,7 +156,7 @@ main()
     echo "OS Type set for valid type: $OS_TYPE."
   else
     echo >&2 "Invalid parameter for \$OS_TYPE: '$OS_TYPE'. Must be either 'ubuntu' or 'centos'"
-    exit 15
+    return 15
   fi
 
   if [[ "${SDS_ENV}" =~ true|false ]]; then
@@ -169,12 +169,14 @@ main()
     fi
   else
     echo >&2 "Invalid parameter for \$SDS_ENV: '$SDS_ENV'. Must be either 'true' or 'false'"
-    exit 16
+    return 16
   fi
 
   if ! generate_yaml; then
-    exit $?
+    return 17
   fi
 }
 
-main "$@"
+if ! main "$@"; then
+  exit $?
+fi
