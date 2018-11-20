@@ -45,7 +45,12 @@ generate_yaml()
   local MASTER_UPGRADE_SCRIPT MASTER_TEARDOWN_SCRIPT NODE_UPGRADE_SCRIPT NODE_TEARDOWN_SCRIPT
   local MASTER_BOOTSTRAP_SCRIPT NODE_BOOTSTRAP_SCRIPT
 
-  bootstrap_dir=bootstrap_scripts/"${OS_TYPE}"/"${WORK_ENV}"
+  if ! mkdir -p "${OUTPUT_DIR}" 2>/dev/null; then
+    echo >&2 "Unable to mkdir $OUTPUT_DIR"
+    return 12
+  fi
+
+  bootstrap_dir="$BASEDIR/bootstrap_scripts/${OS_TYPE}-${OS_VER}/${WORK_ENV}"
 
   # --- MACHINES ---
   machine_template_file="$BASEDIR/templates/machines.yaml.template"
@@ -59,33 +64,20 @@ generate_yaml()
   providercomponent_template_file="$BASEDIR/templates/provider-components.yaml.template"
   providercomponent_generated_file=${OUTPUT_DIR}/provider-components.yaml
 
-  if ! mkdir -p "${OUTPUT_DIR}" 2>/dev/null; then
-    echo >&2 "Unable to mkdir $OUTPUT_DIR"
-    return 12
-  fi
-
   if [[ $OVERWRITE -ne 1 ]] && [[ -f $providercomponent_generated_file ]]; then
     echo >&1 "File $providercomponent_generated_file already exists. Delete it manually before running this script."
     return 25
   fi
 
-  if [[ "${OS_TYPE}" == "ubuntu" ]]; then
-    MASTER_BOOTSTRAP_SCRIPT="$(< "${bootstrap_dir}"/master_bootstrap_16.04.template)"
-    MASTER_TEARDOWN_SCRIPT="$(< "${bootstrap_dir}"/master_teardown_16.04.template)"
-    MASTER_UPGRADE_SCRIPT="$(< "${bootstrap_dir}"/master_upgrade_16.04.template)"
+  # $bootstrap_dir dictates the template. If the template doesn't exist
+  # these will error.
+  MASTER_BOOTSTRAP_SCRIPT="$(< "${bootstrap_dir}"/master_bootstrap.template)"
+  MASTER_TEARDOWN_SCRIPT="$(< "${bootstrap_dir}"/master_teardown.template)"
+  MASTER_UPGRADE_SCRIPT="$(< "${bootstrap_dir}"/master_upgrade.template)"
 
-    NODE_BOOTSTRAP_SCRIPT="$(< "${bootstrap_dir}"/node_bootstrap_16.04.template)"
-    NODE_TEARDOWN_SCRIPT="$(< "${bootstrap_dir}"/node_teardown_16.04.template)"
-    NODE_UPGRADE_SCRIPT="$(< "${bootstrap_dir}"/node_upgrade_16.04.template)"
-  else
-    MASTER_BOOTSTRAP_SCRIPT="$(< "${bootstrap_dir}"/master_bootstrap_7.x.template)"
-    MASTER_TEARDOWN_SCRIPT="$(< "${bootstrap_dir}"/master_teardown_7.x.template)"
-    MASTER_UPGRADE_SCRIPT="$(< "${bootstrap_dir}"/master_upgrade_7.x.template)"
-
-    NODE_BOOTSTRAP_SCRIPT="$(< "${bootstrap_dir}"/node_bootstrap_7.x.template)"
-    NODE_TEARDOWN_SCRIPT="$(< "${bootstrap_dir}"/node_teardown_7.x.template)"
-    NODE_UPGRADE_SCRIPT="$(< "${bootstrap_dir}"/node_upgrade_7.x.template)"
-  fi
+  NODE_BOOTSTRAP_SCRIPT="$(< "${bootstrap_dir}"/node_bootstrap.template)"
+  NODE_TEARDOWN_SCRIPT="$(< "${bootstrap_dir}"/node_teardown.template)"
+  NODE_UPGRADE_SCRIPT="$(< "${bootstrap_dir}"/node_upgrade.template)"
 
   # prepend common functions to template script
   FUNCTIONS=$(< "$bootstrap_dir/common_functions.template")
@@ -119,6 +111,7 @@ main()
 {
   SCRIPT=$(basename "$0")
   OS_TYPE=${OS_TYPE:-centos}
+  OS_VER=${OS_VER:-7.4}
   BASEDIR="$(runpath)"
   OUTPUT_DIR="$BASEDIR/out"
   KUBELET_VERSION=${KUBELET_VERSION:-1.10.6}
@@ -176,7 +169,7 @@ main()
     fi
   else
     echo >&2 "Invalid parameter for \$SDS_ENV: '$SDS_ENV'. Must be either 'true' or 'false'"
-    exit 15
+    exit 16
   fi
 
   if ! generate_yaml; then

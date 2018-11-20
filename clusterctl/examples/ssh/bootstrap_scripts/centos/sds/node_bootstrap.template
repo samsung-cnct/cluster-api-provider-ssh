@@ -1,0 +1,58 @@
+
+          set -e
+          set -x
+
+          ${FUNCTIONS}
+
+          echo "--------------------------------------"
+          echo "$(date)"
+          echo "--------------------------------------"
+
+          # Need to have common_functions sourced first!
+
+          if [[ -z "${TOKEN}" ]];then
+            echo >&2 "Cannot continue. \$TOKEN is not set."
+            exit 1
+          fi
+
+          if [[ -z "${POD_CIDR}" ]];then
+            echo >&2 "Cannot continue. \$POD_CIDR is not set."
+            exit 1
+          fi
+
+          if [[ -z "${CLUSTER_DNS_DOMAIN}" ]];then
+            echo >&2 "Cannot continue. \$CLUSTER_DNS_DOMAIN is not set."
+            exit 1
+          fi
+
+          if [[ -z "${SERVICE_CIDR}" ]];then
+            echo >&2 "Cannot continue. \$SERVICE_CIDR is not set."
+            exit 1
+          fi
+
+          export CLUSTER_DNS_SERVER="10.96.0.10"
+
+          cleanup_repos
+
+          if ! install_nginx_w_yum; then
+            echo >&2 "Error installing nginx ..."
+            exit 1
+          fi
+
+          if ! install_docker; then
+            echo >&2 "Error installing docker components..."
+            exit 1
+          fi
+
+          if ! install_k8s_w_yum; then
+            echo >&2 "Error installing Kubernetes components..."
+            exit 1
+          fi
+
+          if ! run_kubeadm_join; then
+            echo >&2 "Error occurred during Kubeadm join for client node."
+            exit 1
+          fi
+
+          echo "Done..."
+          exit 0
