@@ -316,13 +316,13 @@ func (a *Actuator) updateMasterInPlace(c *clusterv1.Cluster, oldMachine *cluster
 			return err
 		}
 		glog.Infof("running upgrade packages script for master %s", newMachine.Name)
-		if err = sshClient.WriteFile(metadata.UpgradeScript, "/var/log/upgradescript.sh"); err != nil {
+		if err = sshClient.WriteFile(metadata.UpgradeScript, "/var/tmp/upgradescript.sh"); err != nil {
 			glog.Errorf("could not upgrade kubelet version: %s-00 on controlPlane %s: %s", newMachine.Spec.Versions.Kubelet, newMachine.Name, err)
 			glog.Errorf("Error copying upgrade script: %v", err)
 			return err
 		}
 
-		if err = sshClient.ProcessCMD("chmod +x /var/log/upgradescript.sh && bash /var/log/upgradecript.sh"); err != nil {
+		if err = sshClient.ProcessCMD("chmod +x /var/tmp/upgradescript.sh && bash /var/tmp/upgradecript.sh"); err != nil {
 			glog.Errorf("could not upgrade kubelet version: %s-00 on controlPlane %s: %s", newMachine.Spec.Versions.Kubelet, newMachine.Name, err)
 			glog.Errorf("running upgrade script error: %v", err)
 			return err
@@ -380,13 +380,13 @@ func (a *Actuator) updateWorkerInPlace(c *clusterv1.Cluster, oldMachine *cluster
 			return err
 		}
 		glog.Infof("running upgrade packages script for worker %s", newMachine.Name)
-		if err = sshClient.WriteFile(metadata.UpgradeScript, "/var/log/upgradescript.sh"); err != nil {
+		if err = sshClient.WriteFile(metadata.UpgradeScript, "/var/tmp/upgradescript.sh"); err != nil {
 			glog.Errorf("could not upgrade kubelet version: %s-00 on worker %s: %s", newMachine.Spec.Versions.Kubelet, newMachine.Name, err)
 			glog.Errorf("Error copying upgrade script: %v", err)
 			return err
 		}
 
-		if err = sshClient.ProcessCMD("chmod +x /var/log/upgradescript.sh && bash /var/log/upgradecript.sh"); err != nil {
+		if err = sshClient.ProcessCMD("chmod +x /var/tmp/upgradescript.sh && bash /var/tmp/upgradecript.sh"); err != nil {
 			glog.Errorf("could not upgrade kubelet version: %s-00 on worker %s: %s", newMachine.Spec.Versions.Kubelet, newMachine.Name, err)
 			glog.Errorf("running upgrade script error: %v", err)
 			return err
