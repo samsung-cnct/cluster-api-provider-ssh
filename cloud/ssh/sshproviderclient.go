@@ -86,9 +86,13 @@ func (s *sshProviderClient) ProcessCMD(cmd string) error {
 	outputBytes, err := session.CombinedOutput(cmd)
 	glog.Infof("Command output = %s ", string(outputBytes[:]))
 
-	if err != nil {
-		return err
-	}
+	// Commented out to test theory that stdin, stdout, or stderr copy errors
+	// are preventing the annotation from being set. This then results in
+	// multiple simultaneous configuration scripts running. Unless the current
+	// scripts are really broken, we should normally never see ssh errors...
+	//if err != nil {
+	//	return err
+	//}
 	return nil
 }
 
@@ -102,7 +106,12 @@ func (s *sshProviderClient) ProcessCMDWithOutput(cmd string) ([]byte, error) {
 
 	outputBytes, err := session.Output(cmd)
 
-	return outputBytes, err
+	// Commented out to test theory that stdin, stdout, or stderr copy errors
+	// are preventing the annotation from being set. This then results in
+	// multiple simultaneous configuration scripts running. Unless the current
+	// scripts are really broken, we should normally never see ssh errors...
+	//return outputBytes, err
+	return outputBytes, nil
 }
 
 func (s *sshProviderClient) WriteFile(scriptLines string, remotePath string) error {
@@ -172,7 +181,7 @@ func GetBasicSession(s *sshProviderClient) (*ssh.Session, *ssh.Client, error) {
 	session, err := connection.NewSession()
 	if err != nil {
 		glog.Errorf("failed to create sesssion", err)
-		return nil, nil,fmt.Errorf("failed to create session: %v", err)
+		return nil, nil, fmt.Errorf("failed to create session: %v", err)
 	}
 
 	return session, connection, nil
