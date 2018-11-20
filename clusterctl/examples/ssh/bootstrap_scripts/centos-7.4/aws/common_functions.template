@@ -49,12 +49,6 @@
             fi
 
             sudo yum install -y docker
-            sudo systemctl daemon-reload && sudo systemctl start docker.service
-
-            # If this version check fails then docker did not install correctly.
-            if ! sudo "$(which docker)" version >/dev/null 2>&1; then
-              return 1
-            fi
 
             # enable insecure image registry
             sudo mkdir -p /etc/docker

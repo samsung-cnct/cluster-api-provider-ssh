@@ -3,13 +3,12 @@
           set -x
           (
           ARCH=amd64
-
           ${FUNCTIONS}
 
-          set -x
+          set +x
             CLUSTER_DNS_SERVER="$(prips "${SERVICE_CIDR}")"
             export CLUSTER_DNS_SERVER
-          set +x
+          set -x
 
           if ! install_docker; then
             echo >&2 "Error installing docker components..."
