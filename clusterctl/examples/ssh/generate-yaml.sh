@@ -16,7 +16,7 @@ inject_functions()
   [[ -z "${tmpl}" ]] && \
     {
       echo >&2 "Usage: preprocess_template(): caller must provide template to process."
-      return 45
+      return 1
     }
 
   # shellcheck disable=SC2016
@@ -47,7 +47,7 @@ generate_yaml()
 
   if ! mkdir -p "${OUTPUT_DIR}" 2>/dev/null; then
     echo >&2 "Unable to mkdir $OUTPUT_DIR"
-    return 12
+    return 1
   fi
 
   bootstrap_dir="$BASEDIR/bootstrap_scripts/${OS_TYPE}-${OS_VER}/${WORK_ENV}"
@@ -66,7 +66,7 @@ generate_yaml()
 
   if [[ $OVERWRITE -ne 1 ]] && [[ -f $providercomponent_generated_file ]]; then
     echo >&1 "File $providercomponent_generated_file already exists. Delete it manually before running this script."
-    return 25
+    return 1
   fi
 
   # $bootstrap_dir dictates the template. If the template doesn't exist
@@ -139,7 +139,7 @@ main()
   Completed manifests are placed in '$OUTPUT_DIR'
 
         """
-        exit 0
+        return 0
         ;;
       -f|--force-overwrite)
         OVERWRITE=1
@@ -156,7 +156,7 @@ main()
     echo "OS Type set for valid type: $OS_TYPE."
   else
     echo >&2 "Invalid parameter for \$OS_TYPE: '$OS_TYPE'. Must be either 'ubuntu' or 'centos'"
-    return 15
+    return 1
   fi
 
   if [[ "${SDS_ENV}" =~ true|false ]]; then
@@ -169,14 +169,14 @@ main()
     fi
   else
     echo >&2 "Invalid parameter for \$SDS_ENV: '$SDS_ENV'. Must be either 'true' or 'false'"
-    return 16
+    return 1
   fi
 
   if ! generate_yaml; then
-    return 17
+    return 1
   fi
 }
 
 if ! main "$@"; then
-  exit $?
+  exit 17
 fi
