@@ -65,7 +65,15 @@ generate_yaml()
   providercomponent_generated_file=${OUTPUT_DIR}/provider-components.yaml
 
   if [[ $OVERWRITE -ne 1 ]] && [[ -f $providercomponent_generated_file ]]; then
-    echo >&1 "File $providercomponent_generated_file already exists. Delete it manually before running this script."
+    echo >&2 "File $providercomponent_generated_file already exists. Delete it manually before running this script."
+    return 1
+  fi
+
+  if [[ ! -d "${bootstrap_dir}" ]]; then
+    echo >&2 "Looks like the template directory you seek doesn't exist. Perhaps your \$OS_VER is incorrect.
+Please make sure '${bootstrap_dir}' exists!
+Verify your OS_VER env variable if set."
+
     return 1
   fi
 
@@ -129,6 +137,7 @@ main()
         OS_TYPE               : One of "ubuntu" or "centos" -- defaults to "centos"
         KUBELET_VERSION       : e.g. 1.10.6 -- do not prepend a 'v' in front of it -- currently defaults to 1.10.6
         SDS_ENV               : Create provider-components.yaml for SDS or not? e.g. 0 (non-SDS) or 1 (SDS) -- defaults to 1
+        OS_VER                : The distribution version you desire to use. The default is 7.4
 
   $SCRIPT [options]
 
