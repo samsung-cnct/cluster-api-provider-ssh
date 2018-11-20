@@ -142,12 +142,12 @@ func (a *Actuator) Create(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 
 	sshClient := ssh.NewSSHProviderClient(privateKey, passPhrase, machineConfig.SSHConfig)
 
-	if err = sshClient.WriteFile(metadata.StartupScript, "/var/log/startupscript.sh"); err != nil {
+	if err = sshClient.WriteFile(metadata.StartupScript, "/var/tmp/startupscript.sh"); err != nil {
 		glog.Errorf("Error copying startup script: %v", err)
 		return err
 	}
 
-	if err = sshClient.ProcessCMD("chmod +x /var/log/startupscript.sh && bash /var/log/startupscript.sh"); err != nil {
+	if err = sshClient.ProcessCMD("chmod +x /var/tmp/startupscript.sh && bash /var/tmp/startupscript.sh"); err != nil {
 		glog.Errorf("running startup script error: %v", err)
 		return err
 	}
@@ -225,12 +225,12 @@ func (a *Actuator) Delete(c *clusterv1.Cluster, m *clusterv1.Machine) error {
 
 	sshClient := ssh.NewSSHProviderClient(privateKey, passPhrase, machineConfig.SSHConfig)
 
-	if err = sshClient.WriteFile(metadata.ShutdownScript, "/var/log/shutdownscript.sh"); err != nil {
+	if err = sshClient.WriteFile(metadata.ShutdownScript, "/var/tmp/shutdownscript.sh"); err != nil {
 		glog.Errorf("Error copying shutdown script: %v", err)
 		return err
 	}
 
-	if err = sshClient.ProcessCMD("chmod +x /var/log/shutdownscript.sh && bash /var/log/shutdownscript.sh"); err != nil {
+	if err = sshClient.ProcessCMD("chmod +x /var/tmp/shutdownscript.sh && bash /var/tmp/shutdownscript.sh"); err != nil {
 		glog.Errorf("running shutdown script error: %v", err)
 		return err
 	}
