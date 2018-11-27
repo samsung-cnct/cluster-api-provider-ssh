@@ -362,14 +362,14 @@
 
           run_kubeadm_join()
           {
-            if [ -f /etc/kubernetes/bootstrap-kubelet.conf ]; then
+            if [ -f /etc/kubernetes/kubelet.conf ]; then
               echo >&2 "Kubeadm has already been joined."
               return 0
             fi
 
             kubeadm join --token "${TOKEN}" "${MASTER}" --ignore-preflight-errors=all --discovery-token-unsafe-skip-ca-verification
             for (( i = 0; i < 60; i++ )); do
-                kubectl --kubeconfig /etc/kubernetes/bootstrap-kubelet.conf annotate --overwrite node "$(echo $(hostname) | tr '[:upper:]' '[:lower:]')" machine=${MACHINE} && break
+                kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node "$(echo $(hostname) | tr '[:upper:]' '[:lower:]')" machine=${MACHINE} && break
                 sleep 5
             done
           }
