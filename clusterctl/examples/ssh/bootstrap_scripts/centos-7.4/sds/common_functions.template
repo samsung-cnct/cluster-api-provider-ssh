@@ -1,10 +1,4 @@
 
-          cleanup_repos()
-          {
-            rm -rf /etc/yum.repos.d
-            mkdir -p /etc/yum.repos.d
-          }
-
           install_docker()
           {
 
@@ -49,6 +43,8 @@
 
           install_nginx_w_yum()
           {
+            mkdir -p /etc/yum.repos.d
+
             cat << 'EOF' > /etc/yum.repos.d/centos7.repo
           [epel]
           name=Extra Packages for Enterprise Linux 7 - $basearch
