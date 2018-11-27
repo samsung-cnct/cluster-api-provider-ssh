@@ -292,7 +292,7 @@
           net.bridge.bridge-nf-call-iptables = 1
           EOF
 
-            cat <<e > "$kubeadmenv_file"
+            cat <<EOF > "$kubeadmenv_file"
           KUBELET_KUBEADM_ARGS=--cgroup-driver=systemd
           EOF
             sudo chmod 644 "$kubeadmenv_file"
