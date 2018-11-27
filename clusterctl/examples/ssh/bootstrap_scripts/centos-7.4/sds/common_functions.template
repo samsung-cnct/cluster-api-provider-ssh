@@ -43,8 +43,6 @@
 
           install_nginx_w_yum()
           {
-            mkdir -p /etc/yum.repos.d
-
             cat << 'EOF' > /etc/yum.repos.d/centos7.repo
           [epel]
           name=Extra Packages for Enterprise Linux 7 - $basearch
@@ -215,6 +213,9 @@
 
           install_k8s_w_yum()
           {
+            kubeadmenv_dir="/var/lib/kubelet"
+            kubeadmenv_file="$kubeadmenv_dir/kubeadm-flags.env"
+
             if [[ -z $KUBELET_VERSION ]]; then
               echo >&2 "FATAL: \$KUBELET_VERSION is nil! Cannot continue."
               return 1
@@ -230,6 +231,7 @@
               echo >&2 "Unable to copy kubernetes rpms from image ${toolsImage}"
               return 1
             fi
+
             if ! docker cp ${toolsImage}:/resources/yaml/kube-flannel.yml /var/log/kube-flannel.yml;then
               echo >&2 "Unable to copy flannel config from image ${toolsImage}"
               return 1
@@ -289,6 +291,11 @@
           net.bridge.bridge-nf-call-ip6tables = 1
           net.bridge.bridge-nf-call-iptables = 1
           EOF
+
+            cat <<e > "$kubeadmenv_file"
+          KUBELET_KUBEADM_ARGS=--cgroup-driver=systemd
+          EOF
+            sudo chmod 644 "$kubeadmenv_file"
 
             if ! sysctl --system;then
               echo >&2 "Unable to set net.bridge.bridge-nf-call-iptables sysctl settings"
