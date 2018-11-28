@@ -224,7 +224,7 @@
             setenforce 0
             sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config]
 
-            toolsImage=$(docker create quay.io/samsung_cnct/cm-vmware-bootstrap:0.1.26)
+            toolsImage=$(docker create quay.io/samsung_cnct/cm-vmware-bootstrap:0.1.29)
             echo >&2 "Using boostrap image ${toolsImage}"
 
             if ! docker cp ${toolsImage}:/resources/rpms/ /var/log/rpms;then
