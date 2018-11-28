@@ -292,8 +292,17 @@
           net.bridge.bridge-nf-call-iptables = 1
           EOF
 
-            cat <<EOF > "$kubeadmenv_file"
-          KUBELET_KUBEADM_ARGS=--cgroup-driver=systemd
+           mkdir -p $kubeadmenv_dir 2>/dev/null
+           # docker and kubernetes must be using the same cgroupfs driver. We want to use
+           # systemd vs cgroupfs.
+            cat <<EOF > /etc/systemd/system/kubelet.service.d/20-kubeadm.conf
+           [Service]
+           # This is a file that "kubeadm init" and "kubeadm join" generates at runtime, populating the KUBELET_KUBEADM_ARGS variable dynamically
+           EnvironmentFile="$kubeadmenv_file"
+           EOF
+
+           cat <<EOF > "$kubeadmenv_file"
+          KUBELET_KUBEADM_ARGS="--cgroup-driver=systemd"
           EOF
             sudo chmod 644 "$kubeadmenv_file"
 
