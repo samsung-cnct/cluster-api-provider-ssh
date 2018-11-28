@@ -293,7 +293,7 @@
             cat <<EOF > /etc/systemd/system/kubelet.service.d/20-kubeadm.conf
            [Service]
            # This is a file that "kubeadm init" and "kubeadm join" generates at runtime, populating the KUBELET_KUBEADM_ARGS variable dynamically
-           EnvironmentFile="$kubeadmenv_file"
+           EnvironmentFile=$kubeadmenv_file
            EOF
 
            cat <<EOF > "$kubeadmenv_file"
