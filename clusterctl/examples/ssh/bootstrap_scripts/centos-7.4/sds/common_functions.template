@@ -282,23 +282,33 @@
               return 1
             fi
 
-            if ! systemctl enable kubelet && systemctl start kubelet;then
-              echo >&2 "Unable to start kubelet"
-              return 1
-            fi
-
             cat <<EOF >  /etc/sysctl.d/k8s.conf
           net.bridge.bridge-nf-call-ip6tables = 1
           net.bridge.bridge-nf-call-iptables = 1
           EOF
 
-            cat <<EOF > "$kubeadmenv_file"
-          KUBELET_KUBEADM_ARGS=--cgroup-driver=systemd
+           mkdir -p $kubeadmenv_dir 2>/dev/null
+           # docker and kubernetes must be using the same cgroupfs driver. We want to use
+           # systemd vs cgroupfs.
+            cat <<EOF > /etc/systemd/system/kubelet.service.d/20-kubeadm.conf
+           [Service]
+           # This is a file that "kubeadm init" and "kubeadm join" generates at runtime, populating the KUBELET_KUBEADM_ARGS variable dynamically
+           EnvironmentFile=$kubeadmenv_file
+           EOF
+
+           cat <<EOF > "$kubeadmenv_file"
+          KUBELET_KUBEADM_ARGS="--cgroup-driver=systemd"
           EOF
             sudo chmod 644 "$kubeadmenv_file"
 
             if ! sysctl --system;then
               echo >&2 "Unable to set net.bridge.bridge-nf-call-iptables sysctl settings"
+              return 1
+            fi
+
+            systemctl daemon-reload
+            if ! systemctl enable kubelet && systemctl start kubelet;then
+              echo >&2 "Unable to start kubelet"
               return 1
             fi
           }
