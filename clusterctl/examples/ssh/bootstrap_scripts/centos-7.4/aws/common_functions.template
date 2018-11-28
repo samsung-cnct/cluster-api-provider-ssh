@@ -206,6 +206,8 @@
             sudo yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubectl
             sudo yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubeadm
 
+            kubeadm upgrade apply $CONTROL_PLANE_VERSION -y
+
             if ! fix_kubelet_config; then
               return 1
             fi

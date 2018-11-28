@@ -21,10 +21,7 @@ const (
 	deleteEventAction = "Delete"
 	noEventAction     = ""
 	// TODO should this move to the cluster controller?
-	apiServerPort          = 6443
-	upgradeControlPlaneCmd = "curl -o /usr/bin/kubeadm -sSL https://dl.k8s.io/release/v%[1]s/bin/linux/amd64/kubeadm && " +
-		"chmod a+rx /usr/bin/kubeadm && " +
-		"kubeadm upgrade apply v%[1]s -y"
+	apiServerPort  = 6443
 	getNodeCmd     = "kubectl get no -o go-template='{{range .items}}{{.metadata.name}}:{{.status.nodeInfo.kubeletVersion}}:{{.metadata.annotations.machine}}{{\"\\n\"}}{{end}}' --kubeconfig /etc/kubernetes/admin.conf"
 	drainWorkerCmd = "kubectl drain %[1]s --ignore-daemonsets --delete-local-data --force --kubeconfig /etc/kubernetes/admin.conf"
 	uncordonCmd    = "kubectl uncordon %[1]s --kubeconfig /etc/kubernetes/admin.conf"
@@ -280,19 +277,7 @@ func (a *Actuator) updateMasterInPlace(c *clusterv1.Cluster, oldMachine *cluster
 	}
 	sshClient := ssh.NewSSHProviderClient(privateKey, passPhrase, machineConfig.SSHConfig)
 
-	// Perform kubeadm upgrade on the ControlPlane
-	if oldMachine.Spec.Versions.ControlPlane != newMachine.Spec.Versions.ControlPlane {
-		glog.Infof("Updating master node %s; controlplane version from %s to %s.", oldMachine.Name, oldMachine.Spec.Versions.ControlPlane, newMachine.Spec.Versions.ControlPlane)
-		cmd := fmt.Sprintf(upgradeControlPlaneCmd, newMachine.Spec.Versions.ControlPlane)
-		glog.Infof("updateControlPlaneCmd = %s", cmd)
-
-		err := sshClient.ProcessCMD(cmd)
-		if err != nil {
-			glog.Errorf("Could not perform kubeadm upgrade on ControlPlane: %v", err)
-			return err
-		}
-	}
-	// Upgrade ControlPlane packages (kubelet)
+	// Upgrade ControlPlane
 	if oldMachine.Spec.Versions.Kubelet != newMachine.Spec.Versions.Kubelet {
 		glog.Infof("updating master node %s; kubelet version from %s to %s.", oldMachine.Name, oldMachine.Spec.Versions.Kubelet, newMachine.Spec.Versions.Kubelet)
 
@@ -322,7 +307,7 @@ func (a *Actuator) updateMasterInPlace(c *clusterv1.Cluster, oldMachine *cluster
 			return err
 		}
 
-		if err = sshClient.ProcessCMD("chmod +x /var/tmp/upgradescript.sh && bash /var/tmp/upgradecript.sh"); err != nil {
+		if err = sshClient.ProcessCMD("chmod +x /var/tmp/upgradescript.sh && bash /var/tmp/upgradescript.sh"); err != nil {
 			glog.Errorf("could not upgrade kubelet version: %s-00 on controlPlane %s: %s", newMachine.Spec.Versions.Kubelet, newMachine.Name, err)
 			glog.Errorf("running upgrade script error: %v", err)
 			return err
@@ -386,7 +371,7 @@ func (a *Actuator) updateWorkerInPlace(c *clusterv1.Cluster, oldMachine *cluster
 			return err
 		}
 
-		if err = sshClient.ProcessCMD("chmod +x /var/tmp/upgradescript.sh && bash /var/tmp/upgradecript.sh"); err != nil {
+		if err = sshClient.ProcessCMD("chmod +x /var/tmp/upgradescript.sh && bash /var/tmp/upgradescript.sh"); err != nil {
 			glog.Errorf("could not upgrade kubelet version: %s-00 on worker %s: %s", newMachine.Spec.Versions.Kubelet, newMachine.Name, err)
 			glog.Errorf("running upgrade script error: %v", err)
 			return err

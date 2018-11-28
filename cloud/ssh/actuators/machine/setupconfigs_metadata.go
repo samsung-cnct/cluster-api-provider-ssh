@@ -138,6 +138,7 @@ func getSubnet(netRange clusterv1.NetworkRanges) string {
 }
 
 const masterEnvironmentVars = `#!/usr/bin/env bash
+CONTROL_PLANE_VERSION={{ .Machine.Spec.Versions.ControlPlane }}
 KUBELET_VERSION={{ .Machine.Spec.Versions.Kubelet }}
 VERSION=v${KUBELET_VERSION}
 NAMESPACE={{ .Machine.ObjectMeta.Namespace }}

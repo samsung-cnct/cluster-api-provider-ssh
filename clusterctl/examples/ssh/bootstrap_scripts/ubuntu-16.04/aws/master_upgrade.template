@@ -33,5 +33,7 @@
           sudo curl -o /usr/bin/kubeadm -sSL https://dl.k8s.io/release/v${CONTROL_PLANE_VERSION}/bin/linux/amd64/kubeadm
           sudo chmod a+rx /usr/bin/kubeadm
 
+          sudo kubeadm upgrade apply $CONTROL_PLANE_VERSION -y
+
           sudo systemctl restart kubelet
           ) 2>&1 | sudo tee /var/log/upgrade.log
