@@ -213,6 +213,7 @@
 
           install_k8s_w_yum()
           {
+
             if [[ -z $KUBELET_VERSION ]]; then
               echo >&2 "FATAL: \$KUBELET_VERSION is nil! Cannot continue."
               return 1
@@ -283,6 +284,11 @@
           net.bridge.bridge-nf-call-ip6tables = 1
           net.bridge.bridge-nf-call-iptables = 1
           EOF
+
+            if ! sysctl --system;then
+              echo >&2 "Unable to set net.bridge.bridge-nf-call-iptables sysctl settings"
+              return 1
+            fi
 
             if ! systemctl enable kubelet && systemctl start kubelet;then
               echo >&2 "Unable to start kubelet"
