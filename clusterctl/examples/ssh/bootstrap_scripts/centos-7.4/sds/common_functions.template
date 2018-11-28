@@ -299,7 +299,7 @@
            cat <<EOF > "$kubeadmenv_file"
           KUBELET_KUBEADM_ARGS="--cgroup-driver=systemd"
           EOF
-            sudo chmod 644 "$kubeadmenv_file"
+            chmod 644 "$kubeadmenv_file"
 
             if ! sysctl --system;then
               echo >&2 "Unable to set net.bridge.bridge-nf-call-iptables sysctl settings"
