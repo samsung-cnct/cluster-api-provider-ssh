@@ -345,6 +345,8 @@
 
           run_kubeadm_join()
           {
+            systemctl restart kubelet.service
+
             if [ -f /etc/kubernetes/kubelet.conf ]; then
               echo >&2 "Kubeadm has already been joined."
               return 0
