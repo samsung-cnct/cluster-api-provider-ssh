@@ -6,7 +6,7 @@
             if [[ -z "${dockerRpms// }" ]];then
               if ! yum install docker -y;then
                 echo >&2 "Unable to install docker"
-                exit 1
+                return 1
               fi
             fi
 
@@ -345,7 +345,7 @@
 
           run_kubeadm_join()
           {
-            systemctl restart kubelet.service
+            systemctl daemon-reload && systemctl restart kubelet.service
 
             if [ -f /etc/kubernetes/kubelet.conf ]; then
               echo >&2 "Kubeadm has already been joined."
