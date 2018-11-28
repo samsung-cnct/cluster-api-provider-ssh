@@ -318,6 +318,18 @@
 
             kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
 
+            if [[ -f /etc/sysconfig/kubelet ]]; then
+              if ! grep -q 'driver=systemd' /etc/sysconfig/kubelet; then
+                sed -r -i.bak$(date +%Y%m%dT%H%M%s) 's/=(.*)/=--cgroup-driver=systemd \1/' /etc/sysconfig/kubelet
+              else
+                echo "systemd cgroup driver already configured. Skipping"
+              fi
+            else
+              cat <<EOF > /etc/sysconfig/kubelet
+          KUBELET_EXTRA_ARGS=--cgroup-driver=systemd
+          EOF
+            fi
+
             systemctl daemon-reload
             systemctl restart kubelet
           }
