@@ -282,11 +282,6 @@
               return 1
             fi
 
-            if ! systemctl enable kubelet && systemctl start kubelet;then
-              echo >&2 "Unable to start kubelet"
-              return 1
-            fi
-
             cat <<EOF >  /etc/sysctl.d/k8s.conf
           net.bridge.bridge-nf-call-ip6tables = 1
           net.bridge.bridge-nf-call-iptables = 1
@@ -308,6 +303,12 @@
 
             if ! sysctl --system;then
               echo >&2 "Unable to set net.bridge.bridge-nf-call-iptables sysctl settings"
+              return 1
+            fi
+
+            systemctl daemon-reload
+            if ! systemctl enable kubelet && systemctl start kubelet;then
+              echo >&2 "Unable to start kubelet"
               return 1
             fi
           }
