@@ -307,7 +307,7 @@ func (a *Actuator) updateMasterInPlace(c *clusterv1.Cluster, oldMachine *cluster
 			return err
 		}
 
-		if err = sshClient.ProcessCMD("chmod +x /var/tmp/upgradescript.sh && bash /var/tmp/upgradecript.sh"); err != nil {
+		if err = sshClient.ProcessCMD("chmod +x /var/tmp/upgradescript.sh && bash /var/tmp/upgradescript.sh"); err != nil {
 			glog.Errorf("could not upgrade kubelet version: %s-00 on controlPlane %s: %s", newMachine.Spec.Versions.Kubelet, newMachine.Name, err)
 			glog.Errorf("running upgrade script error: %v", err)
 			return err
@@ -371,7 +371,7 @@ func (a *Actuator) updateWorkerInPlace(c *clusterv1.Cluster, oldMachine *cluster
 			return err
 		}
 
-		if err = sshClient.ProcessCMD("chmod +x /var/tmp/upgradescript.sh && bash /var/tmp/upgradecript.sh"); err != nil {
+		if err = sshClient.ProcessCMD("chmod +x /var/tmp/upgradescript.sh && bash /var/tmp/upgradescript.sh"); err != nil {
 			glog.Errorf("could not upgrade kubelet version: %s-00 on worker %s: %s", newMachine.Spec.Versions.Kubelet, newMachine.Name, err)
 			glog.Errorf("running upgrade script error: %v", err)
 			return err
