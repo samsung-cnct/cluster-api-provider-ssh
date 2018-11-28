@@ -6,7 +6,7 @@
             if [[ -z "${dockerRpms// }" ]];then
               if ! yum install docker -y;then
                 echo >&2 "Unable to install docker"
-                exit 1
+                return 1
               fi
             fi
 
@@ -213,8 +213,6 @@
 
           install_k8s_w_yum()
           {
-            kubeadmenv_dir="/var/lib/kubelet"
-            kubeadmenv_file="$kubeadmenv_dir/kubeadm-flags.env"
 
             if [[ -z $KUBELET_VERSION ]]; then
               echo >&2 "FATAL: \$KUBELET_VERSION is nil! Cannot continue."
@@ -287,26 +285,11 @@
           net.bridge.bridge-nf-call-iptables = 1
           EOF
 
-           mkdir -p $kubeadmenv_dir 2>/dev/null
-           # docker and kubernetes must be using the same cgroupfs driver. We want to use
-           # systemd vs cgroupfs.
-            cat <<EOF > /etc/systemd/system/kubelet.service.d/20-kubeadm.conf
-           [Service]
-           # This is a file that "kubeadm init" and "kubeadm join" generates at runtime, populating the KUBELET_KUBEADM_ARGS variable dynamically
-           EnvironmentFile=$kubeadmenv_file
-           EOF
-
-           cat <<EOF > "$kubeadmenv_file"
-          KUBELET_KUBEADM_ARGS="--cgroup-driver=systemd"
-          EOF
-            chmod 644 "$kubeadmenv_file"
-
             if ! sysctl --system;then
               echo >&2 "Unable to set net.bridge.bridge-nf-call-iptables sysctl settings"
               return 1
             fi
 
-            systemctl daemon-reload
             if ! systemctl enable kubelet && systemctl start kubelet;then
               echo >&2 "Unable to start kubelet"
               return 1
@@ -362,6 +345,8 @@
 
           run_kubeadm_join()
           {
+            systemctl daemon-reload && systemctl restart kubelet.service
+
             if [ -f /etc/kubernetes/kubelet.conf ]; then
               echo >&2 "Kubeadm has already been joined."
               return 0
