@@ -5,14 +5,9 @@
           ARCH=amd64
           ${FUNCTIONS}
 
-          if ! drain; then
-            echo >&2 "Unable to drain and/or delete on $(hostname)..."
-            exit 68
-          fi
-
           if ! teardown; then
             echo >&2 "Teardown unsuccessful."
-            exit 69
+            exit 1
           fi
 
           echo "Done..."
