@@ -72,16 +72,16 @@ RUN echo '#!/usr/bin/env bash' > /usr/scripts/node/upgradeScript.sh \
 
 FROM centos:7.4.1708 
 
-ARG ARCH
-ARG K8S_VERSION_OLD
-ARG K8S_VERSION_NEW
+ARG ARCH=amd64
+ARG K8S_VERSION_OLD=1.10.6
+ARG K8S_VERSION_NEW=1.11.2
 
 WORKDIR /resources
 
 RUN mkdir -p /usr/local/bin \
-    && curl -sSL https://dl.k8s.io/release/${K8S_VERSION_OLD}/bin/linux/${ARCH}/kubeadm > /usr/local/bin/kubeadm_${K8S_VERSION_OLD} \
+    && curl -sSL https://dl.k8s.io/release/v${K8S_VERSION_OLD}/bin/linux/${ARCH}/kubeadm > /usr/local/bin/kubeadm_${K8S_VERSION_OLD} \
     && chmod a+rx /usr/local/bin/kubeadm_${K8S_VERSION_OLD} \
-    && curl -sSL https://dl.k8s.io/release/${K8S_VERSION_NEW}/bin/linux/${ARCH}/kubeadm > /usr/local/bin/kubeadm_${K8S_VERSION_NEW} \
+    && curl -sSL https://dl.k8s.io/release/v${K8S_VERSION_NEW}/bin/linux/${ARCH}/kubeadm > /usr/local/bin/kubeadm_${K8S_VERSION_NEW} \
     && chmod a+rx /usr/local/bin/kubeadm_${K8S_VERSION_NEW}
 
 RUN yum update -y \
