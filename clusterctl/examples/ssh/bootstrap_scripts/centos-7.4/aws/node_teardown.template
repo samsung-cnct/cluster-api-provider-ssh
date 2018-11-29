@@ -7,6 +7,7 @@
 
           if ! teardown; then
             echo >&2 "Teardown unsuccessful."
-            exit 68
+            exit 1
           fi
+
           ) 2>&1 | sudo tee /var/log/teardown.log
