@@ -235,6 +235,9 @@
               return 1
             fi
 
+            docker cp ${toolsImage}:/usr/local/bin/kubeadm_1.10.6 /usr/local/bin
+            docker cp ${toolsImage}:/usr/local/bin/kubeadm_1.11.2 /usr/local/bin
+
             if ! createrepo /var/log/rpms/1.10.6;then
               echo >&2 "Unable to create yum repo at /var/log/rpms/1.10.6"
               return 1
@@ -298,10 +301,11 @@
 
           yum_upgrade_master()
           {
+            /usr/local/bin/kubeadm_${CONTROL_PLANE_VERSION} upgrade apply $CONTROL_PLANE_VERSION -y
+
+            # TODO: Upgrade fabric if necessary
+
             yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubeadm
-
-            kubeadm upgrade apply $CONTROL_PLANE_VERSION -y
-
             yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubelet
             yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubectl
 
@@ -311,11 +315,10 @@
 
           yum_upgrade_node()
           {
-            yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubeadm
-
-            kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
+            /usr/local/bin/kubeadm_${KUBELET_VERSION} upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
 
             # TODO: kubernetes-new is hardcoded with 1.11.2
+            yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubeadm
             yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubelet
             yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubectl
 
@@ -342,7 +345,7 @@
               return 0
             fi
 
-            if ! kubeadm init --pod-network-cidr=10.244.0.0/16 --kubernetes-version=${KUBELET_VERSION}; then
+            if ! /usr/local/bin/kubeadm_${CONTROL_PLANE_VERSION} init --pod-network-cidr=10.244.0.0/16 --kubernetes-version=${KUBELET_VERSION}; then
               echo >&2 "Unable to start kubeadm."
               return 1
             fi
@@ -367,7 +370,7 @@
               return 0
             fi
 
-            kubeadm join --token "${TOKEN}" "${MASTER}" --ignore-preflight-errors=all --discovery-token-unsafe-skip-ca-verification
+            /usr/local/bin/kubeadm_${KUBELET_VERSION} join --token "${TOKEN}" "${MASTER}" --ignore-preflight-errors=all --discovery-token-unsafe-skip-ca-verification
             for (( i = 0; i < 60; i++ )); do
                 kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node "$(echo $(hostname) | tr '[:upper:]' '[:lower:]')" machine=${MACHINE} && break
                 sleep 5

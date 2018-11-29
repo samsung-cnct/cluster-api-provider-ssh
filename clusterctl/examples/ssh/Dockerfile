@@ -1,11 +1,21 @@
 FROM centos:7 as builder
 
+ARG ARCH=amd64
+ARG K8S_VERSION_OLD=1.10.6
+ARG K8S_VERSION_NEW=1.11.2
+
 # setup sudo and other tools (for testing only)
 RUN yum update -y \
     && yum install epel-release -y \
     && yum install gettext python-pip jq yum-utils -y \
     && yum clean all
 RUN pip install yq
+
+RUN mkdir -p /usr/local/bin \
+    && curl -sSL https://dl.k8s.io/release/${K8S_VERSION_OLD}/bin/linux/${ARCH}/kubeadm > /usr/local/bin/kubeadm_${K8S_VERSION_OLD} \
+    && chmod a+rx /usr/local/bin/kubeadm_${K8S_VERSION_OLD} \
+    && curl -sSL https://dl.k8s.io/release/${K8S_VERSION_NEW}/bin/linux/${ARCH}/kubeadm > /usr/local/bin/kubeadm_${K8S_VERSION_NEW} \
+    && chmod a+rx /usr/local/bin/kubeadm_${K8S_VERSION_NEW}
 
 # kubernetes rpms
 RUN echo -e '[kubernetes]\n\
@@ -15,9 +25,6 @@ enabled=1\n\
 gpgcheck=1\n\
 repo_gpgcheck=0'\
 >> /etc/yum.repos.d/kubernetes.repo
-
-ARG K8S_VERSION_OLD=1.10.6
-ARG K8S_VERSION_NEW=1.11.2
 
 RUN mkdir /var/tmp/${K8S_VERSION_OLD} \
   && yumdownloader --assumeyes --resolve --destdir /var/tmp/${K8S_VERSION_OLD} \
@@ -31,7 +38,6 @@ RUN mkdir /var/tmp/${K8S_VERSION_NEW} \
     kubeadm-${K8S_VERSION_NEW} \
     kubelet-${K8S_VERSION_NEW} \
     kubernetes-cni
-
 
 WORKDIR /usr/scripts
 COPY bootstrap_scripts bootstrap_scripts
