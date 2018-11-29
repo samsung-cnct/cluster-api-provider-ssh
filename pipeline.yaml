@@ -21,3 +21,6 @@ builds:
   - image: samsung_cnct/ssh-machine-controller
     context: machine-controller
     locationOverride: cmd
+  - image: samsung_cnct/cm-vmware-bootstrap
+    context: .
+    locationOverride: clusterctl/examples/ssh/
