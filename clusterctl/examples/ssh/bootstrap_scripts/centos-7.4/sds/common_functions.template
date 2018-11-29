@@ -300,7 +300,10 @@
           {
             yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubeadm
 
-            kubeadm upgrade apply $CONTROL_PLANE_VERSION -y
+            if ! kubeadm upgrade apply $CONTROL_PLANE_VERSION -y; then
+              echo >&2 "kubeadm upgrade failed."
+              return 1
+            fi
 
             yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubelet
             yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubectl
@@ -313,7 +316,10 @@
           {
             yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubeadm
 
-            kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
+            if ! kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2); then
+              echo >&2 "kubeadm upgrade failed."
+              return 1
+            fi
 
             # TODO: kubernetes-new is hardcoded with 1.11.2
             yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubelet
