@@ -298,11 +298,12 @@
 
           yum_upgrade_master()
           {
+            yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubeadm
+
             kubeadm upgrade apply $CONTROL_PLANE_VERSION -y
 
             yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubelet
             yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubectl
-            yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubeadm
 
             systemctl daemon-reload
             systemctl restart kubelet
@@ -310,12 +311,13 @@
 
           yum_upgrade_node()
           {
+            yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubeadm
+
             kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
 
             # TODO: kubernetes-new is hardcoded with 1.11.2
             yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubelet
             yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubectl
-            yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubeadm
 
             if [[ -f /etc/sysconfig/kubelet ]]; then
               if ! grep -q 'driver=systemd' /etc/sysconfig/kubelet; then
