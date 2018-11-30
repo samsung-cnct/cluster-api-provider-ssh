@@ -2,6 +2,8 @@
           set -e
           set -x
           ${FUNCTIONS}
+  
+          kubectl --kubeconfig=/etc/kubernetes/kubelet.conf delete node $(hostname) || true
 
           if ! teardown; then
             echo >&2 "Teardown unsuccessful."

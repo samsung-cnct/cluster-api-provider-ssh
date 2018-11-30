@@ -4,6 +4,8 @@
 
           ${FUNCTIONS}
 
+          kubectl --kubeconfig=/etc/kubernetes/admin.conf delete node $(hostname) || true
+
           if ! teardown; then
             echo >&2 "Teardown unsuccessful."
             exit 1
