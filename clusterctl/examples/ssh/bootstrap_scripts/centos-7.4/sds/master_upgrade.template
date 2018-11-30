@@ -8,6 +8,6 @@
             echo >&2 "FATAL: upgrade failed. Quitting."
             exit 1
           fi
-          
+
           echo "Done..."
           exit 0
