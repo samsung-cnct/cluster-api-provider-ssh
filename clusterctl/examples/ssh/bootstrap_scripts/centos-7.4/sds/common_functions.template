@@ -390,7 +390,7 @@
               fi
             fi
 
-            yum remove -y kubeadm kubectl kubelet kubernetes-cni nginx* docker*
+            yum remove -y kubeadm kubectl kubelet kubernetes-cni 'nginx*' 'docker*'
 
             RM_RF_DIRS="/etc/cni \
                         /etc/nginx \
