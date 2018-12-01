@@ -390,10 +390,10 @@
               fi
             fi
 
-            all_dockers=($(rpm -qa 'docker*'))
-            yum remove -y kubeadm kubectl kubelet kubernetes-cni "${all_dockers[@]}"
+            yum remove -y kubeadm kubectl kubelet kubernetes-cni nginx* docker*
 
             RM_RF_DIRS="/etc/cni \
+                        /etc/ngins \
                         /etc/docker \
                         /etc/sysconfig/docker \
                         /etc/ethertypes \
@@ -407,7 +407,6 @@
                         /var/lib/kubelet"
 
             for d in ${RM_RF_DIRS}; do
-              rm -rf $d/**
               rm -rf $d
             done
           }
