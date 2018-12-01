@@ -393,7 +393,7 @@
             yum remove -y kubeadm kubectl kubelet kubernetes-cni nginx* docker*
 
             RM_RF_DIRS="/etc/cni \
-                        /etc/ngins \
+                        /etc/nginx \
                         /etc/docker \
                         /etc/sysconfig/docker \
                         /etc/ethertypes \
