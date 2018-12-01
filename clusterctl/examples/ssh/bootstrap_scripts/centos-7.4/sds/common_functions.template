@@ -311,8 +311,7 @@
 
           yum_upgrade_node()
           {
-            yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubeadm
-            yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubelet
+            yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubeadm kubelet
 
             kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
 
