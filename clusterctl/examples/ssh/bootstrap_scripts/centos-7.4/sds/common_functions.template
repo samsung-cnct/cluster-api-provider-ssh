@@ -220,7 +220,7 @@
             fi
 
             setenforce 0
-            sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config]
+            sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
 
             toolsImage=$(docker create quay.io/samsung_cnct/cm-vmware-bootstrap:0.1.30)
             echo >&2 "Using boostrap image ${toolsImage}"
