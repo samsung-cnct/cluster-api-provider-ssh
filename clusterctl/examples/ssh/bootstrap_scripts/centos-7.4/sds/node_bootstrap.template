@@ -32,6 +32,8 @@
 
           export CLUSTER_DNS_SERVER="10.96.0.10"
 
+          cleanup_repos
+
           if ! install_nginx_w_yum; then
             echo >&2 "Error installing nginx ..."
             exit 1

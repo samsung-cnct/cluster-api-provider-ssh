@@ -1,4 +1,10 @@
 
+          cleanup_repos()
+          {
+            rm -rf /etc/yum.repos.d
+            mkdir -p /etc/yum.repos.d
+          }
+
           install_docker()
           {
 
@@ -225,7 +231,7 @@
             setenforce 0
             sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
 
-            toolsImage=$(docker create quay.io/samsung_cnct/cm-vmware-bootstrap:0.1.39-2)
+            toolsImage=$(docker create quay.io/samsung_cnct/cm-vmware-bootstrap:0.1.41)
             echo >&2 "Using boostrap image ${toolsImage}"
 
             if ! docker cp ${toolsImage}:/resources/rpms/ /var/log/rpms;then
