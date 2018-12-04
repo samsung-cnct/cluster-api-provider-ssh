@@ -316,9 +316,32 @@
 
           yum_upgrade_node()
           {
+            max_tries=60
+            i=0
+
             yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubeadm kubelet
 
             kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
+
+            # sometimes the worker node intermittently fails to pull its config from
+            # the master. This next expression is a band-aid which tells the worker
+            # to attempt to pull the config again if it doesn't exist on the file system
+
+            while [[ ! -f /var/lib/kubelet/config.yaml ]]; do
+              if ! kubeadm alpha phase kubelet config download; then
+                echo >&2 "Unable to pull config on try $((i + 1))/$max_tries; trying again in 2 seconds..."
+                sleep 2
+              else
+                break
+              fi
+
+              if [[ $i -ge $max_tries ]]; then
+                echo >&2 "Maximal attempts reached at $max_tries attempts. Quitting with failure."
+                return 1
+              fi
+
+              ((i++))
+            done
 
             # TODO: kubernetes-new is hardcoded with 1.11.2
             yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubectl
@@ -394,11 +417,11 @@
               fi
             fi
 
-            all_dockers=($(rpm -qa 'docker*'))
-            yum remove -y kubeadm kubectl kubelet kubernetes-cni "${all_dockers[@]}"
+            yum remove -y kubeadm kubectl kubelet kubernetes-cni 'docker*' 'nginx*' conntrack
 
             RM_RF_DIRS="/etc/cni \
                         /etc/docker \
+                        /etc/nginx \
                         /etc/sysconfig/docker \
                         /etc/ethertypes \
                         /etc/kubernetes \
@@ -411,7 +434,6 @@
                         /var/lib/kubelet"
 
             for d in ${RM_RF_DIRS}; do
-              rm -rf $d/**
               rm -rf $d
             done
           }
