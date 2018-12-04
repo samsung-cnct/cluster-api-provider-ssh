@@ -30,6 +30,8 @@
 
             mkdir -p /etc/systemd/system/docker.service.d
 
+            systemctl enable docker
+
             if ! systemctl daemon-reload;then
               echo >&2 "Unable to 'systemctl daemon-reload after configuring docker'. Quitting."
               return 1
@@ -275,6 +277,8 @@
               echo >&2 "Unable to install kubeadm"
               return 1
             fi
+
+            yum install -y conntrack
 
             if ! swapoff -a;then
               echo >&2 "Unable to turn off swapping"
