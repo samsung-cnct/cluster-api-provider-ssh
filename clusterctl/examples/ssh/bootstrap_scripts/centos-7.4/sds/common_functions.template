@@ -225,7 +225,7 @@
             setenforce 0
             sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
 
-            toolsImage=$(docker create quay.io/samsung_cnct/cm-vmware-bootstrap:0.1.39-2)
+            toolsImage=$(docker create quay.io/samsung_cnct/cm-vmware-bootstrap:0.1.42)
             echo >&2 "Using boostrap image ${toolsImage}"
 
             if ! docker cp ${toolsImage}:/resources/rpms/ /var/log/rpms;then
@@ -385,6 +385,10 @@
               echo >&2 "Unable apply flannel config."
               return 1
             fi
+
+            for label in $NODE_LABELS ; do
+              kubectl --kubeconfig /etc/kubernetes/kubelet.conf -n $(NAMESPACE) label node $(hostname) "${label}"
+            done
           }
 
           run_kubeadm_join()
@@ -400,6 +404,10 @@
             for (( i = 0; i < 60; i++ )); do
                 kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node "$(echo $(hostname) | tr '[:upper:]' '[:lower:]')" machine=${MACHINE} && break
                 sleep 5
+            done
+
+            for label in $NODE_LABELS ; do
+              kubectl --kubeconfig /etc/kubernetes/kubelet.conf -n $(NAMESPACE) label node $(hostname) "${label}"
             done
           }
 
