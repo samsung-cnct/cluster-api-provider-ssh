@@ -316,6 +316,8 @@
 
           yum_upgrade_node()
           {
+            local max_tries i
+
             max_tries=60
             i=0
 
