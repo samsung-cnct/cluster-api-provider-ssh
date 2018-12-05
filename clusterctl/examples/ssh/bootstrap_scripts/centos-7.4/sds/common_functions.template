@@ -370,7 +370,7 @@
             fi
 
             for label in $NODE_LABELS ; do
-              kubectl --kubeconfig /etc/kubernetes/kubelet.conf -n $(NAMESPACE) label node $(hostname) "${label}"
+              kubectl --kubeconfig /etc/kubernetes/kubelet.conf -n ${NAMESPACE} label node $(hostname) "${label}"
             done
           }
 
@@ -390,7 +390,7 @@
             done
 
             for label in $NODE_LABELS ; do
-              kubectl --kubeconfig /etc/kubernetes/kubelet.conf -n $(NAMESPACE) label node $(hostname) "${label}"
+              kubectl --kubeconfig /etc/kubernetes/kubelet.conf -n ${NAMESPACE} label node $(hostname) "${label}"
             done
           }
 
