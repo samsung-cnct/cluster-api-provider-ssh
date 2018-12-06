@@ -37,7 +37,7 @@ spec:
             - "./controller-manager"
           args:
             - --kubeconfig=/etc/kubernetes/admin.conf
-            - --leader-elect=false
+            - --leader-elect=true
           resources:
             requests:
               cpu: 100m
@@ -64,7 +64,7 @@ spec:
             - "./cluster-controller"
           args:
             - --kubeconfig=/etc/kubernetes/admin.conf
-            - --leader-elect=false
+            - --leader-elect=true
           resources:
             requests:
               cpu: 200m
@@ -92,7 +92,7 @@ spec:
           args:
             - --kubeconfig=/etc/kubernetes/admin.conf
             - --machinesetup=/etc/machinesetup/machine_setup_configs.yaml
-            - --leader-elect=false
+            - --leader-elect=true
           resources:
             requests:
               cpu: 200m
