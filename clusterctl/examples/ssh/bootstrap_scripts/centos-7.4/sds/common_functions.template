@@ -1,4 +1,6 @@
 
+          export HOSTNAME=$(echo $(hostname) | tr '[:upper:]' '[:lower:]')
+
           install_docker()
           {
 
@@ -360,7 +362,7 @@
             fi
 
             for (( i = 0; i < 60; i++ )); do
-              kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node "$(echo $(hostname) | tr '[:upper:]' '[:lower:]')" machine="${MACHINE}" && break
+              kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node ${HOSTNAME} machine="${MACHINE}" && break
               sleep 5
             done
 
@@ -370,7 +372,7 @@
             fi
 
             for label in $NODE_LABELS ; do
-              kubectl --kubeconfig /etc/kubernetes/kubelet.conf -n $(NAMESPACE) label node $(hostname) "${label}"
+              kubectl --kubeconfig /etc/kubernetes/kubelet.conf -n $(NAMESPACE) label node ${HOSTNAME} "${label}"
             done
           }
 
@@ -385,19 +387,19 @@
 
             kubeadm join --token "${TOKEN}" "${MASTER}" --ignore-preflight-errors=all --discovery-token-unsafe-skip-ca-verification
             for (( i = 0; i < 60; i++ )); do
-                kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node "$(echo $(hostname) | tr '[:upper:]' '[:lower:]')" machine=${MACHINE} && break
+                kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node ${HOSTNAME} machine=${MACHINE} && break
                 sleep 5
             done
 
             for label in $NODE_LABELS ; do
-              kubectl --kubeconfig /etc/kubernetes/kubelet.conf -n $(NAMESPACE) label node $(hostname) "${label}"
+              kubectl --kubeconfig /etc/kubernetes/kubelet.conf -n $(NAMESPACE) label node ${HOSTNAME} "${label}"
             done
           }
 
           drain()
           {
-            kubectl --kubeconfig=/etc/kubernetes/admin.conf drain $(hostname) --delete-local-data --ignore-daemonsets && \
-            kubectl --kubeconfig=/etc/kubernetes/admin.conf delete node $(hostname)
+            kubectl --kubeconfig=/etc/kubernetes/admin.conf drain ${HOSTNAME} --delete-local-data --ignore-daemonsets && \
+            kubectl --kubeconfig=/etc/kubernetes/admin.conf delete node ${HOSTNAME}
           }
 
           teardown()
