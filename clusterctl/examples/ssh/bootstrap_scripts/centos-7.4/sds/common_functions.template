@@ -215,9 +215,9 @@
               return 1
             fi
 
-            echo "$(hostname) $(ifconfig ens192 | grep -Po 'inet (\d{1,3}\.?)+' | awk '{print $2}')" >> /etc/hosts
+            echo "$(ifconfig ens192 | grep -Po 'inet (\d{1,3}\.?)+' | awk '{print $2}') $(hostname)" >> /etc/hosts
             echo "127.0.0.1 registry-1.docker.io gcr.io k8s.gcr.io quay.io" >> /etc/hosts
-            echo "182.193.17.192 sds.redii.net" >> /etc/hosts
+            echo -e "182.193.17.192 sds.redii.net\n" >> /etc/hosts
           }
 
           install_k8s_w_yum()
