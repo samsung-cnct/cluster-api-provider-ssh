@@ -326,7 +326,7 @@
           {
             yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubeadm
 
-            kubeadm upgrade apply $CONTROL_PLANE_VERSION -y
+            kubeadm upgrade apply --feature-gates=CoreDNS=false $CONTROL_PLANE_VERSION -y
 
             yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubelet
             yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubectl
