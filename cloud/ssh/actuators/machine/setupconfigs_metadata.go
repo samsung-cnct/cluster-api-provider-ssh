@@ -1,17 +1,15 @@
 package machine
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
+	"strings"
 	"text/template"
 
-	"bytes"
-
 	"github.com/golang/glog"
-	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
-
-	"fmt"
-
 	"github.com/samsung-cnct/cluster-api-provider-ssh/cloud/ssh/providerconfig/v1alpha1"
+	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 )
 
 var (
@@ -48,9 +46,19 @@ type metadataParams struct {
 	ServiceCIDR    string
 	MasterEndpoint string // for node joining a cluster, should be available after master created
 	MasterIP       string // for injection to startup script
+	NodeLabels     string
 }
 
 func masterMetadata(c *clusterv1.Cluster, m *clusterv1.Machine, metadata *Metadata, sshConfig v1alpha1.SSHConfig) (map[string]string, error) {
+	// The Cluster API Machine controller adds machine labels to nodes. Since
+	// our Machines do not exist in the managed cluster we have to manually
+	// add the labels from the bootstrapping scripts.
+	nodeLabelList := make([]string, 0)
+	for k, v := range m.Labels {
+		nodeLabelList = append(nodeLabelList, fmt.Sprintf("%s=%s", k, v))
+	}
+	nodeLabels := strings.Join(nodeLabelList, " ")
+
 	params := metadataParams{
 		Cluster:     c,
 		Machine:     m,
@@ -58,6 +66,7 @@ func masterMetadata(c *clusterv1.Cluster, m *clusterv1.Machine, metadata *Metada
 		PodCIDR:     getSubnet(c.Spec.ClusterNetwork.Pods),
 		ServiceCIDR: getSubnet(c.Spec.ClusterNetwork.Services),
 		MasterIP:    sshConfig.Host,
+		NodeLabels:  nodeLabels,
 	}
 	masterMetadata := map[string]string{}
 	var buf bytes.Buffer
@@ -87,9 +96,20 @@ func masterMetadata(c *clusterv1.Cluster, m *clusterv1.Machine, metadata *Metada
 
 func nodeMetadata(token string, c *clusterv1.Cluster, m *clusterv1.Machine, metadata *Metadata) (map[string]string, error) {
 	nodeMetadata := map[string]string{}
+
 	if len(c.Status.APIEndpoints) < 1 {
 		return nodeMetadata, errors.New("The master APIEndpoints has not been initialized in ClusterStatus")
 	}
+
+	// The Cluster API Machine controller adds machine labels to nodes. Since
+	// our Machines do not exist in the managed cluster we have to manually
+	// add the labels from the bootstrapping scripts.
+	nodeLabelList := make([]string, 0)
+	for k, v := range m.Labels {
+		nodeLabelList = append(nodeLabelList, fmt.Sprintf("%s=%s", k, v))
+	}
+	nodeLabels := strings.Join(nodeLabelList, " ")
+
 	params := metadataParams{
 		Token:          token,
 		Cluster:        c,
@@ -98,6 +118,7 @@ func nodeMetadata(token string, c *clusterv1.Cluster, m *clusterv1.Machine, meta
 		PodCIDR:        getSubnet(c.Spec.ClusterNetwork.Pods),
 		ServiceCIDR:    getSubnet(c.Spec.ClusterNetwork.Services),
 		MasterEndpoint: getEndpoint(c.Status.APIEndpoints[0]),
+		NodeLabels:     nodeLabels,
 	}
 	glog.Infof("The MasterEndpoint = %s, machine %s cluster %s", params.MasterEndpoint, m.Name, c.Name)
 	var buf bytes.Buffer
@@ -151,6 +172,7 @@ CLUSTER_DNS_DOMAIN={{ .Cluster.Spec.ClusterNetwork.ServiceDomain }}
 POD_CIDR={{ .PodCIDR }}
 SERVICE_CIDR={{ .ServiceCIDR }}
 MASTER_IP={{ .MasterIP }}
+NODE_LABELS="{{ .NodeLabels }}"
 `
 const nodeEnvironmentVars = `#!/usr/bin/env bash
 KUBELET_VERSION={{ .Machine.Spec.Versions.Kubelet }}
@@ -164,4 +186,5 @@ MACHINE+=$MACHINE_NAME
 CLUSTER_DNS_DOMAIN={{ .Cluster.Spec.ClusterNetwork.ServiceDomain }}
 POD_CIDR={{ .PodCIDR }}
 SERVICE_CIDR={{ .ServiceCIDR }}
+NODE_LABELS="{{ .NodeLabels }}"
 `

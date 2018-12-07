@@ -1,10 +1,14 @@
 
+          export HOSTNAME=$(echo $(hostname) | tr '[:upper:]' '[:lower:]')
+
           install_docker()
           {
 
             dockerRpms=$(rpm -qa 'docker*')
             if [[ -z "${dockerRpms// }" ]];then
-              if ! yum install docker -y;then
+              # https://github.com/openshift/origin/issues/21609
+              # https://bugzilla.redhat.com/show_bug.cgi?id=1655975
+              if ! yum install docker-1.13.1-75.git8633870.el7.centos -y;then
                 echo >&2 "Unable to install docker"
                 return 1
               fi
@@ -30,6 +34,8 @@
 
             mkdir -p /etc/systemd/system/docker.service.d
 
+            systemctl enable docker
+
             if ! systemctl daemon-reload;then
               echo >&2 "Unable to 'systemctl daemon-reload after configuring docker'. Quitting."
               return 1
@@ -43,6 +49,9 @@
 
           install_nginx_w_yum()
           {
+            rm -rf /etc/yum.repos.d
+            mkdir -p /etc/yum.repos.d
+
             cat << 'EOF' > /etc/yum.repos.d/centos7.repo
           [epel]
           name=Extra Packages for Enterprise Linux 7 - $basearch
@@ -208,7 +217,9 @@
               return 1
             fi
 
-            echo -e '\n127.0.0.1   registry-1.docker.io gcr.io k8s.gcr.io quay.io\n' >> /etc/hosts
+            echo "$(ifconfig ens192 | grep -Po 'inet (\d{1,3}\.?)+' | awk '{print $2}') $(hostname)" >> /etc/hosts
+            echo "127.0.0.1 registry-1.docker.io gcr.io k8s.gcr.io quay.io" >> /etc/hosts
+            echo -e "182.193.17.192 sds.redii.net\n" >> /etc/hosts
           }
 
           install_k8s_w_yum()
@@ -220,9 +231,9 @@
             fi
 
             setenforce 0
-            sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config]
+            sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
 
-            toolsImage=$(docker create quay.io/samsung_cnct/cm-vmware-bootstrap:0.1.30)
+            toolsImage=$(docker create quay.io/samsung_cnct/cm-vmware-bootstrap:0.1.42-10)
             echo >&2 "Using boostrap image ${toolsImage}"
 
             if ! docker cp ${toolsImage}:/resources/rpms/ /var/log/rpms;then
@@ -232,6 +243,11 @@
 
             if ! docker cp ${toolsImage}:/resources/yaml/kube-flannel.yml /var/log/kube-flannel.yml;then
               echo >&2 "Unable to copy flannel config from image ${toolsImage}"
+              return 1
+            fi
+
+            if ! yum -y install createrepo ; then
+              echo >&2 "Unable to install createrepo"
               return 1
             fi
 
@@ -275,15 +291,27 @@
               return 1
             fi
 
+            yum install -y conntrack
+            modprobe br_netfilter
+
             if ! swapoff -a;then
               echo >&2 "Unable to turn off swapping"
               return 1
+            fi
+
+            # make sure swap is off after reboots
+            if grep -Pq '^/dev/mapper/centos-swap' /etc/fstab; then
+              sed -ri.bak-$(date +%Y%m%dT%H%M%S) 's/(.*centos-swap.*)/#\1/' /etc/fstab
             fi
 
             cat <<EOF >  /etc/sysctl.d/k8s.conf
           net.bridge.bridge-nf-call-ip6tables = 1
           net.bridge.bridge-nf-call-iptables = 1
           EOF
+
+            # stop and disable firewall
+            systemctl stop firewalld
+            systemctl disable firewalld
 
             if ! sysctl --system;then
               echo >&2 "Unable to set net.bridge.bridge-nf-call-iptables sysctl settings"
@@ -300,7 +328,7 @@
           {
             yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubeadm
 
-            kubeadm upgrade apply $CONTROL_PLANE_VERSION -y
+            kubeadm upgrade apply $CONTROL_PLANE_VERSION --feature-gates=CoreDNS=false -y
 
             yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubelet
             yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubectl
@@ -311,12 +339,36 @@
 
           yum_upgrade_node()
           {
-            yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubeadm
+            local max_tries i
+
+            max_tries=60
+            i=0
+
+            yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubeadm kubelet
 
             kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
 
+            # sometimes the worker node intermittently fails to pull its config from
+            # the master. This next expression is a band-aid which tells the worker
+            # to attempt to pull the config again if it doesn't exist on the file system
+
+            while [[ ! -f /var/lib/kubelet/config.yaml ]]; do
+              if ! kubeadm alpha phase kubelet config download; then
+                echo >&2 "Unable to pull config on try $((i + 1))/$max_tries; trying again in 2 seconds..."
+                sleep 2
+              else
+                break
+              fi
+
+              if [[ $i -ge $max_tries ]]; then
+                echo >&2 "Maximal attempts reached at $max_tries attempts. Quitting with failure."
+                return 1
+              fi
+
+              ((i++))
+            done
+
             # TODO: kubernetes-new is hardcoded with 1.11.2
-            yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubelet
             yum --disablerepo='*' --enablerepo=kubernetes-new -y install kubectl
 
             if [[ -f /etc/sysconfig/kubelet ]]; then
@@ -348,7 +400,7 @@
             fi
 
             for (( i = 0; i < 60; i++ )); do
-              kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node "$(echo $(hostname) | tr '[:upper:]' '[:lower:]')" machine="${MACHINE}" && break
+              kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node ${HOSTNAME} machine="${MACHINE}" && break
               sleep 5
             done
 
@@ -356,6 +408,10 @@
               echo >&2 "Unable apply flannel config."
               return 1
             fi
+
+            for label in $NODE_LABELS ; do
+              kubectl --kubeconfig /etc/kubernetes/kubelet.conf -n ${NAMESPACE} label node ${HOSTNAME} "${label}"
+            done
           }
 
           run_kubeadm_join()
@@ -369,15 +425,19 @@
 
             kubeadm join --token "${TOKEN}" "${MASTER}" --ignore-preflight-errors=all --discovery-token-unsafe-skip-ca-verification
             for (( i = 0; i < 60; i++ )); do
-                kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node "$(echo $(hostname) | tr '[:upper:]' '[:lower:]')" machine=${MACHINE} && break
+                kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node ${HOSTNAME} machine=${MACHINE} && break
                 sleep 5
+            done
+
+            for label in $NODE_LABELS ; do
+              kubectl --kubeconfig /etc/kubernetes/kubelet.conf -n ${NAMESPACE} label node ${HOSTNAME} "${label}"
             done
           }
 
           drain()
           {
-            kubectl --kubeconfig=/etc/kubernetes/admin.conf drain $(hostname) --delete-local-data --ignore-daemonsets && \
-            kubectl --kubeconfig=/etc/kubernetes/admin.conf delete node $(hostname)
+            kubectl --kubeconfig=/etc/kubernetes/admin.conf drain ${HOSTNAME} --delete-local-data --ignore-daemonsets && \
+            kubectl --kubeconfig=/etc/kubernetes/admin.conf delete node ${HOSTNAME}
           }
 
           teardown()
@@ -390,11 +450,12 @@
               fi
             fi
 
-            yum remove -y kubeadm kubectl kubelet kubernetes-cni 'nginx*' 'docker*'
+            yum remove -y kubeadm kubectl kubelet kubernetes-cni 'docker*' 'nginx*' conntrack
 
             RM_RF_DIRS="/etc/cni \
                         /etc/nginx \
                         /etc/docker \
+                        /etc/nginx \
                         /etc/sysconfig/docker \
                         /etc/ethertypes \
                         /etc/kubernetes \

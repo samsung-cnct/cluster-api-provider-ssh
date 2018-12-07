@@ -32,7 +32,6 @@ RUN mkdir /var/tmp/${K8S_VERSION_NEW} \
     kubelet-${K8S_VERSION_NEW} \
     kubernetes-cni
 
-
 WORKDIR /usr/scripts
 COPY bootstrap_scripts bootstrap_scripts
 COPY templates templates
