@@ -217,7 +217,7 @@
               return 1
             fi
 
-            if=$(netstat -rn | grep -P '^0.0.0.0 | awk '{print $8}')
+            if=$(ip route list | grep default | awk '{print $5}')
 
             if [[ -z "$if" ]]; then
               echo >&2 "Unable to determine default network interface for /etc/hosts entry."
