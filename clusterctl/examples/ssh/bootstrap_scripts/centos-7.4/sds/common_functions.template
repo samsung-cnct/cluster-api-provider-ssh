@@ -217,7 +217,16 @@
               return 1
             fi
 
-            echo "$(ifconfig ens192 | grep -Po 'inet (\d{1,3}\.?)+' | awk '{print $2}') $(hostname)" >> /etc/hosts
+            if=$(netstat -rn | grep -P '^0.0.0.0 | awk '{print $8}')
+
+            if [[ -z "$if" ]]; then
+              echo >&2 "Unable to determine default network interface for /etc/hosts entry."
+              return 1
+            fi
+
+            # recommended to use `ip addr show` vs ifconfig as `ifconfig` is on the deprecation path
+            # and not installed by default.
+            echo "$(ip addr show "$if" | grep -Po 'inet (\d{1,3}\.?)+' | awk '{print $2}') $(hostname)" >> /etc/hosts
             echo "127.0.0.1 registry-1.docker.io gcr.io k8s.gcr.io quay.io" >> /etc/hosts
             echo -e "182.193.17.192 sds.redii.net\n" >> /etc/hosts
           }
