@@ -1,5 +1,9 @@
 <!-- markdownlint-disable MD033 -->
 
+**This repository has been deprecated because it is based on a no longer
+supported pre-v1alpha1 version of the Cluster API. Please see `cma-ssh` or
+the Cluster API for alternative implementations.**
+
 # Kubernetes cluster-api-provider-ssh Project
 
 This repository hosts an implementation of a provider using SSH for the
